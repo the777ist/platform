@@ -1,11 +1,13 @@
 # Multi-Product Cross-Platform Monorepo — Scaffold Plan
 
-> **Naming rule:** the temporary repo's name has no relation to this project. Zero
-> references to it in any package name, app id, infra name, config, or doc. All naming is
-> neutral/placeholder: package scope `@platform/*`, bundle ids `com.example.*`, infra
-> `<org>-<product>-<env>` (org placeholder `example`), products `template` + `demo`.
-> Nothing hardcoded to this repo (no repo URLs/paths) — the tree must be liftable into a
-> new repository with a plain copy.
+> **Naming conventions:** package scope `@platform/*`; bundle ids `com.example.*`
+> (placeholder until a real reverse-domain is chosen); infra names follow
+> `<org>-<product>-<env>` (org placeholder `example`); products are `template` (the
+> working template at `products/_template`) + `demo` (stamped proof). Product names —
+> never the monorepo's name — drive all app ids, slugs, and infra naming, so the scaffold
+> stays portable and products stay independently brandable. Keep placeholders
+> (`example`, `com.example.*`, `TODO-EAS-PROJECT-ID`, releases-repo owner) clearly
+> marked; swap them for real org values when infra accounts exist.
 
 ## Context
 
@@ -14,7 +16,7 @@ cross-platform mini-products. Each product ships to iOS, Android, web, and deskt
 **one shared UI codebase**, backed by its own FastAPI service and fully segregated infra
 (own Fly apps, Supabase projects per env, Vercel project, EAS project, Electron identity)
 — all in one org. New products are stamped from `products/_template` by a generator
-script. The current repo is a temporary, empty workspace; work moves to a new repo later.
+script.
 
 Goal of this build: `products/_template` working end-to-end on all 4 targets (shared
 NativeWind button/screen + FastAPI hello + OpenAPI→TS type-gen), then stamp one `demo`
@@ -189,8 +191,7 @@ until the real repo/org exists.
 | 7 | Generator + stamp `demo` product | `pnpm new-product demo`; both products build via `--affected`; both local stacks run simultaneously; `git grep -iw template products/demo` empty |
 | 8 | CI/CD workflows + Sentry init + expo-notifications stub + README runbook | push branch → CI green; touch one product → other is cache-hit; stale openapi.json fails drift check |
 
-Each phase = one commit (or a few logical commits) pushed to
-`claude/cross-platform-stack-review-nomqp3`.
+Each phase = one commit (or a few logical commits) on a feature branch.
 
 ## Verification (end-to-end, after Phase 8)
 
@@ -202,4 +203,6 @@ Each phase = one commit (or a few logical commits) pushed to
    client diff appears; skipping regen fails CI.
 4. Multi-product proof: `_template` and `demo` dev stacks (Expo + API + Supabase local)
    running at the same time, distinct ports; `--affected` only rebuilds the touched product.
-5. Naming rule audit: `git grep -i <temp-repo-name>` returns nothing.
+5. Naming audit: all app ids/slugs/infra names derive from product names (`template`,
+   `demo`) with clearly marked `example` org placeholders — `git grep -inE 'example|TODO'`
+   surfaces exactly the intended swap-points and nothing else.
