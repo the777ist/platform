@@ -18,9 +18,10 @@ cross-platform mini-products. Each product ships to iOS, Android, web, and deskt
 — all in one org. New products are stamped from `products/_template` by a generator
 script.
 
-Goal of this build: `products/_template` working end-to-end on all 4 targets (shared
-NativeWind button/screen + FastAPI hello + OpenAPI→TS type-gen), then stamp one `demo`
-product to prove the generator.
+Goal of this build: `products/_template` working end-to-end on all 4 targets — shared
+design system (light/dark, per-product brandable), auth, an API-backed items list through
+the OpenAPI→TS type-gen pipeline, realtime invalidation, push loop, observability — then
+stamp one `demo` product to prove the generator.
 
 ## Decision Sheet (locked with user)
 
@@ -103,6 +104,7 @@ product to prove the generator.
 │   ├── ci.yml                     # affected lint/typecheck/test/build + typegen drift
 │   ├── deploy-api.yml             # Fly: main→staging, tag <product>-api-v*→prod
 │   ├── eas-build.yml              # dispatch(product,profile) + tag <product>-app-v*
+│   ├── eas-update.yml             # OTA: main→staging channel; tag <product>-ota-v*→prod
 │   └── electron-release.yml       # tag <product>-desktop-v* → 3-OS matrix
 ├── scripts/new-product.mjs        # generator (plain Node, zero deps)
 ├── packages/
@@ -116,10 +118,11 @@ product to prove the generator.
 │   │       └── lib/{utils.ts,     # cn() helper
 │   │                theme.ts}     # default light/dark themes: CSS vars (web) + vars() (native)
 │   └── core/                      # @platform/core — plumbing ONLY (no screens)
-│       └── src/{index.ts,supabase.ts,auth.ts,    # session store + route guards
+│       └── src/{index.ts,supabase.ts,auth.ts,    # session store (zustand) + route guards
 │                query.ts,                        # query client + cache persistence
 │                realtime.ts,                     # subscribe-and-invalidate helper
 │                notifications.ts,                # push-token registration helper
+│                storage.ts,                      # direct-to-Storage upload helper
 │                api.ts,                          # client wrapper: baseUrl, auth header,
 │                env.ts,sentry.ts}                #   X-Request-Id injection
 └── products/
@@ -138,6 +141,8 @@ product to prove the generator.
     │   │   ├── tailwind.config.js               # preset + PRODUCT TOKEN OVERRIDES (brand)
     │   │   ├── global.css · theme.ts            # product's CSS-var values (light+dark)
     │   │   ├── vercel.json                      # SPA rewrite
+    │   │   ├── e2e/ · playwright.config.ts      # web E2E smoke (against exported dist)
+    │   │   ├── .maestro/                        # mobile E2E flows
     │   │   ├── features/                        # product-local screens & logic (rich starter)
     │   │   │   ├── auth/                        # login/signup screens on core plumbing
     │   │   │   ├── home/                        # list screen via generated API hooks
@@ -164,7 +169,7 @@ product to prove the generator.
     │   │   │                     routers/{hello,me,items,push}.py,
     │   │   │                     services/{items,push,realtime}.py,  # logic; send_push();
     │   │   │                     export_openapi.py}       #   broadcast invalidation
-    │   │   └── tests/{test_hello.py,test_auth.py,test_items.py}
+    │   │   └── tests/{test_hello.py,test_auth.py,test_items.py,test_push.py}
     │   └── api-client/            # @platform/template-api-client (GENERATED, committed)
     │       ├── openapi-ts.config.ts             # input ../api/openapi.json
     │       └── src/                             # hey-api output: sdk/types/tanstack hooks
@@ -225,7 +230,7 @@ App sets client baseUrl from `EXPO_PUBLIC_API_URL` at startup.
 1. Validate `/^[a-z][a-z0-9-]*$/`, refuse collisions; `portIndex` = max+1.
 2. Copy `_template` → `products/<name>` (skip node_modules/.venv/dist/.expo/release; keep uv.lock).
 3. Whole-word replace `template`/`Template`/`template_api` in contents AND paths → kebab/Pascal/snake variants (covers package names, slug/scheme/bundle ids, electron appId + releases repo, fly app names, pyproject module, alembic, supabase project_id, and the product's README.md / CLAUDE.md / `.claude/commands/*` — ports and infra names in those docs come from `product.json` so they stay accurate).
-4. Ports from portIndex: API `8000+10i`; Supabase block `54321+100i` → products' local stacks coexist.
+4. Ports from portIndex: API `8000+10i`; Supabase block `54321+100i` → products' local stacks coexist. Applied everywhere ports appear: supabase `config.toml`, api dev script, AND the committed `app/.env.*` files (`EXPO_PUBLIC_API_URL`, supabase URL).
 5. Write `.env.example` + `product.json`; `pnpm install`.
 6. Print infra checklist: 2 Supabase projects (`<org>-<name>-stg|prod`), `fly apps create <org>-<name>-api-stg|prod` + secrets, Vercel project (root `products/<name>/app`, build via turbo filter, output `dist`, ignore step `npx turbo-ignore`), `eas init` → paste projectId, create `<name>-desktop-releases` repo + `GH_TOKEN`, 4 Sentry projects + DSNs, per-product GH Action secrets.
 
@@ -247,13 +252,13 @@ until the real repo/org exists.
 | # | Build | Verify |
 |---|---|---|
 | 1 | Root tooling: mise.toml, .npmrc, workspace+turbo+tsconfig, .gitignore, `packages/config` | `mise install && pnpm install && pnpm turbo run lint` (clean no-op) |
-| 2 | `packages/ui`: adopt react-native-reusables (button/text/input/card) + theme infra (CSS vars, light/dark); `packages/core` (query+persist, env); `_template/app` shell: tabs, settings screen with working theme toggle | dev server → themed components at `localhost:8081`, dark toggle works; Expo Go on device; `turbo run export:web` + `npx serve dist`. **Settles NativeWind v4 ↔ SDK 56 compat; fallback = SDK 55** |
+| 2 | `packages/ui`: adopt react-native-reusables (button/text/input/card) + theme infra (CSS vars, light/dark); `packages/core` (query+persist, env); `_template/app` shell: tabs, settings screen with working theme toggle; unit/component harness (Jest + RNTL) with a first Button test | dev server → themed components at `localhost:8081`, dark toggle works; Expo Go on device; `turbo run export:web` + `npx serve dist`; `turbo run test` runs the RNTL test. **Settles NativeWind v4 ↔ SDK 56 compat; fallback = SDK 55** |
 | 3 | `_template/api`: full layout — routers→services, UUIDv7 base model, problem+json handlers, cursor pagination, /healthz + /v1/hello + /v1/items CRUD, auth.py, db.py, initial Alembic migration (incl. RLS deny-all), Dockerfile, fly tomls, pytest | `turbo run dev --filter=*template-api` + `curl localhost:8000/healthz`; items CRUD + paging via curl; error responses are problem+json; `turbo run test lint`; `docker build` |
-| 4 | Typegen: export_openapi.py, `api-client/` (hey-api), turbo wiring; `features/home` list screen renders /v1/hello via generated TanStack hook (cache-persisted) | `turbo run build --filter=*template-app` shows openapi→client→app order; model change regenerates types; web renders API data; reload shows cached data instantly |
+| 4 | Typegen: export_openapi.py, `api-client/` (hey-api), turbo wiring; `features/home` list screen renders the cursor-paginated /v1/items via generated `useInfiniteQuery` hook (cache-persisted) | `turbo run build --filter=*template-app` shows openapi→client→app order; model change regenerates types; web renders paginated API data; reload shows cached data instantly |
 | 5 | Desktop: main/preload, `app://` protocol, electron-builder.yml, updater (no-op w/o repo) | `turbo run build` + start → same screen in window; navigation works; API down → shell still launches; `electron-builder --dir` packs |
-| 6 | Supabase local + auth: per-product config.toml; core plumbing (session store, guards); `features/auth` login/signup screens + `(auth)`/`(tabs)` route guards; protected `/v1/me` | `supabase start`; sign up through the template's login screen; guarded tabs redirect when signed out; bearer-token curl → user id; bad token → 401 |
+| 6 | Supabase local + auth: per-product config.toml; core plumbing (session store, guards); `features/auth` login/signup screens + `(auth)`/`(tabs)` route guards; protected `/v1/me`; `core/storage.ts` + avatar upload demo on settings (direct-to-Storage) | `supabase start`; sign up through the template's login screen; guarded tabs redirect when signed out; bearer-token curl → user id; bad token → 401; avatar uploads and renders back from Storage |
 | 7 | Generator + stamp `demo` product | `pnpm new-product demo`; both products build via `--affected`; both local stacks run simultaneously; `git grep -iw template products/demo` empty |
-| 8 | CI/CD workflows + observability (structlog JSON, request_id middleware, X-Request-Id in client wrapper, Sentry init) + push loop (registration → /v1/push-tokens → send_push) + realtime broadcast pattern (api broadcast + core subscribe-and-invalidate on the items list) + docs/agent surface: root + product README.md, CLAUDE.md, `.claude/commands/` | push branch → CI green; touch one product → other is cache-hit; stale openapi.json fails drift check; items list refreshes across two open clients after a mutation; API log lines carry the request_id sent by the client |
+| 8 | CI/CD workflows + observability (structlog JSON, request_id middleware, X-Request-Id in client wrapper, Sentry init) + push loop (registration → /v1/push-tokens → send_push) + realtime broadcast pattern (api broadcast + core subscribe-and-invalidate on the items list) + E2E harness: Playwright web smoke (login → items list, against exported dist) + one Maestro flow + docs/agent surface: root + product README.md, CLAUDE.md, `.claude/commands/` | push branch → CI green; touch one product → other is cache-hit; stale openapi.json fails drift check; items list refreshes across two open clients after a mutation; API log lines carry the request_id sent by the client; Playwright smoke green in CI (push registration needs a dev build — Expo Go can't receive push tokens; verified later on real devices) |
 
 Each phase = one commit (or a few logical commits) on a feature branch.
 
