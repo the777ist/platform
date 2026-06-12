@@ -86,6 +86,22 @@ stamp one `demo` product to prove the generator.
    screens package. Only auth plumbing (session store, guards) is shared via
    `packages/core`.
 
+## Package management model
+
+One repo, **one JS dependency universe + N isolated Python universes**, all orchestrated
+by one Turborepo task graph:
+
+| Layer | Management | Rationale |
+|---|---|---|
+| JS/TS | **Global** — root pnpm workspace, ONE `pnpm-lock.yaml`, hoisted `node_modules`, single `pnpm install` | Products share LIVE code (`@platform/ui`, `@platform/core` via `workspace:*`) — they must resolve against one dependency graph or shared packages break. Each workspace still declares its own deps in its own `package.json` (products MAY pin divergent versions of a lib; pnpm dedupes in the single lockfile) |
+| Python | **Per-product** — each `products/<name>/api` is a self-contained uv project: own `pyproject.toml`, own `uv.lock`, own `.venv`, own Docker image | Product APIs share NOTHING; isolation is the feature — a dep bump in one API cannot ripple into another, and each deploys independently. The `package.json` in `api/` is only a script shim so Turborepo can orchestrate `uv run` tasks in the same graph |
+| Supabase | **Per-product** — own `config.toml`, own migrations, own local stack on offset ports | Full data-plane segregation per product |
+
+Corollary (document in root CLAUDE.md): there is deliberately **no shared Python
+package** between products. Cross-product reuse happens in TypeScript (`packages/*`) or
+by improving `_template` for future products — if Python reuse pressure ever gets real,
+that's a new architecture decision, not a default.
+
 ## Directory tree
 
 ```
