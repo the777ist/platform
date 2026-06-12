@@ -37,6 +37,10 @@ product to prove the generator.
 - **Quality:** ESLint flat config + Prettier; Ruff; Vitest/Jest + RNTL; Playwright (web E2E); Maestro (mobile E2E); pytest + httpx + typegen drift check; GitHub Actions (affected-only)
 - **Cross-cutting:** Sentry (`@sentry/react-native` — NOT deprecated `sentry-expo`), Expo Push, Supabase Storage/CDN
 - **Multi-product:** `products/<name>/` consuming shared `packages/{ui,core,config}`; `pnpm new-product <name>` generator; infra naming `<org>-<product>-<env>`
+- **Env/config:** frontend config is publishable-only (`EXPO_PUBLIC_*`) in **committed per-env files** (`.env.development/.staging/.production` in each product's `app/`; gitignore allows these, still ignores `.env` + `.env.local`); EAS profiles / Vercel envs select them. Secrets live in **each platform's native store** (Fly secrets, EAS env, Vercel env, GH Actions) — setup codified in the generator checklist
+- **Releases:** trunk-based — `main` → staging auto (API deploy + web previews + **EAS Update OTA to staging channel**); tag `<product>-<surface>-v*` → that product's production (surface = api/app/desktop); mobile = **OTA for JS-only changes**, store builds only when native deps change
+- **DB conventions (template defaults):** **UUIDv7 PKs** (SQLModel base model); **RLS deny-all on every table** via the template's initial migration (the API's privileged role bypasses it; PostgREST/Realtime surface locked, opened per-table only where Realtime reads are wanted); schema changes ONLY via Alembic
+- **API conventions (template defaults):** thin **routers → services** (services take a session, hold business logic); **RFC 9457 problem+json** error contract (typed into OpenAPI → typed in the generated client); **cursor pagination** (`useInfiniteQuery`-ready); template ships `hello` + `me` + one `items` CRUD example in this shape
 
 ## Key design rulings (architect-verified, June 2026)
 
@@ -111,12 +115,14 @@ product to prove the generator.
 └── products/
     ├── _template/                 # WORKING product; name token = literal `template`
     │   ├── product.json           # {"name":"template","portIndex":0} generator metadata
-    │   ├── .env.example
+    │   ├── .env.example           # server-side secrets template (api)
     │   ├── supabase/{config.toml,migrations/}   # project_id example-template; ports from portIndex
     │   ├── app/                   # @platform/template-app (iOS+Android+WEB)
     │   │   ├── app.config.ts      # web.output "single", scheme, com.example.template,
     │   │   │                      #   extra.eas.projectId: "TODO-EAS-PROJECT-ID"
-    │   │   ├── eas.json · metro.config.js · babel.config.js
+    │   │   ├── .env.development · .env.staging · .env.production   # committed, publishable only
+    │   │   ├── eas.json           # build profiles + update channels (staging/production)
+    │   │   ├── metro.config.js · babel.config.js
     │   │   ├── tailwind.config.js               # preset + PRODUCT TOKEN OVERRIDES (brand)
     │   │   ├── global.css · theme.ts            # product's CSS-var values (light+dark)
     │   │   ├── vercel.json                      # SPA rewrite
@@ -137,10 +143,15 @@ product to prove the generator.
     │   │   ├── pyproject.toml · uv.lock · Dockerfile
     │   │   ├── fly.staging.toml   # app = "example-template-api-stg"; release_command alembic
     │   │   ├── fly.production.toml
-    │   │   ├── alembic.ini · alembic/{env.py,versions/}
-    │   │   ├── src/template_api/{main.py,settings.py,auth.py,db.py,models.py,
-    │   │   │                     routers/hello.py,export_openapi.py}
-    │   │   └── tests/{test_hello.py,test_auth.py}
+    │   │   ├── alembic.ini · alembic/{env.py,versions/}   # initial migration incl. RLS deny-all
+    │   │   ├── src/template_api/{main.py,settings.py,auth.py,db.py,
+    │   │   │                     models.py,               # UUIDv7 base model
+    │   │   │                     errors.py,               # problem+json handlers
+    │   │   │                     pagination.py,           # cursor pagination helpers
+    │   │   │                     routers/{hello,me,items}.py,
+    │   │   │                     services/items.py,       # business logic, takes session
+    │   │   │                     export_openapi.py}
+    │   │   └── tests/{test_hello.py,test_auth.py,test_items.py}
     │   └── api-client/            # @platform/template-api-client (GENERATED, committed)
     │       ├── openapi-ts.config.ts             # input ../api/openapi.json
     │       └── src/                             # hey-api output: sdk/types/tanstack hooks
@@ -211,6 +222,9 @@ App sets client baseUrl from `EXPO_PUBLIC_API_URL` at startup.
 `products/*/api/** + packages/**` → matrix `flyctl deploy -c fly.staging.toml`; tags →
 prod. `eas-build.yml` — dispatch/tag; needs `EXPO_TOKEN`, committed `.npmrc`,
 `packageManager` field in root package.json (eas-cli workspace detection workaround).
+`eas-update.yml` — OTA: on main push affecting a product's app → `eas update --channel
+staging`; tag `<product>-ota-v*` → `--channel production` (store builds only for native
+changes via `eas-build.yml`).
 `electron-release.yml` — 3-OS matrix, `electron-builder --publish always`, tag must match
 `desktop/package.json` version. All repo-specific values are clearly-marked placeholders
 until the real repo/org exists.
@@ -221,7 +235,7 @@ until the real repo/org exists.
 |---|---|---|
 | 1 | Root tooling: mise.toml, .npmrc, workspace+turbo+tsconfig, .gitignore, `packages/config` | `mise install && pnpm install && pnpm turbo run lint` (clean no-op) |
 | 2 | `packages/ui`: adopt react-native-reusables (button/text/input/card) + theme infra (CSS vars, light/dark); `packages/core` (query+persist, env); `_template/app` shell: tabs, settings screen with working theme toggle | dev server → themed components at `localhost:8081`, dark toggle works; Expo Go on device; `turbo run export:web` + `npx serve dist`. **Settles NativeWind v4 ↔ SDK 56 compat; fallback = SDK 55** |
-| 3 | `_template/api`: full layout, /healthz + /v1/hello, auth.py, db.py, Dockerfile, fly tomls, pytest | `turbo run dev --filter=*template-api` + `curl localhost:8000/healthz`; `turbo run test lint`; `docker build` |
+| 3 | `_template/api`: full layout — routers→services, UUIDv7 base model, problem+json handlers, cursor pagination, /healthz + /v1/hello + /v1/items CRUD, auth.py, db.py, initial Alembic migration (incl. RLS deny-all), Dockerfile, fly tomls, pytest | `turbo run dev --filter=*template-api` + `curl localhost:8000/healthz`; items CRUD + paging via curl; error responses are problem+json; `turbo run test lint`; `docker build` |
 | 4 | Typegen: export_openapi.py, `api-client/` (hey-api), turbo wiring; `features/home` list screen renders /v1/hello via generated TanStack hook (cache-persisted) | `turbo run build --filter=*template-app` shows openapi→client→app order; model change regenerates types; web renders API data; reload shows cached data instantly |
 | 5 | Desktop: main/preload, `app://` protocol, electron-builder.yml, updater (no-op w/o repo) | `turbo run build` + start → same screen in window; navigation works; API down → shell still launches; `electron-builder --dir` packs |
 | 6 | Supabase local + auth: per-product config.toml; core plumbing (session store, guards); `features/auth` login/signup screens + `(auth)`/`(tabs)` route guards; protected `/v1/me` | `supabase start`; sign up through the template's login screen; guarded tabs redirect when signed out; bearer-token curl → user id; bad token → 401 |
