@@ -35,10 +35,10 @@ stamp one `demo` product to prove the generator.
 - **Topology (hybrid):** core data via FastAPI → Supabase Postgres (pooler 6543); Supabase Auth (FastAPI verifies JWTs); `supabase-js` on frontend ONLY for auth/Realtime/Storage uploads
 - **Contracts:** FastAPI OpenAPI → `@hey-api/openapi-ts` (pinned exact, pre-1.0) + TanStack Query plugin; generated client committed per product
 - **Hosting:** web → Vercel (one project/product, turbo-ignore); per-env separate Supabase projects; local dev via Supabase CLI stack
-- **Quality:** ESLint flat config + Prettier; Ruff; **single Jest runner** (jest-expo preset) + RNTL for ALL JS tests; Playwright (web E2E, **nightly CI**); Maestro (mobile E2E, **local-only initially**); pytest + httpx against **real Postgres**; typegen drift check; GitHub Actions (affected-only) — full inventory in “Testing strategy”
+- **Quality:** ESLint flat config + Prettier; Ruff; **pyright strict** + Pydantic strict mode (Python); **single Jest runner** (jest-expo preset) + RNTL for ALL JS tests; Playwright (web E2E, **nightly CI**); Maestro (mobile E2E, **local-only initially**); pytest + httpx against **real Postgres**; typegen drift check; GitHub Actions (affected-only) — full inventory in “Testing strategy”
 - **Cross-cutting:** Sentry (`@sentry/react-native` — NOT deprecated `sentry-expo`), Expo Push, Supabase Storage/CDN
 - **Multi-product:** `products/<name>/` consuming shared `packages/{ui,core,config}`; `pnpm new-product <name>` generator; infra naming `<org>-<product>-<env>`
-- **Git hooks (Lefthook, repo-level + affected-scoped):** `lefthook.yml` at root. **pre-commit** (fast, staged files only): Prettier + ESLint on staged JS/TS, Ruff check+format on staged `.py` (scoped to the touched product's api). **pre-push:** `turbo run typecheck test build --affected` + pytest for affected APIs — i.e. ONLY the product(s) actually touched run (plus all dependents when `packages/*` change, which is the co-evolve guard moved before the push). Builds are turbo-cached so repeat pushes are fast
+- **Git hooks (Lefthook, repo-level + affected-scoped):** `lefthook.yml` at root. **pre-commit** (fast, staged files only): Prettier + ESLint on staged JS/TS, Ruff check+format on staged `.py` (scoped to the touched product's api). **pre-push:** `turbo run typecheck test build --affected` + (for affected APIs) pyright strict + pytest — i.e. ONLY the product(s) actually touched run (plus all dependents when `packages/*` change, which is the co-evolve guard moved before the push). Builds are turbo-cached so repeat pushes are fast
 - **Design system workbench:** **Storybook** (web, via react-native-web) as a SINGLE shared workbench in `packages/ui` — stories colocated (`*.stories.tsx`), run with `pnpm --filter @platform/ui storybook`. Visual regression = Playwright screenshots of the static Storybook build (light+dark), wired into the nightly E2E run (baselines committed)
 - **API hardening (template defaults):** env-driven **CORS allowlist** (web origin + `app://` desktop + mobile), security-headers middleware, **slowapi** rate limiting (per-IP + per-user) — every product inherits sensible defaults
 - **Branding assets:** template ships placeholder icon/splash/favicon in `app/assets/brand/` from a single source; a regen script produces all sizes; the generator copies them and prints a "replace brand assets" checklist item
@@ -47,11 +47,11 @@ stamp one `demo` product to prove the generator.
 - **Env/config:** frontend config is publishable-only (`EXPO_PUBLIC_*`) in **committed per-env files** (`.env.development/.staging/.production` in each product's `app/`; gitignore allows these, still ignores `.env` + `.env.local`); EAS profiles / Vercel envs select them. Secrets live in **each platform's native store** (Fly secrets, EAS env, Vercel env, GH Actions) — setup codified in the generator checklist
 - **Releases:** trunk-based — `main` → staging auto (API deploy + web previews + **EAS Update OTA to staging channel**); tag `<product>-<surface>-v*` → that product's production (surface = api/app/desktop); mobile = **OTA for JS-only changes**, store builds only when native deps change
 - **DB conventions (template defaults):** **UUIDv7 PKs** (SQLModel base model); **RLS deny-all on every table** via the template's initial migration (the API's privileged role bypasses it; PostgREST/Realtime surface locked, opened per-table only where Realtime reads are wanted); schema changes ONLY via Alembic
-- **API conventions (template defaults):** thin **routers → services** (services take a session, hold business logic); **RFC 9457 problem+json** error contract (typed into OpenAPI → typed in the generated client); **cursor pagination** (`useInfiniteQuery`-ready); template ships `hello` + `me` + one `items` CRUD example in this shape
+- **API conventions / architecture (template defaults):** strict **layered OOP** — `schemas/` (Pydantic v2 DTOs = the API contract) ↔ `routers/` (thin, depend on a service, map schema↔domain) → `services/` (class per aggregate, business logic, inject repositories via `Depends`) → `repositories/` (`BaseRepository[T]` generic + per-aggregate repos, **all** data access) → `models/` (SQLModel tables, persistence only). **DTOs are always separate from DB models — ORM models are never serialized to the client.** **RFC 9457 problem+json** errors (typed into OpenAPI → typed client); **cursor pagination** (`useInfiniteQuery`-ready); template ships `hello` + `me` + `items` CRUD in this exact shape. **Type strictness: pyright strict mode + Pydantic strict mode, enforced in pre-push AND CI** (no untyped defs, no implicit `Any`). Pragmatic layering — no full-DDD entities/value-objects/events (revisit only if a product needs it)
 - **Realtime (canonical pattern): broadcast-only** — tables stay RLS-locked; after mutations FastAPI broadcasts invalidation events on per-product channels (service-role HTTP call); clients refetch through the API. `packages/core` ships the subscribe-and-invalidate helper (wires channel events → TanStack invalidation). No Postgres-Changes subscriptions, no RLS holes, schema stays private
 - **Push notifications: full loop templated** — token registration in the app (expo-notifications), `/v1/push-tokens` endpoint + table (per user+device), `send_push()` service calling Expo's Push API via httpx
 - **Observability:** Sentry (already locked) + **structlog JSON logs** + `request_id` middleware in FastAPI; the API-client wrapper sends a generated `X-Request-Id` per request; Sentry events tagged with it on both sides → client→API→logs traceability
-- **Docs & agent surface:** README.md + **CLAUDE.md** + **slash commands** (`.claude/commands/`) at BOTH levels — monorepo root AND inside every product (authored once in `products/_template`, token-rewritten by the generator). Root CLAUDE.md = monorepo map + conventions (promote-on-2nd-use, naming, theming mechanism, broadcast-only realtime, problem+json, never-edit-generated-client) + gotchas (hoisted linker, pooler ports). Product CLAUDE.md = product structure, ports, infra names, the add-an-endpoint-end-to-end recipe (model→service→router→openapi→typegen→hook→screen). Root commands take a product arg (`/new-product`, `/affected`, `/typegen <product>`, `/release <product> <surface>`); product commands are product-scoped (`/dev`, `/typegen`, `/migrate`, `/add-feature`, `/release <surface>`) and apply when a session opens in the product dir (CLAUDE.md loads hierarchically; commands load from the session's project root). Decision-record format (ADRs vs ARCHITECTURE.md) **deferred**
+- **Docs & agent surface:** README.md + **CLAUDE.md** + **slash commands** (`.claude/commands/`) at BOTH levels — monorepo root AND inside every product (authored once in `products/_template`, token-rewritten by the generator). Root CLAUDE.md = monorepo map + conventions (promote-on-2nd-use, naming, theming mechanism, broadcast-only realtime, problem+json, never-edit-generated-client) + gotchas (hoisted linker, pooler ports). Product CLAUDE.md = product structure, ports, infra names, the add-an-endpoint-end-to-end recipe (model→repository→service→schema→router→openapi→typegen→hook→screen) + the strict-OOP/strict-typing/DTO-separation rules. Root commands take a product arg (`/new-product`, `/affected`, `/typegen <product>`, `/release <product> <surface>`); product commands are product-scoped (`/dev`, `/typegen`, `/migrate`, `/add-feature`, `/release <surface>`) and apply when a session opens in the product dir (CLAUDE.md loads hierarchically; commands load from the session's project root). Decision-record format (ADRs vs ARCHITECTURE.md) **deferred**
 
 ## Key design rulings (architect-verified, June 2026)
 
@@ -91,6 +91,13 @@ stamp one `demo` product to prove the generator.
    working auth UI it can freely restyle — reuse without coupling products to a shared
    screens package. Only auth plumbing (session store, guards) is shared via
    `packages/core`.
+10. **Backend is strict layered OOP, but Pythonic:** classes model real cohesion
+    (repositories own data access, services own business logic + injected deps); they are
+    NOT one-method wrappers or staticmethod buckets. The fixed per-feature recipe is
+    `model → repository → service → schema → router` — this is the contract documented in
+    the api CLAUDE.md and the thing AI agents follow verbatim. DTOs (`schemas/`) are the
+    ONLY thing crossing the HTTP boundary; SQLModel tables never are. Avoid full-DDD
+    ceremony unless a product earns it.
 
 ## Package management model
 
@@ -188,19 +195,22 @@ that's a new architecture decision, not a default.
     │   │   ├── fly.staging.toml   # app = "example-template-api-stg"; release_command alembic
     │   │   ├── fly.production.toml
     │   │   ├── alembic.ini · alembic/{env.py,versions/}   # initial migration incl. RLS deny-all
-    │   │   ├── src/template_api/{main.py,settings.py,auth.py,db.py,
-    │   │   │                     middleware.py,           # request_id + structlog binding
-    │   │   │                     security.py,             # CORS allowlist, headers, slowapi
-    │   │   │                     models.py,               # UUIDv7 base model; push_tokens
-    │   │   │                     errors.py,               # problem+json handlers
-    │   │   │                     pagination.py,           # cursor pagination helpers
-    │   │   │                     routers/{hello,me,items,push}.py,
-    │   │   │                     services/{items,push,realtime}.py,  # logic; send_push();
-    │   │   │                     tasks.py,                # scheduled jobs (Fly machines)
-    │   │   │                     seed.py,                 # local dev seed data
-    │   │   │                     export_openapi.py}       #   broadcast invalidation
+    │   │   ├── src/template_api/
+    │   │   │   ├── main.py · settings.py · auth.py · db.py
+    │   │   │   ├── middleware.py            # request_id + structlog binding
+    │   │   │   ├── security.py              # CORS allowlist, headers, slowapi
+    │   │   │   ├── errors.py                # problem+json handlers
+    │   │   │   ├── pagination.py            # cursor pagination helpers
+    │   │   │   ├── models/                  # SQLModel tables (UUIDv7 base; item, push_token)
+    │   │   │   ├── schemas/                 # Pydantic v2 DTOs (the API contract)
+    │   │   │   ├── repositories/            # BaseRepository[T] + ItemRepository, ...
+    │   │   │   ├── services/                # BaseService + ItemService, PushService, ...
+    │   │   │   ├── routers/{hello,me,items,push}.py   # thin; depend on services
+    │   │   │   ├── tasks.py                 # scheduled jobs (Fly machines)
+    │   │   │   ├── seed.py                  # local dev seed data
+    │   │   │   └── export_openapi.py
     │   │   └── tests/{conftest.py,                        # polyfactory factories, db fixture
-    │   │             test_hello.py,test_auth.py,test_items.py,test_push.py}
+    │   │             test_items.py,test_auth.py,test_push.py}   # service+router layers
     │   └── api-client/            # @platform/template-api-client (GENERATED, committed)
     │       ├── openapi-ts.config.ts             # input ../api/openapi.json
     │       └── src/                             # hey-api output: sdk/types/tanstack hooks
@@ -249,7 +259,7 @@ algs ES256/RS256; HS256 local fallback. Expose `CurrentUser` dependency.
 **Dockerfile:** multi-stage `ghcr.io/astral-sh/uv` (`uv sync --frozen --no-dev` → slim runtime).
 Python deps: fastapi, uvicorn[standard], pydantic-settings, sqlmodel,
 sqlalchemy[postgresql-psycopg], psycopg[binary], alembic, pyjwt[crypto], httpx,
-sentry-sdk[fastapi], structlog, slowapi; dev: pytest, ruff, polyfactory.
+sentry-sdk[fastapi], structlog, slowapi; dev: pytest, ruff, pyright, polyfactory.
 
 **Typegen:** `@hey-api/openapi-ts` pinned exact + `@hey-api/client-fetch` + TanStack Query
 plugin (generates `queryOptions`/typed SDK — beats openapi-typescript+openapi-fetch which
@@ -283,8 +293,8 @@ until the real repo/org exists.
 | Layer | Tool | Lives in | Runs |
 |---|---|---|---|
 | JS unit/component (ui components, core logic, product feature screens) | **Jest (jest-expo preset) + RNTL** — single runner for ALL JS tests, one templated config | `packages/ui`, `packages/core`, `products/*/app` (`__tests__/` beside source) | every PR (`turbo run test --affected`) |
-| API unit (services: pagination edges, `send_push()` w/ mocked httpx, JWT paths) | pytest | `products/*/api/tests` | every PR |
-| API integration (routers over HTTP: CRUD round-trips, problem+json shapes, 401s) | pytest + httpx against **real Postgres** (Supabase local in dev; postgres **service container** in CI), per-test transaction rollback — exercises UUIDv7 + real SQL | `products/*/api/tests` | every PR |
+| API unit (service classes with a real repo over a test DB, or repo mocked for pure logic; pagination edges, `send_push()` w/ mocked httpx, JWT paths) | pytest | `products/*/api/tests` | every PR |
+| API integration (routers over HTTP: CRUD round-trips, problem+json shapes, 401s, DTO/ORM separation) | pytest + httpx against **real Postgres** (Supabase local in dev; postgres **service container** in CI), per-test transaction rollback — exercises UUIDv7 + real SQL | `products/*/api/tests` | every PR |
 | Contract (API ↔ generated client can't drift) | regen `openapi.json` + client → `git diff --exit-code` | CI step | every PR |
 | Visual regression (every `@platform/ui` component, light+dark) | Playwright screenshots of the static **Storybook** build, committed baselines | `packages/ui/.storybook` | **nightly** + locally on demand |
 | Web E2E (full stack: exported dist + API + Supabase local; signup → login → items CRUD → realtime invalidation) | Playwright | `products/*/app/e2e` | **nightly** (`e2e-nightly.yml`, also `workflow_dispatch`) + locally on demand |
@@ -301,7 +311,7 @@ mock transport — integration tests hit the real DB, never mock the session.
 |---|---|---|
 | 1 | Root tooling: mise.toml, .npmrc, workspace+turbo+tsconfig, .gitignore, `packages/config`, lefthook.yml (hooks install via pnpm prepare) | `mise install && pnpm install && pnpm turbo run lint` (clean no-op); a commit triggers staged lint; a push triggers the affected gate |
 | 2 | `packages/ui`: adopt react-native-reusables (button/text/input/card) + theme infra (CSS vars, light/dark) + **Storybook workbench** with stories; `packages/core` (query+persist, env); `_template/app` shell: tabs, settings screen with working theme toggle; unit/component harness (Jest + RNTL) with a first Button test | dev server → themed components at `localhost:8081`, dark toggle works; `pnpm --filter @platform/ui storybook` renders the gallery; Expo Go on device; `turbo run export:web` + `npx serve dist`; `turbo run test` runs the RNTL test. **Settles NativeWind v4 ↔ SDK 56 compat; fallback = SDK 55** |
-| 3 | `_template/api`: full layout — routers→services, UUIDv7 base model, problem+json, cursor pagination, security.py (CORS/headers/slowapi), middleware, /healthz + /v1/hello + /v1/items CRUD, auth.py, db.py, initial Alembic migration (incl. RLS deny-all), seed.py, polyfactory factories, Dockerfile, fly tomls, pytest (real Postgres) | `turbo run dev --filter=*template-api` + `curl localhost:8000/healthz`; items CRUD + paging; problem+json errors; rate limit returns 429; CORS preflight from web origin passes; `seed.py` populates local DB; `turbo run test lint` (against pg service); `docker build` |
+| 3 | `_template/api`: strict layered OOP — `models/`, `schemas/` (DTOs), `repositories/` (BaseRepository[T] + ItemRepository), `services/` (BaseService + ItemService/PushService), thin `routers/`; UUIDv7 base, problem+json, cursor pagination, security.py (CORS/headers/slowapi), middleware, /healthz + /v1/hello + /v1/items CRUD, auth.py, db.py, initial Alembic migration (RLS deny-all), seed.py, polyfactory factories, pyright-strict config, Dockerfile, fly tomls, pytest (real Postgres) | `turbo run dev --filter=*template-api` + `curl /healthz`; items CRUD + paging; problem+json errors; 429 on rate limit; CORS preflight from web origin passes; DTOs returned (no ORM leakage); `pyright` clean in strict mode; `seed.py` populates DB; `turbo run test lint` (pg service); `docker build` |
 | 4 | Typegen: export_openapi.py, `api-client/` (hey-api), turbo wiring; `features/home` list screen renders the cursor-paginated /v1/items via generated `useInfiniteQuery` hook (cache-persisted) | `turbo run build --filter=*template-app` shows openapi→client→app order; model change regenerates types; web renders paginated API data; reload shows cached data instantly |
 | 5 | Desktop: main/preload, `app://` protocol, electron-builder.yml, updater (no-op w/o repo) | `turbo run build` + start → same screen in window; navigation works; API down → shell still launches; `electron-builder --dir` packs |
 | 6 | Supabase local + auth: per-product config.toml; core plumbing (session store, guards); `features/auth` login/signup screens + `(auth)`/`(tabs)` route guards; protected `/v1/me`; `core/storage.ts` + avatar upload demo on settings (direct-to-Storage) | `supabase start`; sign up through the template's login screen; guarded tabs redirect when signed out; bearer-token curl → user id; bad token → 401; avatar uploads and renders back from Storage |
