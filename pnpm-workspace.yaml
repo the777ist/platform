@@ -1,8 +1,0 @@
-packages:
-  - "packages/*"
-  # Each product contributes up to four workspaces. products/_template matches
-  # these globs intentionally: the template is a working product and builds in CI.
-  - "products/*/app"
-  - "products/*/desktop"
-  - "products/*/api"
-  - "products/*/api-client"
