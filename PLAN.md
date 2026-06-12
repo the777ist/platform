@@ -38,6 +38,7 @@ stamp one `demo` product to prove the generator.
 - **Quality:** ESLint flat config + Prettier; Ruff; **single Jest runner** (jest-expo preset) + RNTL for ALL JS tests; Playwright (web E2E, **nightly CI**); Maestro (mobile E2E, **local-only initially**); pytest + httpx against **real Postgres**; typegen drift check; GitHub Actions (affected-only) — full inventory in “Testing strategy”
 - **Cross-cutting:** Sentry (`@sentry/react-native` — NOT deprecated `sentry-expo`), Expo Push, Supabase Storage/CDN
 - **Multi-product:** `products/<name>/` consuming shared `packages/{ui,core,config}`; `pnpm new-product <name>` generator; infra naming `<org>-<product>-<env>`
+- **Git hooks (Lefthook, repo-level + affected-scoped):** `lefthook.yml` at root. **pre-commit** (fast, staged files only): Prettier + ESLint on staged JS/TS, Ruff check+format on staged `.py` (scoped to the touched product's api). **pre-push:** `turbo run typecheck test build --affected` + pytest for affected APIs — i.e. ONLY the product(s) actually touched run (plus all dependents when `packages/*` change, which is the co-evolve guard moved before the push). Builds are turbo-cached so repeat pushes are fast
 - **Env/config:** frontend config is publishable-only (`EXPO_PUBLIC_*`) in **committed per-env files** (`.env.development/.staging/.production` in each product's `app/`; gitignore allows these, still ignores `.env` + `.env.local`); EAS profiles / Vercel envs select them. Secrets live in **each platform's native store** (Fly secrets, EAS env, Vercel env, GH Actions) — setup codified in the generator checklist
 - **Releases:** trunk-based — `main` → staging auto (API deploy + web previews + **EAS Update OTA to staging channel**); tag `<product>-<surface>-v*` → that product's production (surface = api/app/desktop); mobile = **OTA for JS-only changes**, store builds only when native deps change
 - **DB conventions (template defaults):** **UUIDv7 PKs** (SQLModel base model); **RLS deny-all on every table** via the template's initial migration (the API's privileged role bypasses it; PostgREST/Realtime surface locked, opened per-table only where Realtime reads are wanted); schema changes ONLY via Alembic
@@ -110,6 +111,7 @@ that's a new architecture decision, not a default.
 ├── .claude/commands/              # /new-product, /affected, /typegen <product>,
 │                                  #   /release <product> <surface>
 ├── mise.toml                      # node 22, pnpm 10, python 3.13, uv
+├── lefthook.yml                   # pre-commit: staged lint/format; pre-push: --affected
 ├── .npmrc                         # node-linker=hoisted
 ├── pnpm-workspace.yaml            # packages/*, products/*/{app,desktop,api,api-client}
 ├── package.json                   # scripts: new-product; devDeps: turbo, prettier
@@ -284,7 +286,7 @@ mock transport — integration tests hit the real DB, never mock the session.
 
 | # | Build | Verify |
 |---|---|---|
-| 1 | Root tooling: mise.toml, .npmrc, workspace+turbo+tsconfig, .gitignore, `packages/config` | `mise install && pnpm install && pnpm turbo run lint` (clean no-op) |
+| 1 | Root tooling: mise.toml, .npmrc, workspace+turbo+tsconfig, .gitignore, `packages/config`, lefthook.yml (hooks install via pnpm prepare) | `mise install && pnpm install && pnpm turbo run lint` (clean no-op); a commit triggers staged lint; a push triggers the affected gate |
 | 2 | `packages/ui`: adopt react-native-reusables (button/text/input/card) + theme infra (CSS vars, light/dark); `packages/core` (query+persist, env); `_template/app` shell: tabs, settings screen with working theme toggle; unit/component harness (Jest + RNTL) with a first Button test | dev server → themed components at `localhost:8081`, dark toggle works; Expo Go on device; `turbo run export:web` + `npx serve dist`; `turbo run test` runs the RNTL test. **Settles NativeWind v4 ↔ SDK 56 compat; fallback = SDK 55** |
 | 3 | `_template/api`: full layout — routers→services, UUIDv7 base model, problem+json handlers, cursor pagination, /healthz + /v1/hello + /v1/items CRUD, auth.py, db.py, initial Alembic migration (incl. RLS deny-all), Dockerfile, fly tomls, pytest | `turbo run dev --filter=*template-api` + `curl localhost:8000/healthz`; items CRUD + paging via curl; error responses are problem+json; `turbo run test lint`; `docker build` |
 | 4 | Typegen: export_openapi.py, `api-client/` (hey-api), turbo wiring; `features/home` list screen renders the cursor-paginated /v1/items via generated `useInfiniteQuery` hook (cache-persisted) | `turbo run build --filter=*template-app` shows openapi→client→app order; model change regenerates types; web renders paginated API data; reload shows cached data instantly |
