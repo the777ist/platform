@@ -40,8 +40,8 @@ This guide is faithful to PLAN.md's locked decisions: Decision Sheet bullets on 
 Topology, Contracts, API hardening, Background/scheduled jobs, Operational defaults, DB
 conventions, "API conventions / architecture", and Realtime; Key design rulings #4
 (psycopg3 + NullPool + `prepare_threshold=None`, Alembic over 5432 via
-`DATABASE_MIGRATION_URL`), #5 (JWKS `PyJWKClient` ES256/RS256 cached, HS256 local
-fallback), #10 (strict layered OOP but Pythonic, `model → service → schema → router`); the
+`DATABASE_MIGRATION_URL`), #5 (JWKS `PyJWKClient` ES256/RS256 cached as the primary path on
+ALL environments incl. local, HS256 a genuine fallback only), #10 (strict layered OOP but Pythonic, `model → service → schema → router`); the
 `api/` directory tree; the `api/db.py` / `auth.py` / `export_openapi.py` / Dockerfile /
 Python-deps notes in "Config essentials & gotchas"; and the API unit + integration rows in
 "Testing strategy". Anything PLAN.md does not pin is marked **⚠️ OPEN / TO CONFIRM**.
@@ -96,8 +96,9 @@ Python-deps notes in "Config essentials & gotchas"; and the API unit + integrati
 - [ ] `middleware.py` provides a **request_id** scaffold (generate/propagate
       `X-Request-Id`); full structlog JSON binding is **Phase 8** (noted, not built here).
 - [ ] `auth.py` verifies Supabase JWTs via **JWKS `PyJWKClient`** (cached, ES256/RS256,
-      `audience="authenticated"`) with an **HS256 + `SUPABASE_JWT_SECRET`** local fallback;
-      exposes a `CurrentUser` dependency.
+      `audience="authenticated"`) as the **primary path on all environments incl. local**,
+      with **HS256 + `SUPABASE_JWT_SECRET`** as a genuine fallback only (older CLI /
+      self-hosted symmetric secret / minted test tokens); exposes a `CurrentUser` dependency.
 - [ ] `db.py` builds the engine with **psycopg3 + `NullPool` + `prepare_threshold=None`**
       over the pooler (6543) and exposes a `get_session` dependency; a separate
       `DATABASE_MIGRATION_URL` (direct **5432**) is used only by Alembic.
@@ -281,7 +282,7 @@ class Settings(BaseSettings):
 
     # --- Auth (Supabase) ---
     supabase_url: AnyHttpUrl | None = Field(default=None)        # JWKS discovery base
-    supabase_jwt_secret: str | None = Field(default=None)        # HS256 local fallback
+    supabase_jwt_secret: str | None = Field(default=None)        # HS256 genuine fallback only
     jwt_audience: str = Field(default="authenticated")
 
     # --- CORS allowlist (comma-separated; web origin + app:// desktop + mobile) ---
@@ -1977,6 +1978,14 @@ hit the real DB.
 - **Python turbo `inputs` globs are mandatory.** The `openapi`/`lint`/`test` tasks must
   declare `inputs` (`src/**/*.py`, `pyproject.toml`, `uv.lock`) or Turborepo's cache keys
   are wrong and stale results get served. (turbo.json notes.)
+- **`DELETE`/`UPDATE` go through `session.execute(...)`, never `session.exec(...)`.**
+  SQLModel's `Session.exec()` is typed/designed for `select()` only — passing a `delete()` or
+  `update()` statement is a **pyright-strict type error** (fastapi/sqlmodel #909) so Verify 7
+  would fail, and the returned object wouldn't expose `.rowcount`. Use SQLAlchemy's
+  `self.session.execute(delete(...))` (already on `Session`, import nothing new); its `Result`
+  exposes `.rowcount` (`PushService.prune_stale`, and any future `update()` path). A plain
+  scalar-column `select(...)` via `.exec()` is fine — only `delete()`/`update()` are the issue.
+  (Key ruling DB conventions.)
 - **Service `__init__` default is a `Depends` marker, not a real session.** Inside a
   request, FastAPI resolves `BaseService(session=Depends(get_session))`. Outside a request
   (`seed.py`, `tasks.py`, tests constructing a service directly), pass a real `Session`
@@ -1998,10 +2007,12 @@ Each maps to a DoD / PLAN.md Verify item. Run from repo root unless noted.
    ```
    Expected: `{"status":"ok"}` (HTTP 200), response carries an `X-Request-Id` header.
 
-2. **Items CRUD + paging (Verify 2).** With a valid bearer token (local HS256) or via the
-   test suite:
+2. **Items CRUD + paging (Verify 2).** With a valid bearer token — either a hand-minted HS256
+   token exercising the fallback branch (no live Supabase stack needed; the real ES256/JWKS
+   local path is wired in Phase 6), or via the test suite:
    ```bash
-   TOKEN=...   # an HS256 token signed with SUPABASE_JWT_SECRET, aud=authenticated
+   TOKEN=...   # a hand-minted HS256 token signed with SUPABASE_JWT_SECRET, aud=authenticated
+               #   (fallback branch; the live local CLI issues ES256 → JWKS, exercised in Phase 6)
    curl -s -X POST localhost:8000/v1/items -H "Authorization: Bearer $TOKEN" \
         -H 'content-type: application/json' -d '{"title":"a","description":null}'
    curl -s "localhost:8000/v1/items?limit=20" -H "Authorization: Bearer $TOKEN"
