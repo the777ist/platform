@@ -3,7 +3,7 @@
 **Goal:** Wire the contract pipeline end to end. The FastAPI service (built in Phase 3)
 emits a stable `openapi.json`; a committed, generated `@platform/template-api-client`
 workspace turns that contract into a typed SDK plus TanStack Query hooks via
-`@hey-api/openapi-ts` (+ `@hey-api/client-fetch` + the TanStack Query plugin); Turborepo
+`@hey-api/openapi-ts` (its bundled Fetch client + the TanStack Query plugin); Turborepo
 orders the work `openapi → api-client#build → app build/export:web` from **real dependency
 edges**; and `features/home` renders the cursor-paginated `/v1/items` through a generated
 `useInfiniteQuery` hook, cache-persisted so a reload paints instantly.
@@ -40,7 +40,9 @@ marked **⚠️ OPEN / TO CONFIRM**.
   `_template/app` shell (`@platform/template-app`) has tab navigation, NativeWind theming,
   and a settings screen. `app/_layout.tsx` already mounts the query (+ persist) provider.
 - **Phase 1 root tooling** — pnpm workspaces, Turborepo 2.9, `tsconfig.base.json`,
-  `node-linker=hoisted`, mise pins (Node 22 / pnpm 10 / Python 3.13 / uv).
+  `nodeLinker: hoisted` (in `pnpm-workspace.yaml`, not `.npmrc` — pnpm 11), mise pins
+  (Node 24 LTS / pnpm 11 / Python 3.13 / uv). Note: `@hey-api/openapi-ts` requires
+  **Node 22+** as a hard floor — the Node 24 pin clears it comfortably.
 - The cursor-pagination response shape from Phase 3 is the contract this phase consumes.
   PLAN.md fixes it as `useInfiniteQuery`-ready but does **not** pin exact field names.
   This guide assumes `{ items: Item[], next_cursor: string | null }`. The **exact DTO
@@ -58,10 +60,12 @@ marked **⚠️ OPEN / TO CONFIRM**.
 - [ ] `products/_template/api-client` exists as the workspace `@platform/template-api-client`,
       **devDepends on `@platform/template-api`** (the edge that makes turbo order it after
       `openapi`), and contains `openapi-ts.config.ts` with `input: ../api/openapi.json`.
-- [ ] `openapi-ts.config.ts` uses `@hey-api/client-fetch` **+ the TanStack Query plugin**,
-      emitting `sdk` / `types` / TanStack hooks (`queryOptions`, `infiniteQueryOptions`)
-      into `src/`.
-- [ ] `@hey-api/openapi-ts` and `@hey-api/client-fetch` are **pinned exact** (pre-1.0).
+- [ ] `openapi-ts.config.ts` uses the `@hey-api/client-fetch` **plugin** (the Fetch client
+      bundled inside `@hey-api/openapi-ts`) **+ the TanStack Query plugin**, emitting
+      `sdk` / `types` / TanStack hooks (`queryOptions`, `infiniteQueryOptions`) into `src/`.
+- [ ] `@hey-api/openapi-ts` is the **only** hey-api dependency (a devDep) and is **pinned
+      exact** (~0.98.x, pre-1.0). `@hey-api/client-fetch` is **not installed** — it is a
+      plugin identifier only.
 - [ ] The generated `src/` output is **committed**.
 - [ ] A package-level `api-client/turbo.json` declares `build` with
       `dependsOn: ["^openapi", "^build"]`.
@@ -203,11 +207,10 @@ Port `8000` here is the template's `portIndex=0` value; the generator rewrites i
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@hey-api/client-fetch": "0.x.y",
     "@tanstack/react-query": "catalog:"
   },
   "devDependencies": {
-    "@hey-api/openapi-ts": "0.x.y",
+    "@hey-api/openapi-ts": "0.98.2",
     "@platform/template-api": "workspace:*",
     "@platform/config": "workspace:*",
     "typescript": "catalog:"
@@ -215,11 +218,21 @@ Port `8000` here is the template's `portIndex=0` value; the generator rewrites i
 }
 ```
 
-> **⚠️ OPEN / TO CONFIRM — exact versions.** PLAN.md mandates `@hey-api/openapi-ts`
-> "pinned exact, pre-1.0" and `@hey-api/client-fetch`; replace `0.x.y` with the exact
-> resolved pre-1.0 versions (no `^`/`~`). `catalog:` assumes a pnpm catalog from Phase 1
-> for shared TS/React Query versions — if no catalog exists, pin the same exact version
-> the app uses.
+> **Do NOT add `@hey-api/client-fetch` to `dependencies`.** Since openapi-ts **0.73.0** the
+> Fetch client is **bundled inside `@hey-api/openapi-ts`**; the standalone
+> `@hey-api/client-fetch` npm package is **deprecated** (its npm message: *"Starting with
+> v0.73.0, this package is bundled directly inside @hey-api/openapi-ts"*). The string
+> `@hey-api/client-fetch` survives **only as a plugin identifier** in the
+> `openapi-ts.config.ts` `plugins` array (Step 4) — that usage is correct; installing it as
+> a dependency pulls a deprecated, redundant package. `@hey-api/openapi-ts` is the **only**
+> hey-api dependency, lives in `devDependencies`, and is **pinned exact** (no `^`/`~`).
+>
+> **Version pin:** `0.98.2` is current latest (pre-1.0, June 2026) — refresh to the resolved
+> latest at install time and keep it exact (the README states the package is "in initial
+> development. Please pin an exact version"). openapi-ts requires **Node 22+** (a hard floor,
+> satisfied by the repo's Node 24 pin). `catalog:` assumes a pnpm catalog from Phase 1 for
+> shared TS/React Query (v5, ~5.101.x) versions — if no catalog exists, pin the same exact
+> version the app uses. ⚠️ REVIEW: confirm the catalog exists in Phase 1 before relying on it.
 
 **Commands**
 ```bash
@@ -250,9 +263,11 @@ point at `src/index.ts`, no separate build artifact — same no-build pattern as
 import { defineConfig } from "@hey-api/openapi-ts";
 
 // PLAN.md (api-client/ tree): input ../api/openapi.json; output committed under src/.
-// Plugins: @hey-api/client-fetch + the TanStack Query plugin (generates queryOptions /
-// infiniteQueryOptions + a typed SDK), which PLAN.md picks over
-// openapi-typescript + openapi-fetch precisely because it needs no hand-written glue.
+// Plugins: the bundled @hey-api/client-fetch client (referenced by PLUGIN string only —
+// it ships inside @hey-api/openapi-ts since 0.73, NOT a separate install) + the TanStack
+// Query plugin (generates queryOptions / infiniteQueryOptions + a typed SDK), which
+// PLAN.md picks over openapi-typescript + openapi-fetch precisely because it needs no
+// hand-written glue.
 export default defineConfig({
   input: "../api/openapi.json",
   output: {
@@ -278,12 +293,19 @@ export default defineConfig({
 });
 ```
 
-> **⚠️ OPEN / TO CONFIRM — exact plugin identifiers & options.** PLAN.md fixes the
-> *combination* (`@hey-api/client-fetch` + TanStack Query plugin generating
-> `queryOptions`) but not the precise plugin string set for the pinned pre-1.0 version.
-> Confirm against the installed `@hey-api/openapi-ts` version's plugin API and lock it.
-> The cursor param name that drives `infiniteQueryOptions` `getNextPageParam` is whatever
-> `/v1/items` declares in Phase 3 (**⚠️ OPEN / TO CONFIRM**).
+> **Plugin identifiers — confirmed current (June 2026).** The plugin string set is verified
+> against the openapi-ts source: client `@hey-api/client-fetch`; types `@hey-api/typescript`;
+> SDK `@hey-api/sdk`; schemas `@hey-api/schemas` (optional — only needed for runtime
+> JSON-schema output; drop it to keep generated output smaller if you don't consume runtime
+> schemas); TanStack `@tanstack/react-query`. The TanStack plugin emits `queryOptions` and
+> `infiniteQueryOptions` **by default** (`enabled: true`), with default name templates
+> `{{name}}Options` and `{{name}}InfiniteOptions` (camelCase). Re-confirm only against the
+> exact pinned version if you bump it.
+>
+> **⚠️ OPEN / TO CONFIRM — cursor param name only.** The cursor query parameter that drives
+> `infiniteQueryOptions`' `getNextPageParam` is whatever `/v1/items` declares in Phase 3 —
+> the generated `getNextPageParam` keys off that **query parameter** name (not just the
+> response field), so confirm both against Phase 3's `schemas/` and route.
 
 **Commands**
 ```bash
@@ -461,14 +483,24 @@ export function configureApiClient(): void {
 }
 ```
 
-> **⚠️ OPEN / TO CONFIRM — the imported client symbol.** `@hey-api/client-fetch` exposes a
-> shared `client` whose `setConfig` sets `baseUrl`; the exact import path
-> (`@platform/template-api-client` barrel vs a `/client` subpath) depends on the pinned
-> hey-api version's output layout. Confirm against generated `src/index.ts`.
-> **Generic-client coupling note:** the `core` package importing the **template-specific**
-> client is acceptable in the template (Phase 4 wiring); when promoting `core` toward a
-> truly shared package, the client should be injected rather than imported by name. PLAN.md
-> does not pin this seam — **⚠️ OPEN / TO CONFIRM** the long-term injection shape.
+> **Client symbol — confirmed.** The bundled Fetch client exports a shared `client` whose
+> `setConfig({ baseUrl })` is the documented startup pattern (verified in the client-fetch
+> bundle source); `baseUrl` is an optional field on its `Config`. (The same client exposes
+> `interceptors.request.use(...)` for the auth-header + `X-Request-Id` injection that lands
+> in Phases 6/8.) The only thing to confirm is the **import path** — whether the generated
+> barrel re-exports `client` from `@platform/template-api-client` directly or under a
+> `/client` subpath depends on the pinned version's output layout; read it from the
+> generated `src/index.ts` after Step 4. ⚠️ REVIEW: adjust the import above to match the
+> generated barrel.
+>
+> **core ↔ client coupling seam (resolved for this phase).** In the template, `packages/core`
+> importing the **template-specific** generated client by name is the correct Phase 4 wiring
+> and matches PLAN.md's `packages/core` tree (`api.ts` = the client wrapper: baseUrl, auth
+> header, X-Request-Id). `core` is "plumbing only" but is consumed as `workspace:*` source
+> per product, so name-importing the sibling client is acceptable here. The longer-term
+> injection shape (passing the client into `core` rather than importing it) is **not pinned
+> by PLAN.md** and is **deferred** — flagged here so a future shared-`core` refactor knows
+> the seam exists; it is out of Phase 4 scope.
 
 **Commands**
 ```bash
@@ -499,11 +531,12 @@ lives in `app/.env.development`, written by Phase 2/3 and re-ported by the gener
 // Renders cursor-paginated /v1/items through the generated useInfiniteQuery hook.
 // Loading / error / empty states; cache-persisted (the persister is configured in
 // packages/core query.ts from Phase 2, so a reload paints cached pages instantly).
-import { FlashList } from "@shopify/flash-list";
-import { ActivityIndicator, RefreshControl, View } from "react-native";
+import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native";
 import { Text } from "@platform/ui";
-// Generated TanStack Query plugin export. EXACT name depends on the route operationId
-// from Phase 3 (e.g. listItemsInfiniteOptions). ⚠️ OPEN / TO CONFIRM the generated name.
+// Generated TanStack Query plugin export. The plugin's default infinite-options name
+// template is `{{name}}InfiniteOptions` (camelCase), so an operation `listItems`
+// (FastAPI operationId `list_items`) emits exactly `listItemsInfiniteOptions`. The name
+// thus follows the Phase 3 operationId, not the plugin behavior — confirm the operationId.
 import { listItemsInfiniteOptions } from "@platform/template-api-client";
 import { useInfiniteQuery } from "@tanstack/react-query";
 
@@ -559,10 +592,9 @@ export function HomeScreen() {
   }
 
   return (
-    <FlashList
+    <FlatList
       data={items}
       keyExtractor={(item) => item.id}
-      estimatedItemSize={64}
       contentContainerClassName="bg-background"
       renderItem={({ item }) => (
         <View className="border-b border-border p-4">
@@ -582,18 +614,28 @@ export function HomeScreen() {
     />
   );
 }
+// Note: `FlatList` is RN's built-in virtualized list (no extra dependency). For very long
+// lists a product may later swap in `@shopify/flash-list` (`estimatedItemSize` prop, same
+// data/render API) — see the ⚠️ REVIEW note above before adding the dependency.
 ```
 
-> **⚠️ OPEN / TO CONFIRM:**
-> - The generated hook/options name (`listItemsInfiniteOptions` here) follows from the
->   `/v1/items` operationId and the hey-api TanStack plugin's naming — read it from the
->   generated `src/` after Step 4.
-> - The response field names (`items`, `next_cursor`) and the `Item` field used as title
->   (`title`) come from Phase 3's `schemas/` — match them exactly.
-> - **FlashList vs FlatList:** PLAN.md's `features/home` tree says only "list screen via
->   generated API hooks." It does not pin `@shopify/flash-list`. If FlashList isn't an
->   accepted dependency, swap to RN's built-in `FlatList` (same props for the bits used
->   here). **⚠️ OPEN / TO CONFIRM.**
+> **Resolved & remaining flags:**
+> - **Generated hook name — confirmed.** `listItemsInfiniteOptions` is correct, verified
+>   against the plugin's default `{{name}}InfiniteOptions` camelCase template. The only thing
+>   to verify is the **operationId** (`list_items` → `listItems`) in Phase 3, not the plugin
+>   naming. The non-infinite helper would be `listItemsOptions`.
+> - **List component — use RN's built-in `FlatList`.** PLAN.md's `features/home` tree says
+>   only "list screen via generated API hooks" and does **not** pin `@shopify/flash-list`,
+>   which is not listed anywhere in the Decision Sheet's dependency set. To avoid introducing
+>   an unpinned dependency, this guide uses React Native's built-in `FlatList` (the props
+>   used here — `data`, `keyExtractor`, `renderItem`, `onEndReached`, `onEndReachedThreshold`,
+>   `ListFooterComponent`, `refreshControl` — are identical). If a product later adopts
+>   FlashList for long lists, swapping is mechanical. ⚠️ REVIEW: if the team standardizes on
+>   FlashList, pin it and swap the import.
+> - **⚠️ OPEN / TO CONFIRM — response field names.** `items`, `next_cursor`, the cursor
+>   **query parameter**, and the `Item` field used as title (`title`) come from Phase 3's
+>   `schemas/` — match them exactly (the screen should read the generated types, not
+>   hard-code names).
 
 **Commands**
 ```bash
@@ -665,10 +707,15 @@ into `packages/*` later without dragging routing concerns along.
   cacheable-with-no-key and a model change won't bust the cache — Verify #2 fails
   silently. This is the single most common typegen-pipeline footgun.
 
-- **Pin hey-api EXACT (pre-1.0).** Both `@hey-api/openapi-ts` and `@hey-api/client-fetch`
-  are pre-1.0; pin exact (no `^`/`~`). A patch bump can change generated output shape and
-  produce a spurious drift diff for everyone. This matches the broader "pin pre-1.0 tools
-  exactly" stance (also applied to `@rn-primitives/*`).
+- **Pin `@hey-api/openapi-ts` EXACT (pre-1.0) — and do NOT install `@hey-api/client-fetch`.**
+  `@hey-api/openapi-ts` (~0.98.x) is pre-1.0; pin it exact (no `^`/`~`) — a patch bump can
+  change generated output shape and produce a spurious drift diff for everyone. This matches
+  the broader "pin pre-1.0 tools exactly" stance (also applied to `@rn-primitives/*`). The
+  Fetch client is **bundled inside `@hey-api/openapi-ts` since 0.73.0**, so there is **no
+  separate `@hey-api/client-fetch` package to install or pin** — the standalone npm package
+  is deprecated. `@hey-api/client-fetch` appears **only** as a plugin identifier in
+  `openapi-ts.config.ts`; installing it as a dependency is the single most common mistake
+  migrating from older hey-api setups.
 
 - **Regenerate on every model change.** The recipe (api CLAUDE.md, ruling #10) is
   `model → service → schema → router → openapi → typegen → hook → screen`. The `openapi`
@@ -774,19 +821,29 @@ Suggested split on a `phase-4-typegen` branch:
 
 ## Open questions / deferred
 
-- **Exact pre-1.0 versions** of `@hey-api/openapi-ts` and `@hey-api/client-fetch` — pin
-  exact at install time. **⚠️ OPEN / TO CONFIRM.**
-- **Exact hey-api plugin identifier set & options** for the pinned version (the precise
-  strings for client-fetch / sdk / typescript / TanStack Query plugin and whether
-  `infiniteQueryOptions` + `getNextPageParam` are emitted automatically). **⚠️ OPEN / TO
-  CONFIRM** against generated output.
-- **Cursor contract field names** (`items`, `next_cursor`, the cursor query param) and the
-  `Item` DTO fields — defined by Phase 3's `schemas/`; match them. **⚠️ OPEN / TO CONFIRM.**
-- **FlashList vs FlatList** for the list — PLAN.md doesn't pin a list component; confirm
-  whether `@shopify/flash-list` is an accepted app dependency. **⚠️ OPEN / TO CONFIRM.**
-- **`core/api.ts` ↔ template-client coupling** — importing the template-specific client by
-  name into `packages/core` is fine for the template; the injection seam for a future
-  shared `core` is unspecified. **⚠️ OPEN / TO CONFIRM.**
+- **Exact `@hey-api/openapi-ts` version** — `0.98.2` is current latest (pre-1.0); pin exact,
+  refreshing to the resolved latest at install time. `@hey-api/client-fetch` is **NOT
+  installed** (bundled into openapi-ts since 0.73.0; deprecated standalone package) — it is a
+  plugin string only. **Resolved.**
+- **hey-api plugin identifier set & options** — confirmed current: client
+  `@hey-api/client-fetch`, types `@hey-api/typescript`, SDK `@hey-api/sdk`, schemas
+  (optional) `@hey-api/schemas`, TanStack `@tanstack/react-query`. `queryOptions` and
+  `infiniteQueryOptions` are emitted **by default** (`enabled: true`). The TanStack plugin is
+  the officially recommended, production-used option but ships under the pre-1.0 openapi-ts
+  umbrella — it is **not** separately "GA"; treat it as "stable, recommended, pre-1.0 — pin
+  exact." **Resolved.**
+- **Cursor contract field names** (`items`, `next_cursor`, and the cursor **query param** —
+  the generated `getNextPageParam` keys off the query param, not just the response field) and
+  the `Item` DTO fields — defined by Phase 3's `schemas/`; match them. **⚠️ OPEN / TO
+  CONFIRM** (in-domain unverifiable — owned by Phase 3).
+- **List component** — uses RN's built-in `FlatList`; PLAN.md does not pin
+  `@shopify/flash-list` and it is absent from the Decision Sheet dependency set, so no new
+  dependency is introduced. Swap to FlashList only if a product standardizes on it. **Resolved
+  (FlatList).**
+- **`core/api.ts` ↔ template-client coupling** — name-importing the template-specific client
+  into `packages/core` is the correct Phase 4 wiring (matches PLAN.md's `core` tree). The
+  injection seam for a future truly-shared `core` is unspecified by PLAN.md and **deferred**
+  (out of Phase 4 scope).
 - **Single vs duplicated `api-client#build` declaration** (package-level `turbo.json`
   alone vs also in root) — standardize on one. **⚠️ OPEN / TO CONFIRM.**
 - **Query persistence tuning** (`maxAge`, `gcTime`, dehydrate filters) lives in Phase 2's
