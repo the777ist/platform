@@ -79,9 +79,10 @@ Concrete, testable:
    readable `index.json` (used by VR).
 7. Each primitive has a colocated `*.figma.tsx` Code Connect map (skeleton acceptable with
    a placeholder `figma.connect` URL until the real file key exists).
-8. `node scripts/figma-tokens.mjs` regenerates `packages/ui/src/lib/theme.ts` from the
-   configured source (Tokens Studio JSON fixture by default) without error and idempotently
-   (`git diff --exit-code` clean on a second run).
+8. `node scripts/figma-tokens.mjs` regenerates **both** `packages/ui/src/lib/theme.ts`
+   (native `vars()`) **and** `packages/ui/src/global.css` (`:root`/`.dark`) from the
+   configured source (Tokens Studio DTCG fixture by default) via Style Dictionary v5, without
+   error and idempotently (`git diff --exit-code` clean on a second run).
 9. `figma.config.json`, `packages/ui/FIGMA.md`, and the three commands
    (`/add-component`, `/sync-tokens`, `/bootstrap-design-system`) exist under
    `packages/ui/.claude/commands/`.
@@ -889,38 +890,60 @@ two schemas would otherwise collide on one filename:
 }
 ```
 
-`scripts/figma-tokens.mjs` (plain Node, zero deps beyond Style Dictionary; **source
-abstracted behind one interface** — Tokens Studio JSON default, REST on Enterprise):
+`scripts/figma-tokens.mjs` (ESM Node; **actually drives Style Dictionary v5** — a custom
+HSL-channel transform + the stock `css/variables` format for web `global.css` + a JS format
+for native `theme.ts`, both from one resolved token tree; **source abstracted behind one
+interface** — Tokens Studio JSON default, REST on Enterprise):
 
 ```js
 #!/usr/bin/env node
-// Figma Variables -> Style Dictionary -> CSS-var theme.ts (one-way, committed).
-// Source abstracted: default = Tokens Studio JSON export (tier-independent, CI-runnable,
-// reviewable diff); set source:"rest" + FIGMA_TOKEN for the Enterprise Variables REST API.
+// Figma Variables -> Style Dictionary v5 -> co-generate web global.css (:root/.dark) AND
+// native theme.ts (vars()) from ONE resolved token tree (one-way, committed).
+// SD v5 is ESM-only + DTCG-default — this script is .mjs to match.
+// Source abstracted: default = Tokens Studio JSON export, DTCG format (tier-independent,
+// CI-runnable, reviewable diff); set source:"rest" + FIGMA_TOKEN for the Enterprise-only
+// Variables REST API. NOTE: this script reads tokens.config.json (NOT figma.config.json —
+// that file belongs to the Code Connect CLI, step (d)).
 import fs from "node:fs";
-import path from "node:path";
+import StyleDictionary from "style-dictionary";
 
-const cfg = JSON.parse(fs.readFileSync("figma.config.json", "utf8"));
+const cfg = JSON.parse(fs.readFileSync("tokens.config.json", "utf8"));
 
 async function loadSource() {
   if (cfg.source === "rest") {
-    // Enterprise-only: GET /v1/files/:key/variables/local
+    // Enterprise-only: GET /v1/files/:key/variables/local (needs FIGMA_TOKEN w/
+    // file_variables:read + file_content:read). Dereference VARIABLE_ALIAS references and
+    // emit a DTCG token tree keyed by mode (cfg.modes maps brand -> modeId).
     const res = await fetch(
       `https://api.figma.com/v1/files/${cfg.fileKey}/variables/local`,
       { headers: { "X-Figma-Token": process.env.FIGMA_TOKEN } },
     );
     if (!res.ok) throw new Error(`Figma REST ${res.status}`);
-    return normalizeRest(await res.json());
+    return toDtcg(normalizeRest(await res.json()));
   }
-  // default: Tokens Studio JSON (committed fixture)
-  return normalizeTokensStudio(
-    JSON.parse(fs.readFileSync(cfg.tokensFile, "utf8")),
-  );
+  // default: Tokens Studio DTCG JSON (committed fixture); @tokens-studio/sd-transforms (or
+  // SD's DTCG parser) resolves token-set layering + {alias} references.
+  return toDtcg(JSON.parse(fs.readFileSync(cfg.tokensFile, "utf8")));
 }
 
-// Each adapter returns: { [mode]: { [cssVar]: "H S% L%" } } for the semantic collection.
-function normalizeTokensStudio(json) { /* map Tokens Studio sets -> {light,dark,...} */ }
 function normalizeRest(json) { /* resolve semantic collection modes via cfg.modes */ }
+function toDtcg(json) { /* -> DTCG token tree: { semantic: { background: { $value, $type:"color" }, ... } } per mode */ }
+
+// Custom transform: emit space-separated HSL CHANNELS ("240 6% 10%") so the Tailwind preset's
+// hsl(var(--x)) wrapper resolves. SD's stock color transforms output hex/rgb — not channels —
+// so this transform is REQUIRED for this stack.
+StyleDictionary.registerTransform({
+  name: "color/hsl-channels",
+  type: "value",
+  filter: (t) => t.$type === "color" || t.type === "color",
+  transform: (t) => toHslChannels(t.$value ?? t.value), // "H S% L%"
+});
+
+// JS format: emit the native theme.ts (NativeWind vars() objects, light+dark).
+StyleDictionary.registerFormat({
+  name: "javascript/nativewind-theme",
+  format: ({ dictionary }) => emitThemeTs(groupByMode(dictionary.allTokens)),
+});
 
 function emitThemeTs(modesByName) {
   const order = ["light", "dark"]; // resolved per product brand mode pair
@@ -932,19 +955,47 @@ function emitThemeTs(modesByName) {
     `export type Theme = keyof typeof themes;\n`;
 }
 
-const semantic = await loadSource();
-// Style Dictionary resolves primitive references -> final HSL triples here.
-const out = path.resolve(cfg.outputs["@platform/ui"]);
-fs.writeFileSync(out, emitThemeTs(semantic));
-// TODO: also regenerate the matching :root/.dark blocks in packages/ui/src/global.css.
-console.log(`wrote ${out}`);
+const tokens = await loadSource();
+const sd = new StyleDictionary({
+  tokens,
+  platforms: {
+    // WEB: stock css/variables format -> :root (light) + .dark (dark) blocks in global.css.
+    web: {
+      transforms: ["color/hsl-channels"],
+      buildPath: "packages/ui/src/",
+      files: [{ destination: "global.css", format: "css/variables", options: { selector: ":root" } }],
+    },
+    // NATIVE: custom JS format -> theme.ts vars() objects.
+    native: {
+      transforms: ["color/hsl-channels"],
+      buildPath: "packages/ui/src/lib/",
+      files: [{ destination: "theme.ts", format: "javascript/nativewind-theme" }],
+    },
+  },
+});
+await sd.buildAllPlatforms(); // writes cfg.outputs.globalCss + cfg.outputs.themeTs
+console.log("regenerated global.css (web) + theme.ts (native)");
 ```
 
-`packages/ui/figma/tokens.json` — the committed Tokens Studio fixture (the default source
-so the pipeline runs in CI with **no** Figma file): a minimal JSON with `light`/`dark` sets
-holding the same semantic names as `theme.ts`.
+> **Style Dictionary v5 is actually used** (not just referenced in a comment) — the script
+> registers a **custom value transform** (`color/hsl-channels`) because SD's stock color
+> transforms emit hex/rgb, but this stack needs space-separated HSL channels to feed the
+> `hsl(var(--x))` Tailwind preset; then it co-generates BOTH targets from one resolved token
+> tree: the stock **`css/variables`** format writes the web `:root`/`.dark` blocks in
+> `global.css`, and a small **JS format** writes the native `theme.ts` `vars()` objects. This
+> resolves the prior "does it also rewrite global.css?" TODO — **yes, both web and native are
+> co-generated**, matching the PLAN's "both derive from the same modes". SD v5 is **ESM-only
+> + DTCG-default**, which is why the script is `.mjs` and the fixture is DTCG.
 
-Add `style-dictionary` (exact pin) as a root devDependency.
+`packages/ui/figma/tokens.json` — the committed Tokens Studio fixture **in DTCG format** (the
+default source so the pipeline runs in CI with **no** Figma file): `light`/`dark` token sets
+holding the same semantic names as `theme.ts`, with `$value`/`$type` per the DTCG spec.
+Tokens Studio's native JSON is NOT plain Style-Dictionary format — export in **DTCG** and let
+`@tokens-studio/sd-transforms` (or SD's DTCG parser) resolve `{alias}` references + set
+layering.
+
+Add `style-dictionary` (exact pin, **v5 / 5.4.x**) — and, if consuming Tokens Studio exports,
+`@tokens-studio/sd-transforms` — as root devDependencies.
 
 **Commands**
 
@@ -1623,13 +1674,14 @@ test -f packages/ui/storybook-static/index.json && echo "VR index OK"
 ls packages/ui/src/components/ui/*.figma.tsx                 # 4 files
 pnpm dlx @figma/code-connect parse                           # parses (placeholder URLs OK)
 
-# [8] token pipeline idempotent
+# [8] token pipeline idempotent (co-generates theme.ts + global.css via Style Dictionary v5)
 node scripts/figma-tokens.mjs
-node scripts/figma-tokens.mjs && git diff --exit-code packages/ui/src/lib/theme.ts
+node scripts/figma-tokens.mjs && git diff --exit-code packages/ui/src/lib/theme.ts packages/ui/src/global.css
 
 # [9] docs/commands present
 ls packages/ui/FIGMA.md packages/ui/.claude/commands/        # FIGMA.md + 3 command files
-test -f figma.config.json && echo "figma.config OK"
+test -f figma.config.json && echo "figma.config (Code Connect) OK"   # root, Code Connect CLI
+test -f tokens.config.json && echo "tokens.config (token pipeline) OK"   # root, distinct schema
 
 # [10] core exports
 pnpm --filter @platform/core exec tsc --noEmit
@@ -1684,23 +1736,34 @@ the repo's git conventions (branch off the default branch first).
   unworkable with NativeWind v4, fall back to **SDK 54** (NOT 55 — 55 is also New-Arch-only
   and not the NativeWind-validated SDK; 54 is the last officially-validated SDK with a
   legacy-arch escape hatch) and record the pin. (PLAN.md mandates settling this in Phase 2.)
-- **⚠️ Exact version pins** for `@rn-primitives/*`, `nativewind`, `class-variance-authority`,
-  Storybook/Vite, TanStack Query, `style-dictionary`, `@figma/code-connect` — freeze to
-  what the CLI/`expo install` emit at execution time; PLAN.md names the packages, not the
-  numbers.
-- **⚠️ Storybook dev port** — PLAN.md fixes 8081 only for the app; `6006` chosen here to
-  avoid a clash. Confirm.
+- **⚠️ Exact version pins** — freeze to what the CLI/`expo install` emit at execution time;
+  PLAN.md names the packages, not the numbers. Current (June 2026) reference values resolved
+  by the accuracy review: `nativewind 4.2.5` (+ pin `react-native-css-interop` exact),
+  `@rn-primitives/* 1.4.0` (slot/types/portal), `class-variance-authority 0.7.1`, `clsx 2.1.1`,
+  `tailwind-merge 2.6.x` (Tailwind-v3 line — do NOT use 3.x, which assumes Tailwind v4),
+  `tailwindcss@^3.4` (NOT v4), Storybook + `@storybook/react-native-web-vite` `9.1.x`,
+  `@tanstack/* 5.101.x`, `zustand 5.0.x`, `@react-native-async-storage/async-storage 3.1.x`,
+  `style-dictionary 5.4.x`, `@figma/code-connect 1.4.8`, `@react-native-reusables/cli 0.7.1`,
+  `jest-expo 56.0.4`, `@testing-library/react-native 14.x`.
+- **✅ RESOLVED — Storybook dev port** — `6006` is Storybook's default and does not clash
+  with Expo's fixed `8081`. Keep 6006. (Storybook docs.)
 - **⚠️ Real Figma file key + mode IDs** — `figma.config.json` ships `TODO-*` placeholders;
   filled during `/bootstrap-design-system` against the real handed-over library. Until then
   the committed Tokens Studio fixture is the source (DoD #8).
-- **⚠️ `theme.ts` global.css co-generation** — `figma-tokens.mjs` regenerates `theme.ts`
-  (native `vars()`); whether it ALSO rewrites the web `:root`/`.dark` blocks in `global.css`
-  in the same pass is left as a TODO in the script. PLAN.md says both web and native derive
-  from the same modes; confirm the exact write target.
+- **✅ RESOLVED — `theme.ts` + global.css co-generation.** `figma-tokens.mjs` now
+  co-generates **both** via Style Dictionary v5: the stock `css/variables` format writes the
+  web `:root`/`.dark` blocks in `global.css` and a JS format writes the native `theme.ts`
+  `vars()` objects, both from one resolved token tree (a custom `color/hsl-channels` transform
+  emits the space-separated HSL channels the `hsl(var(--x))` preset needs). Matches PLAN.md's
+  "both web and native derive from the same modes". (Style Dictionary docs / SD v5 migration.)
 - **VR baseline tooling wiring** (`/add-component` step 6 + nightly `e2e-nightly.yml`) — the
   Playwright-over-`storybook-static/index.json` runner is defined in Testing strategy but
   fully wired into nightly CI in **Phase 8**; Phase 2 only needs the static build + local
-  baseline capability.
+  baseline capability. The VR sweep visits `iframe.html?id=<story>&globals=theme:<t>` (the
+  `globals=key:value` URL form — a bare `theme=dark` query does NOT work). Since the locked
+  workbench feature is the **brand switcher**, the matrix should sweep `brand` too
+  (`globals=theme:dark,brand:demo`), not just `{light,dark}` — recommend baselining the `demo`
+  brand mode as well (a product decision finalized with the Phase 8 wiring).
 - **`packages/core` later modules** (`supabase.ts`, `auth.ts`, `realtime.ts`,
   `notifications.ts`, `storage.ts`, `api.ts`, `sentry.ts`) — deferred to Phases 6/8 per the
   phase table; intentionally NOT built here.

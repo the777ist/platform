@@ -36,8 +36,9 @@ surface** (README + CLAUDE.md + `.claude/commands/` at root, `packages/ui`, and 
 
 Phase 8 is the capstone — it assumes **Phases 1–7 are complete** and both products exist:
 
-1. **Phase 1** — root tooling: `mise.toml` (Node 22 / pnpm 10 / Python 3.13 / uv),
-   `.npmrc` (`node-linker=hoisted`), `pnpm-workspace.yaml`, `turbo.json` (2.9 `tasks`),
+1. **Phase 1** — root tooling: `mise.toml` (Node 24 LTS / pnpm 11 / Python 3.13 / uv),
+   `pnpm-workspace.yaml` (`nodeLinker: hoisted` — pnpm 11 relocates this out of `.npmrc`),
+   `.npmrc` (auth/registry only), `turbo.json` (2.9 `tasks`),
    `tsconfig.base.json`, `lefthook.yml`, `packages/config`. `turbo run lint` is a clean
    no-op.
 2. **Phase 2** — `packages/ui` (owned react-native-reusables primitives, theme infra,
@@ -666,11 +667,18 @@ fly machine run \
   registry.fly.io/example-template-api-stg:latest \
   python -m template_api.tasks prune-push-tokens
 ```
+> `fly machine run --schedule` takes **interval keywords ONLY** —
+> `hourly` / `daily` / `weekly` / `monthly` (NOT cron expressions) — and runs are **"fuzzy"**
+> (approximate, not guaranteed at an exact minute). `daily` is fine for prune-stale-tokens. If
+> a product ever needs precise cron (e.g. `0 4 * * *`), use Fly's **Cron Manager** (per-job
+> isolated machines) or **Supercronic** per Fly's task-scheduling blueprint — `--schedule`
+> alone won't do it. The one-off Verify run (no `--schedule`) is a correct one-shot.
 
 **Why** — PLAN.md Background/scheduled jobs: "Fly scheduled machines running a lightweight
 `tasks` module in the api (no queue infra); template ships one example (prune stale push
 tokens)." The task module reuses the API's `engine` + structlog config so logs are JSON and
-land in the same place. `--schedule` is Fly's native cron-like scheduler.
+land in the same place. `--schedule` is Fly's native (keyword-based, fuzzy) scheduler — exact
+cron needs Cron Manager / Supercronic.
 
 ---
 
@@ -990,9 +998,11 @@ jobs:
         run: eas build --non-interactive --profile "${{ github.event.inputs.profile || 'production' }}"
 ```
 > **eas-cli workspace-detection workaround (gotcha):** the build relies on the committed
-> `.npmrc` (`node-linker=hoisted`) AND a `"packageManager": "pnpm@10.x"` field in the **root**
-> `package.json` — without both, `eas build` misdetects the package manager in a pnpm
-> workspace. RESOLVED (tag→product parse): the `tag` step derives `<product>` from the
+> hoisted node-linker (`nodeLinker: hoisted` in `pnpm-workspace.yaml` — pnpm 11 relocates this
+> out of `.npmrc`; the `.npmrc` form is still honoured but the canonical home is the workspace
+> yaml) AND a `"packageManager": "pnpm@11.x"` field in the **root** `package.json` (match the
+> exact pnpm version mise pins) — without both, `eas build` misdetects the package manager in
+> a pnpm workspace. RESOLVED (tag→product parse): the `tag` step derives `<product>` from the
 > `<product>-app-v*` tag via bash parameter expansion `${GITHUB_REF_NAME%%-app-v*}` and
 > exposes it as `steps.tag.outputs.product`; the `working-directory` then maps the literal
 > `template` token to the on-disk `_template` dir (same expression the matrix workflows use).
@@ -1134,21 +1144,36 @@ jobs:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v4
       - run: pnpm install --frozen-lockfile
+      - name: Resolve product token (from the desktop tag)
+        id: tag
+        run: echo "product=${GITHUB_REF_NAME%%-desktop-v*}" >> "$GITHUB_OUTPUT"
       - name: Build the web bundle the desktop wraps
         run: pnpm turbo run export:web --filter=*-app
-      - name: electron-builder (publish to <product>-desktop-releases)
-        working-directory: products/PARSE-FROM-TAG/desktop
+      # macOS: sign+publish only when certs are present; empty placeholders → build-but-don't-publish.
+      - name: electron-builder — signed publish (mac when certs exist; win/linux always)
+        if: runner.os != 'macOS' || env.MAC_CSC_LINK != ''
+        working-directory: products/${{ steps.tag.outputs.product == 'template' && '_template' || steps.tag.outputs.product }}/desktop
         env:
           GH_TOKEN: ${{ secrets.DESKTOP_RELEASES_TOKEN }}   # PLACEHOLDER (token for <org>/<product>-desktop-releases)
-          # macOS signing/notarization gated until certs exist — see gotcha:
-          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}             # PLACEHOLDER (empty until certs exist)
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}          # PLACEHOLDER (empty until certs exist)
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}              # electron-builder reads CSC_LINK
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
         run: pnpm electron-builder --publish always
+      - name: electron-builder — macOS build-only (no certs yet)
+        if: runner.os == 'macOS' && env.MAC_CSC_LINK == ''
+        working-directory: products/${{ steps.tag.outputs.product == 'template' && '_template' || steps.tag.outputs.product }}/desktop
+        env:
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+        run: pnpm electron-builder --mac --publish never   # builds unsigned; does NOT publish the mac artifact
 ```
-> The tag must match `desktop/package.json` `version`. macOS publishing only succeeds once
-> signing certs exist; until then either keep `macos-latest` off the matrix or let
-> electron-builder build-but-not-sign (gotcha below). `PARSE-FROM-TAG` = derive `<product>`
-> from `${GITHUB_REF_NAME%%-desktop-v*}` in a step (placeholder).
+> The tag must match `desktop/package.json` `version`. RESOLVED (tag→product parse): the `tag`
+> step derives `<product>` from `${GITHUB_REF_NAME%%-desktop-v*}` (bash parameter expansion),
+> mapping the literal `template` token to the on-disk `_template` dir. RESOLVED (macOS
+> signing): the publish step is gated `if: runner.os != 'macOS' || env.MAC_CSC_LINK != ''` so
+> win/linux always publish and macOS only publishes once `MAC_CSC_LINK`/`MAC_CSC_KEY_PASSWORD`
+> certs exist; until then the macOS leg runs a `--publish never` build-only step (unsigned, no
+> publish). Alternatively drop `macos-latest` from the matrix entirely. macOS auto-update
+> requires a signed AND notarized app, so mac OTA stays inert until certs land.
 
 **Commands** — `git tag template-desktop-v1.0.0 && git push origin template-desktop-v1.0.0`.
 
@@ -1345,16 +1370,20 @@ product-scoped and load from the session's project root.
   turbo-ignore` as the manual "ignored build step" is OPTIONAL now, and if invoked bare must
   pass `--fallback=HEAD^` to avoid the new-branch always-deploy gotcha.
 - **macOS desktop signing gating.** `electron-builder --publish always` only signs/notarizes
-  macOS once certs exist. Until then, either drop `macos-latest` from the matrix or build
-  unsigned (no `--publish` of the mac artifact). Auto-update on macOS requires
-  signing/notarization (PLAN.md Electron essentials).
+  macOS once certs exist. The workflow gates the publish step `if: runner.os != 'macOS' ||
+  env.MAC_CSC_LINK != ''` (win/linux always publish; macOS publishes only when the cert
+  secret is set) and falls back to an unsigned `--mac --publish never` build-only step when
+  certs are absent. Alternatively drop `macos-latest` from the matrix. Auto-update on macOS
+  requires signing AND notarization (PLAN.md Electron essentials).
 - **Request-id middleware ordering.** Register `RequestIdMiddleware` LAST (`add_middleware`
   adds outermost-last) so it wraps the security middleware and error handlers — otherwise
   error responses won't carry the `X-Request-Id` header and error logs lose the id.
 - **All repo/org values are placeholders.** `example`, `com.example.*`, `TODO-EAS-PROJECT-ID`,
   `<org>/<product>-desktop-releases`, every `secrets.*`, and Fly app names
   (`example-template-api-stg|prod`) are clearly-marked swap-points for real-infra day. A
-  `git grep -inE 'example|TODO|PARSE-FROM-TAG'` should surface exactly these and nothing else.
+  `git grep -inE 'example|TODO'` should surface exactly these and nothing else. (The former
+  `PARSE-FROM-TAG` placeholders in `eas-build.yml`/`electron-release.yml` are now resolved to
+  real `${GITHUB_REF_NAME%%-<surface>-v*}` parse steps.)
 
 ---
 
@@ -1442,12 +1471,16 @@ commits):
   on the token (base model or the table).
 - ⚠️ **OPEN / TO CONFIRM — E2E process orchestration:** the exact background-API start +
   teardown glue in `global-setup.ts`/`globalTeardown` is not pinned by PLAN.md.
-- ⚠️ **OPEN / TO CONFIRM — `--affected` base ref in CI:** default Turbo base detection vs an
-  explicit `TURBO_SCM_BASE`; revisit if CI mis-scopes the affected set.
-- ⚠️ **OPEN / TO CONFIRM — tag→product parsing:** `eas-build.yml` and `electron-release.yml`
-  need a small step to derive `<product>` from the tag (`${GITHUB_REF_NAME%%-<surface>-v*}`),
-  shown as `PARSE-FROM-TAG` placeholder.
-- ⚠️ **OPEN / TO CONFIRM — macOS signing:** desktop mac publish/auto-update gated until
-  certs exist; matrix may drop `macos-latest` or build unsigned in the interim.
+- **RESOLVED — `--affected` base ref in CI:** with `fetch-depth: 0` Turbo auto-detects the
+  base (PR base ref / previous push commit); `ci.yml` also sets `TURBO_SCM_BASE`/`TURBO_SCM_HEAD`
+  explicitly to be robust against squash-merge histories. Revisit only if CI mis-scopes.
+- **RESOLVED — tag→product parsing:** `eas-build.yml` and `electron-release.yml` now derive
+  `<product>` from the tag via a step (`echo "product=${GITHUB_REF_NAME%%-<surface>-v*}" >>
+  "$GITHUB_OUTPUT"`) and map the literal `template` token to the `_template` dir — no more
+  `PARSE-FROM-TAG` placeholder.
+- **RESOLVED — macOS signing:** `electron-release.yml` gates the signed publish step with
+  `if: runner.os != 'macOS' || env.MAC_CSC_LINK != ''` (win/linux always publish; macOS only
+  when certs exist) and runs an unsigned `--publish never` build-only step otherwise. mac
+  auto-update stays inert until the app is signed AND notarized.
 - **Deferred (PLAN.md):** Maestro CI via EAS Workflows (local-only for now); Chromatic
   (declined — self-hosted Playwright VR); ADR-vs-ARCHITECTURE.md decision-record format.
