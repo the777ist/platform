@@ -25,30 +25,30 @@ stamp one `demo` product to prove the generator.
 
 ## Decision Sheet (locked with user)
 
-- **Monorepo:** pnpm workspaces + Turborepo 2.9 (`--affected`); mise pins Node 22 / pnpm 10 / Python 3.13 / uv
-- **Frontend:** Expo SDK 56 (RN 0.85) + react-native-web, managed + EAS; **NativeWind v4** (v5 is pre-release — do NOT use); Expo Router; TanStack Query + Zustand; per-platform overrides via `.ios/.android/.web/.native` extensions
-- **Design system:** **react-native-reusables** adopted INTO `packages/ui` (shadcn model: components are copied in and OWNED, not a black-box dep); cva variants + `className` escape hatch; **semantic CSS-variable tokens** (`--background`, `--primary`, …) with **light+dark from day 1** (runtime-switchable); per-product branding = each product overrides token VALUES, never component code
+- **Monorepo:** pnpm workspaces + Turborepo 2.9 (`--affected`); mise pins **Node 24 LTS** / **pnpm 11** / Python 3.13 / uv. **pnpm 11 config note:** settings relocate out of `.npmrc` into `pnpm-workspace.yaml` as camelCase keys (`nodeLinker: hoisted`, `preferFrozenLockfile: true`); `.npmrc` is auth/registry-only; `only-built-dependencies` is removed → use the `allowBuilds` map (pnpm 11 requires Node ≥ 22.13, satisfied by 24)
+- **Frontend:** Expo SDK 56 (RN 0.85, React 19.2, New Arch mandatory, Hermes v1) + react-native-web, managed + EAS; **NativeWind v4** (v5 is pre-release — do NOT use) on **Tailwind CSS v3** (NOT v4 — v4's CSS-first config belongs to NativeWind v5); Expo Router; **TanStack Query v5 + Zustand v5**; per-platform overrides via `.ios/.android/.web/.native` extensions. **NativeWind-v4 ↔ SDK 56 is unverified by an official pairing (last on-record official pairing is SDK 54); the safe-harbor fallback is SDK 54, NOT 55.** **SDK 56 routes global `fetch` through `expo/fetch`** (affects the generated client transport + Sentry network breadcrumbs; escape hatch `EXPO_PUBLIC_USE_RN_FETCH=1`). **EAS Update requires `updates.url` (`https://u.expo.dev/<projectId>`) + a `runtimeVersion` policy in `app.config.ts`** (projectId alone won't deliver OTA)
+- **Design system:** **react-native-reusables** (now `founded-labs/react-native-reusables`; run the CLI on the **NativeWind** path, NOT Uniwind/CSS-first) adopted INTO `packages/ui` (shadcn model: components are copied in and OWNED, not a black-box dep); cva variants + `className` escape hatch; **semantic CSS-variable tokens** (`--background`, `--primary`, …) with **light+dark from day 1** (runtime-switchable); per-product branding = each product overrides token VALUES, never component code. `@rn-primitives/*` are now at **1.4.x** (NOT pre-1.0) — still pinned exact, but the rationale is **version-coupling to react-native-reusables**, not pre-1.0 instability
 - **Code sharing:** `packages/core` = plumbing only (supabase client factory, auth session store + route guards, query client **with cache persistence** — AsyncStorage native / localStorage web —, env, Sentry init); features are **product-local** (`app/features/<feature>/`, route files stay thin one-liners); **promote to `packages/*` on 2nd use** (documented convention)
 - **Template lifecycle:** stamped products are **snapshots** — divergence accepted, template kept thin, reusables pushed down into `packages/*`; shared packages **co-evolve** (`workspace:*`, breaking change = fix all consumers in same PR, CI `--affected` enforces); `_template` app is a **rich starter**: auth screens (login/signup on core plumbing), API-backed list screen, settings with theme/dark toggle, tab navigation
 - **Desktop:** Electron bundling the exported Expo web build; electron-builder + electron-updater (GitHub Releases)
 - **Backend (per product):** FastAPI (Pydantic v2), uv + Ruff, SQLModel + Alembic, Dockerized → Fly.io (staging + production apps)
 - **Topology (hybrid):** core data via FastAPI → Supabase Postgres (pooler 6543); Supabase Auth (FastAPI verifies JWTs); `supabase-js` on frontend ONLY for auth/Realtime/Storage uploads
-- **Contracts:** FastAPI OpenAPI → `@hey-api/openapi-ts` (pinned exact, pre-1.0) + TanStack Query plugin; generated client committed per product
+- **Contracts:** FastAPI OpenAPI → `@hey-api/openapi-ts` (pinned exact, pre-1.0; ~0.98.x) + TanStack Query plugin (`@tanstack/react-query`); generated client committed per product. **Do NOT install `@hey-api/client-fetch` as a dependency** — since openapi-ts 0.73 the fetch client is bundled inside `@hey-api/openapi-ts`; `@hey-api/client-fetch` is valid ONLY as a **plugin identifier** in the `plugins` array. Client configured via `setConfig({ baseUrl })` + `interceptors.request.use(...)`
 - **Hosting:** web → Vercel (one project/product, turbo-ignore); per-env separate Supabase projects; local dev via Supabase CLI stack
 - **Quality:** ESLint flat config + Prettier; Ruff; **pyright strict** + Pydantic strict mode (Python); **single Jest runner** (jest-expo preset) + RNTL for ALL JS tests; Playwright (web E2E, **nightly CI**); Maestro (mobile E2E, **local-only initially**); pytest + httpx against **real Postgres**; typegen drift check; GitHub Actions (affected-only) — full inventory in “Testing strategy”
-- **Cross-cutting:** Sentry (`@sentry/react-native` — NOT deprecated `sentry-expo`), Expo Push, Supabase Storage/CDN
+- **Cross-cutting:** Sentry (`@sentry/react-native` — NOT deprecated `sentry-expo`; the **Expo config plugin is `@sentry/react-native/expo`** + Metro `getSentryExpoConfig` wiring for production source maps; pin a release that lists SDK 56 / RN 0.85 support), Expo Push, Supabase Storage/CDN
 - **Multi-product:** `products/<name>/` consuming shared `packages/{ui,core,config}`; `pnpm new-product <name>` generator; infra naming `<org>-<product>-<env>`
 - **Git hooks (Lefthook, repo-level + affected-scoped):** `lefthook.yml` at root. **pre-commit** (fast, staged files only): Prettier + ESLint on staged JS/TS, Ruff check+format on staged `.py` (scoped to the touched product's api). **pre-push:** `turbo run typecheck test build --affected` + (for affected APIs) pyright strict + pytest — i.e. ONLY the product(s) actually touched run (plus all dependents when `packages/*` change, which is the co-evolve guard moved before the push). Builds are turbo-cached so repeat pushes are fast
-- **Design system workbench:** **Storybook** (web, **`@storybook/react-native-web-vite`** — renders the SAME RN components through react-native-web that ship to every target; NOT on-device `@storybook/react-native`) as a SINGLE shared workbench in `packages/ui` — stories colocated (`*.stories.tsx`, one story per cva variant), run with `pnpm --filter @platform/ui storybook`. Global decorator imports `global.css` + wraps in the theme provider so `className`/NativeWind utilities resolve identically to the app; toolbar exposes a **light/dark toggle AND a brand switcher** (template ↔ demo) that swaps the active CSS-var set — so the workbench is also the live preview surface for the Figma token modes (below) and the demo-able "one component set, different brand" moment. Visual regression = Playwright screenshots of the static Storybook build (iterates the stories `index.json`, each story × {light,dark}), committed baselines, wired into the nightly E2E run. **Chromatic deliberately declined** — self-hosted Playwright keeps VR free + in-repo, consistent with the no-paid-SaaS stance elsewhere
+- **Design system workbench:** **Storybook 9 (9.1.x)** (web, **`@storybook/react-native-web-vite`** — renders the SAME RN components through react-native-web that ship to every target; NOT on-device `@storybook/react-native`; chose 9 over ESM-only 10 for the broadest RN-web-vite + NativeWind compat) as a SINGLE shared workbench in `packages/ui` — `.storybook/main.ts` sets `jsxImportSource: "nativewind"` and runs the Tailwind/NativeWind step on `global.css`; the framework already aliases `react-native`→`react-native-web` (no manual alias needed) — stories colocated (`*.stories.tsx`, one story per cva variant), run with `pnpm --filter @platform/ui storybook`. Global decorator imports `global.css` + wraps in the theme provider so `className`/NativeWind utilities resolve identically to the app; toolbar exposes a **light/dark toggle AND a brand switcher** (template ↔ demo) that swaps the active CSS-var set — so the workbench is also the live preview surface for the Figma token modes (below) and the demo-able "one component set, different brand" moment. Visual regression = Playwright screenshots of the static Storybook build (iterates the stories `index.json`, each story × {light,dark}), committed baselines, wired into the nightly E2E run. **Chromatic deliberately declined** — self-hosted Playwright keeps VR free + in-repo, consistent with the no-paid-SaaS stance elsewhere
 - **Component lifecycle (shadcn-ownership two-tier):** Tier-1 **owned primitives** in `packages/ui/src/components/ui/` (react-native-reusables components copied in via its CLI, then OWNED as source); Tier-2 **product compositions** start product-local in `app/features/<feature>/components/` and **promote down into `packages/ui` on 2nd use**. Primitives consume **semantic tokens ONLY** (`bg-primary`, never hex/brand values) so one set works on all targets + all products. Fixed **add-a-component recipe** (documented in `packages/ui` CLAUDE.md, enforced like the API's `model→service→schema→router`): `cli-add (or author) → pin @rn-primitives/* exact → write *.stories.tsx (one per variant) → write *.figma.tsx Code Connect map → export from index.ts → commit VR baseline (light+dark)`. Exposed as a `/add-component` command
-- **Figma bridge (design ↔ code, three planes):** (1) **Tokens** — a Figma Variables file is the source of truth for token VALUES: `primitives` collection (raw scale) + `semantic` collection (`--primary`, `--background`, `--muted`, …) whose **modes = light/dark × brand (template/demo)**, mapping 1:1 onto each product's `theme.ts`/`global.css`. A token-export script (`figma-tokens.mjs`, **source abstracted behind one interface — default Tokens Studio JSON export (tier-independent, CI-runnable, reviewable diff); Figma REST Variables API on Enterprise plans** — → Style Dictionary) regenerates the CSS-var values per product — a brand change in Figma rebrands a product with ZERO component edits, the design-side mirror of the locked theming mechanism. (2) **Components** — **Code Connect** `*.figma.tsx` files colocated next to each `packages/ui` component map Figma component props → cva variants, so `get_design_context` returns real `@platform/ui` components, not generic JSX. (3) **Screens** — with (1)+(2) wired, scaffolding a `features/<x>` screen from a Figma frame yields on-system code (owned components + semantic tokens, no one-off hex). Figma official MCP server drives all three. **Library is GLOBAL** (`packages/ui` + shared Foundations) — per-app differentiation is a brand *mode*, never a forked component library. Handover-day bootstrap is a documented, repeatable procedure (`/bootstrap-design-system`, see gotchas); designer conventions live in `packages/ui/FIGMA.md`
+- **Figma bridge (design ↔ code, three planes):** (1) **Tokens** — a Figma Variables file is the source of truth for token VALUES: `primitives` collection (raw scale) + `semantic` collection (`--primary`, `--background`, `--muted`, …) whose **modes = light/dark × brand (template/demo)**, mapping 1:1 onto each product's `theme.ts`/`global.css`. A token-export script (`figma-tokens.mjs`, **source abstracted behind one interface — default Tokens Studio JSON export (tier-independent, CI-runnable, reviewable diff); Figma REST Variables API on Enterprise plans** — → Style Dictionary) regenerates the CSS-var values per product — a brand change in Figma rebrands a product with ZERO component edits, the design-side mirror of the locked theming mechanism. Pin **Style Dictionary v5** (ESM-only, DTCG) and actually run it — a custom HSL-channel transform feeding `hsl(var(--x))` plus `css/variables` + a JS format co-generate `global.css` (web) AND native `theme.ts`. (2) **Components** — **Code Connect** `*.figma.tsx` files colocated next to each `packages/ui` component map Figma component props → cva variants, so `get_design_context` returns real `@platform/ui` components, not generic JSX. **Code Connect's CLI config MUST be `figma.config.json` at the repo ROOT** (next to `package.json`) — a `.figma/` subdir is NOT discovered; the token-pipeline config is named separately (`tokens.config.json`) to avoid a filename collision. The **Code Connect CLI reads `FIGMA_ACCESS_TOKEN`** (scopes `code_connect:write` + `file_content:read`) — distinct from the REST Variables pull's `FIGMA_TOKEN`/`X-Figma-Token` (which stays Enterprise-only). (3) **Screens** — with (1)+(2) wired, scaffolding a `features/<x>` screen from a Figma frame yields on-system code (owned components + semantic tokens, no one-off hex). Figma official MCP server drives all three. **Library is GLOBAL** (`packages/ui` + shared Foundations) — per-app differentiation is a brand *mode*, never a forked component library. Handover-day bootstrap is a documented, repeatable procedure (`/bootstrap-design-system`, see gotchas); designer conventions live in `packages/ui/FIGMA.md`
 - **API hardening (template defaults):** env-driven **CORS allowlist** (web origin + `app://` desktop + mobile), security-headers middleware, **slowapi** rate limiting (per-IP + per-user) — every product inherits sensible defaults
 - **Branding assets:** template ships placeholder icon/splash/favicon in `app/assets/brand/` from a single source; a regen script produces all sizes; the generator copies them and prints a "replace brand assets" checklist item
 - **Background/scheduled jobs:** **Fly scheduled machines** running a lightweight `tasks` module in the api (no queue infra); template ships one example (prune stale push tokens); heavier products can add a worker later
 - **Operational defaults:** per-product `seed.py` (local dev data) + **polyfactory** test factories; API versioning = additive-only within `/v1`, new prefix for breaking changes; template app ships a global **error boundary + offline/error UX**; root `pnpm bootstrap` (mise → install → supabase start) for one-command onboarding; `.env.example` documents every consumed var
 - **Env/config:** frontend config is publishable-only (`EXPO_PUBLIC_*`) in **committed per-env files** (`.env.development/.staging/.production` in each product's `app/`; gitignore allows these, still ignores `.env` + `.env.local`); EAS profiles / Vercel envs select them. Secrets live in **each platform's native store** (Fly secrets, EAS env, Vercel env, GH Actions) — setup codified in the generator checklist
 - **Releases:** trunk-based — `main` → staging auto (API deploy + web previews + **EAS Update OTA to staging channel**); tag `<product>-<surface>-v*` → that product's production (surface = api/app/desktop); mobile = **OTA for JS-only changes**, store builds only when native deps change
-- **DB conventions (template defaults):** **UUIDv7 PKs** (SQLModel base model); **RLS deny-all on every table** via the template's initial migration (the API's privileged role bypasses it; PostgREST/Realtime surface locked, opened per-table only where Realtime reads are wanted); schema changes ONLY via Alembic
+- **DB conventions (template defaults):** **UUIDv7 PKs** (SQLModel base model) — generated via the maintained **`uuid-utils`** (`from uuid_utils import uuid7`) or `uuid6`, pinned exact; NOT the unmaintained `uuid7` PyPI package, and stdlib `uuid.uuid7` only lands in Python 3.14. **`DELETE`/`UPDATE` go through `session.execute(delete(...))`, never `session.exec(...)`** (SQLModel `exec()` only types `select()` — `delete()`/`update()` break pyright strict and don't expose `.rowcount`); **RLS deny-all on every table** via the template's initial migration (the API's privileged role bypasses it; PostgREST/Realtime surface locked, opened per-table only where Realtime reads are wanted); schema changes ONLY via Alembic
 - **API conventions / architecture (template defaults):** strict **layered OOP** — `schemas/` (Pydantic v2 DTOs = the API contract) ↔ `routers/` (thin, depend on a service, map schema↔domain) → `services/` (class per aggregate, holds the session via `Depends`, owns business logic AND data access) → `models/` (SQLModel tables, persistence only). **No repository layer** — service classes query directly (kept deliberately lean for CRUD-thin products). **DTOs are always separate from DB models — ORM models are never serialized to the client.** **RFC 9457 problem+json** errors (typed into OpenAPI → typed client); **cursor pagination** (`useInfiniteQuery`-ready); template ships `hello` + `me` + `items` CRUD in this exact shape. **Type strictness: pyright strict mode + Pydantic strict mode, enforced in pre-push AND CI** (no untyped defs, no implicit `Any`). Pragmatic layering — no full-DDD entities/value-objects/events (revisit only if a product needs it)
 - **Realtime (canonical pattern): broadcast-only** — tables stay RLS-locked; after mutations FastAPI broadcasts invalidation events on per-product channels (service-role HTTP call); clients refetch through the API. `packages/core` ships the subscribe-and-invalidate helper (wires channel events → TanStack invalidation). No Postgres-Changes subscriptions, no RLS holes, schema stays private
 - **Push notifications: full loop templated** — token registration in the app (expo-notifications), `/v1/push-tokens` endpoint + table (per user+device), `send_push()` service calling Expo's Push API via httpx
@@ -68,15 +68,22 @@ stamp one `demo` product to prove the generator.
 3. **electron-updater collision:** GitHub provider resolves "latest release of the repo" —
    multiple products in one monorepo collide. Each product's desktop publishes to its own
    `<org>/<product>-desktop-releases` repo (placeholder until real org/repo exists).
-4. **Supabase pooler reality:** port 6543 is transaction-mode only (session mode removed
-   2025); asyncpg prepared statements break. Use **psycopg v3** + `prepare_threshold=None`
-   + `NullPool`. **Alembic migrates over direct port 5432** via separate
-   `DATABASE_MIGRATION_URL`, run as Fly release command.
-5. **JWT verify:** new Supabase projects use asymmetric keys → verify via JWKS
-   (`PyJWKClient`, ES256/RS256, cached); HS256 + `SUPABASE_JWT_SECRET` fallback because the
-   **local CLI stack still issues HS256**.
-6. **pnpm + Expo:** `.npmrc` with `node-linker=hoisted` (still the documented happy path);
-   explicit `watchFolders`/`nodeModulesPaths` in metro config; never set
+4. **Supabase pooler reality:** Supavisor **deprecated session mode on the 6543 pooler
+   (2025-02-28)** — 6543 is transaction-mode only (session mode and direct connections live
+   on **5432**); asyncpg prepared statements break on the transaction pooler. Use **psycopg
+   v3** + `prepare_threshold=None` + `NullPool`. **Alembic migrates over direct port 5432**
+   via separate `DATABASE_MIGRATION_URL`, run as Fly release command.
+5. **JWT verify:** new Supabase projects (created after 2025-10-01) **default to asymmetric
+   ES256** → verify via JWKS (`PyJWKClient`, ES256/RS256, cached) as the **primary path on
+   ALL environments**. The **local CLI now ALSO issues ES256 by default** (since CLI
+   v2.71.1) — so point `SUPABASE_URL` at `http://localhost:54321` and let `PyJWKClient` hit
+   the local `/auth/v1/.well-known/jwks.json` locally too. HS256 + `SUPABASE_JWT_SECRET` is
+   kept as a **genuine fallback only** (older CLI, self-hosted symmetric secret,
+   manually-minted test tokens) — it is NO LONGER the local happy path. (A backend that
+   trusts only HS256 locally will 401 every request on a current CLI — supabase/cli#4726.)
+6. **pnpm + Expo:** `nodeLinker: hoisted` in **`pnpm-workspace.yaml`** (pnpm 11 — this
+   setting moved out of `.npmrc`; the hoisted linker is still the documented Expo happy
+   path); explicit `watchFolders`/`nodeModulesPaths` in metro config; never set
    `disableHierarchicalLookups`.
 7. **Template is a working product:** `products/_template` matches workspace globs and
    builds in CI so it never rots. It uses the literal product name `template`; the
@@ -132,10 +139,11 @@ that's a new architecture decision, not a default.
 ├── README.md · CLAUDE.md          # monorepo runbook + agent context/conventions
 ├── .claude/commands/              # /new-product, /affected, /typegen <product>,
 │                                  #   /release <product> <surface>, /add-component, /sync-tokens
-├── mise.toml                      # node 22, pnpm 10, python 3.13, uv
+├── mise.toml                      # node 24, pnpm 11, python 3.13, uv
 ├── lefthook.yml                   # pre-commit: staged lint/format; pre-push: --affected
-├── .npmrc                         # node-linker=hoisted
+├── .npmrc                         # auth/registry only (pnpm 11; nodeLinker → workspace yaml)
 ├── pnpm-workspace.yaml            # packages/*, products/*/{app,desktop,api,api-client}
+│                                  #   + pnpm 11 settings: nodeLinker: hoisted, allowBuilds
 ├── package.json                   # scripts: new-product, bootstrap; devDeps: turbo, prettier, lefthook
 ├── turbo.json                     # task graph (see below)
 ├── tsconfig.base.json             # strict, moduleResolution bundler, noEmit
@@ -266,7 +274,8 @@ module.exports = withNativeWind(config, { input: "./global.css" });
 convention) — web gets them as `:root`/`.dark` blocks in `global.css`, native via
 NativeWind `vars()` in the theme provider. A product rebrands by overriding variable
 values in its own `theme.ts`/`global.css`; component code is never forked. Pin
-react-native-reusables' `@rn-primitives/*` deps exactly like other pre-1.0 tools.
+react-native-reusables' `@rn-primitives/*` deps exactly (now 1.4.x — pinned for
+version-coupling to rn-reusables, not pre-1.0).
 
 **Electron main.ts essentials:** `protocol.registerSchemesAsPrivileged([{scheme:"app",
 privileges:{standard:true,secure:true,supportFetchAPI:true}}])`; `protocol.handle("app", ...)`
@@ -276,14 +285,17 @@ needs signing/notarization — gate publish to win/linux until certs exist.
 
 **api/db.py:** `create_engine(url, poolclass=NullPool, connect_args={"prepare_threshold": None})`
 (psycopg3, pooler 6543). **auth.py:** JWKS via `PyJWKClient` (cached), `audience="authenticated"`,
-algs ES256/RS256; HS256 local fallback. Expose `CurrentUser` dependency.
+algs ES256/RS256 — **JWKS is the primary path locally too** (point `SUPABASE_URL` at
+`http://localhost:54321`; current CLI issues ES256). HS256 is a genuine fallback only (older
+CLI / self-hosted / minted test tokens), NOT the local default. Expose `CurrentUser` dependency.
 **export_openapi.py:** writes `app.openapi()` JSON, sorted keys (stable diffs), no server needed.
 **Dockerfile:** multi-stage `ghcr.io/astral-sh/uv` (`uv sync --frozen --no-dev` → slim runtime).
 Python deps: fastapi, uvicorn[standard], pydantic-settings, sqlmodel,
 sqlalchemy[postgresql-psycopg], psycopg[binary], alembic, pyjwt[crypto], httpx,
 sentry-sdk[fastapi], structlog, slowapi; dev: pytest, ruff, pyright, polyfactory.
 
-**Typegen:** `@hey-api/openapi-ts` pinned exact + `@hey-api/client-fetch` + TanStack Query
+**Typegen:** `@hey-api/openapi-ts` pinned exact (~0.98.x; fetch client now bundled in — do
+NOT add `@hey-api/client-fetch` as a dep, use it only as a `plugins` identifier) + TanStack Query
 plugin (generates `queryOptions`/typed SDK — beats openapi-typescript+openapi-fetch which
 needs hand-written glue). Output committed; CI drift check:
 `turbo run openapi build --filter=*api-client* && git diff --exit-code products/*/api-client products/*/api/openapi.json`.
@@ -341,9 +353,14 @@ mode export. Tokens are fully automated; the component mirror is assisted, not o
 5. Write `.env.example` + `product.json`; `pnpm install`.
 6. Print infra checklist: 2 Supabase projects (`<org>-<name>-stg|prod`), `fly apps create <org>-<name>-api-stg|prod` + secrets, Vercel project (root `products/<name>/app`, build via turbo filter, output `dist`, ignore step `npx turbo-ignore`), `eas init` → paste projectId, create `<name>-desktop-releases` repo + `GH_TOKEN`, 4 Sentry projects + DSNs, per-product GH Action secrets.
 
-**Workflows:** `ci.yml` — mise-action → pnpm frozen install → uv sync (affected apis) →
+**Workflows:** pin **current action majors** (June 2026): `actions/checkout@v6`,
+`jdx/mise-action@v4`, `dorny/paths-filter@v4` (mise-action/paths-filter v4 are the Node-24
+runtime bumps — Node 20 is EOL on GH runners), `expo/expo-github-action@v8` (current).
+`ci.yml` — mise-action → pnpm frozen install → uv sync (affected apis) →
 `turbo run lint typecheck test build openapi --affected` → drift check. Web: NO workflow
-(Vercel git integration + turbo-ignore per product). `deploy-api.yml` — paths-filter on
+(Vercel git integration; `turbo-ignore` is now **optional** — Vercel ships a built-in
+"skip unaffected monorepo builds" setting; if invoked bare, pass `--fallback=HEAD^` to avoid
+the new-branch always-deploy gotcha). `deploy-api.yml` — paths-filter on
 `products/*/api/** + packages/**` → matrix `flyctl deploy -c fly.staging.toml`; tags →
 prod. `eas-build.yml` — dispatch/tag; needs `EXPO_TOKEN`, committed `.npmrc`,
 `packageManager` field in root package.json (eas-cli workspace detection workaround).
@@ -386,6 +403,11 @@ mock transport — integration tests hit the real DB, never mock the session.
 > [Phase 6 — auth](docs/phase-6-auth.md) ·
 > [Phase 7 — generator](docs/phase-7-generator.md) ·
 > [Phase 8 — CI/CD & observability](docs/phase-8-cicd-obs.md)
+>
+> **Accuracy review:** every stack/tool choice was fact-checked against official docs
+> (June 2026) — per-surface findings with source URLs live in `docs/research/`. Corrections
+> from that review are folded into this plan and the guides; locked version calls: **pnpm 11,
+> Node 24 LTS, Storybook 9, NativeWind v4 (Tailwind v3), Expo SDK 56**.
 
 | # | Build | Verify |
 |---|---|---|
