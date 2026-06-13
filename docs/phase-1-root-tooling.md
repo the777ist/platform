@@ -1,6 +1,6 @@
 # Phase 1 — Root tooling
 
-**Goal.** Stand up the empty monorepo's foundational tooling so every later phase plugs into one coherent JS dependency universe and one Turborepo task graph. After this phase the repo has: pinned toolchain (`mise.toml`), pnpm workspace config (`.npmrc` + `pnpm-workspace.yaml`), the root `package.json` with orchestration scripts and shared devDeps, `turbo.json` (Turborepo 2.9 `tasks` graph), strict `tsconfig.base.json`, a `.gitignore` that still allows committed per-env `.env` files, the shared `@platform/config` package (ESLint flat config, Prettier, tailwind preset, tsconfig presets), and `lefthook.yml` git hooks (installed via `pnpm prepare`) wired for a fast staged pre-commit lint and an `--affected` pre-push gate. No product workspaces exist yet, so all turbo runs are clean no-ops.
+**Goal.** Stand up the empty monorepo's foundational tooling so every later phase plugs into one coherent JS dependency universe and one Turborepo task graph. After this phase the repo has: pinned toolchain (`mise.toml`), pnpm workspace config (`pnpm-workspace.yaml`, which under pnpm 11 now also carries the pnpm settings — `nodeLinker`, `preferFrozenLockfile`, `allowBuilds` — that used to live in `.npmrc`; plus an auth/registry-only `.npmrc`), the root `package.json` with orchestration scripts and shared devDeps, `turbo.json` (Turborepo 2.9 `tasks` graph), strict `tsconfig.base.json`, a `.gitignore` that still allows committed per-env `.env` files, the shared `@platform/config` package (ESLint flat config, Prettier, tailwind preset, tsconfig presets), and `lefthook.yml` git hooks (installed via `pnpm prepare`) wired for a fast staged pre-commit lint and an `--affected` pre-push gate. No product workspaces exist yet, so all turbo runs are clean no-ops.
 
 **Verify criteria (restated from the Phase 1 row of PLAN.md):**
 
@@ -14,7 +14,7 @@
 
 Before starting Phase 1:
 
-- **`mise` installed** on the machine (the version manager that pins the toolchain). Install per <https://mise.jdx.dev>. Everything else (Node 22, pnpm 10, Python 3.13, uv) is provisioned BY mise from `mise.toml` — do **not** pre-install Node/pnpm/Python globally; let mise own them.
+- **`mise` installed** on the machine (the version manager that pins the toolchain). Install per <https://mise.jdx.dev>. Everything else (Node 24, pnpm 11, Python 3.13, uv) is provisioned BY mise from `mise.toml` — do **not** pre-install Node/pnpm/Python globally; let mise own them. (pnpm 11 is pure ESM and requires Node ≥ 22.13 — Node 24 satisfies this comfortably.)
 - **Git repo initialized** (it already is — `git status` works; `PLAN.md`, `README.md`, and an empty `docs/` exist). You are on the default branch with a clean tree.
 - **A feature branch** for this phase (per PLAN.md "Each phase = one commit (or a few logical commits) on a feature branch"). Example: `git checkout -b phase-1-root-tooling`.
 - **Network access** for `pnpm install` to fetch `turbo`, `prettier`, `lefthook`, ESLint, etc.
@@ -28,8 +28,8 @@ Before starting Phase 1:
 
 Each bullet is independently testable (see **Verification** for the exact commands):
 
-1. **Toolchain pins resolve.** `mise install` succeeds and `mise current` reports node 22, pnpm 10, python 3.13, uv (latest) exactly as pinned in `mise.toml`. `node -v`, `pnpm -v`, `python --version`, `uv --version` all reflect the mise-managed versions.
-2. **Workspace installs clean.** `pnpm install` succeeds with `node-linker=hoisted` (flat-ish `node_modules`), produces a single `pnpm-lock.yaml`, and runs the `prepare` script which installs Lefthook git hooks.
+1. **Toolchain pins resolve.** `mise install` succeeds and `mise current` reports node 24, pnpm 11, python 3.13, uv (latest) exactly as pinned in `mise.toml`. `node -v`, `pnpm -v`, `python --version`, `uv --version` all reflect the mise-managed versions.
+2. **Workspace installs clean.** `pnpm install` succeeds with `nodeLinker: hoisted` (set in `pnpm-workspace.yaml`, giving a flat-ish `node_modules`), produces a single `pnpm-lock.yaml`, and runs the `prepare` script which installs Lefthook git hooks.
 3. **Turbo lint is a clean no-op.** `pnpm turbo run lint` exits 0. With only `packages/config` present (which has no lintable source yet) turbo reports no tasks / cache-hit and does not error on the absent product workspaces.
 4. **`@platform/config` is consumable.** The package resolves under the `@platform/*` scope and exposes: `eslint.config.js` (flat), `prettier.json`, `tailwind-preset.js`, and `tsconfig/{base,expo,node}.json`. `pnpm --filter @platform/config exec ls` lists them.
 5. **Strict TS base exists.** `tsconfig.base.json` sets `strict: true`, `moduleResolution: "bundler"`, `noEmit: true` and is extendable by downstream workspaces.
@@ -52,56 +52,52 @@ Each bullet is independently testable (see **Verification** for the exact comman
 
 ```toml
 # mise.toml — single source of truth for the repo toolchain.
-# PLAN.md Decision Sheet: "mise pins Node 22 / pnpm 10 / Python 3.13 / uv".
+# PLAN.md Decision Sheet: "mise pins Node 24 LTS / pnpm 11 / Python 3.13 / uv".
 [tools]
-node = "22"
-pnpm = "10"
+node = "24"      # Node 24 'Krypton' Active LTS (recommended 2026 runtime; pnpm 11 needs Node >= 22.13)
+pnpm = "11"
 python = "3.13"
 uv = "latest"
 
 [env]
 # Keep tool-managed shims first on PATH for child processes (turbo, lefthook).
 _.path = ["{{config_root}}/node_modules/.bin"]
-
-[settings]
-# Reproducible installs: don't silently float to a newer minor on a teammate's box.
-# (Node 22 / pnpm 10 / Python 3.13 are major.minor pins; uv tracks latest per PLAN.)
-experimental = true
 ```
 
 **Commands:**
 
 ```bash
-mise install            # provisions node 22, pnpm 10, python 3.13, uv
+mise install            # provisions node 24, pnpm 11, python 3.13, uv
 mise current            # sanity-check the resolved versions
 ```
 
-**Why.** PLAN.md locks the toolchain in the Decision Sheet ("mise pins Node 22 / pnpm 10 / Python 3.13 / uv") and lists `mise.toml` as the first root file. mise must be the toolchain owner so CI (`mise-action`, per "Workflows") and local dev resolve identical versions. `uv` is pinned here even though Python deps are per-product (PLAN "Package management model") because the generator and api Dockerfiles assume `uv` is on PATH.
+**Why.** PLAN.md locks the toolchain in the Decision Sheet ("mise pins Node 24 LTS / pnpm 11 / Python 3.13 / uv") and lists `mise.toml` as the first root file. mise must be the toolchain owner so CI (`mise-action`, per "Workflows") and local dev resolve identical versions. **Node 24** is the current Active LTS (Node 22 has dropped to Maintenance LTS, EOL Apr 2027); **pnpm 11** is the current major (pure ESM, requires Node ≥ 22.13 — satisfied by 24). `uv` is pinned here even though Python deps are per-product (PLAN "Package management model") because the generator and api Dockerfiles assume `uv` is on PATH.
 
-⚠️ **OPEN / TO CONFIRM:** PLAN.md says "uv" without an exact version; `latest` is used. If reproducibility matters more than freshness, pin an exact uv version once the first api lands in Phase 3.
+> **Note on `[settings] experimental`.** An earlier draft set `experimental = true` with a "reproducible installs" rationale — that rationale was wrong. The `experimental` flag gates mise's *experimental features* (e.g. `[hooks]`, monorepo mode), NOT version-pin reproducibility (which is just the `[tools]` specifiers). The `[env] _.path` line is basic env-path support and needs no experimental flag, so the flag is dropped here. Add `experimental = true` back only if you later introduce `[hooks]`.
+
+**Resolved (uv pin):** `uv = "latest"` is valid mise syntax and fine for dev — mise's built-in uv provider supports both `latest` and an exact pin. For reproducible CI/Docker, pin an exact uv version once Phase 3's api Dockerfile depends on it. Not a correctness bug.
 
 ---
 
-### Step 2 — `.npmrc` (pnpm linker for Expo compatibility)
+### Step 2 — `.npmrc` (auth/registry only under pnpm 11)
 
 **Files:** `.npmrc`
 
 **Contents:**
 
 ```ini
-# .npmrc — committed (EAS workspace detection needs it on the runner; PLAN "Workflows").
-# Key design ruling #6: pnpm + Expo requires the hoisted node-linker (documented happy path).
-node-linker=hoisted
-
-# Do NOT set disableHierarchicalLookups (PLAN ruling #6 explicitly forbids it) — metro's
-# nodeModulesPaths walk depends on hierarchical lookup working.
-
-# Keep the lockfile authoritative and installs reproducible across machines + CI.
-prefer-frozen-lockfile=true
-
-# Run lifecycle scripts only for explicitly trusted deps (pnpm 10 default is to block them);
-# add packages here as Phase 2+ introduces native tooling that needs build scripts.
-# Example (uncomment/extend later): only-built-dependencies[]=esbuild
+# .npmrc — committed (EAS workspace detection looks for it on the runner; PLAN "Workflows").
+#
+# pnpm 11 IMPORTANT: .npmrc is now read for AUTH/REGISTRY settings ONLY. Every other pnpm
+# setting (node-linker, prefer-frozen-lockfile, the build-script allowlist, hoist-pattern,
+# save-exact, …) MUST live in pnpm-workspace.yaml as camelCase keys (see Step 3). pnpm 11
+# SILENTLY IGNORES those keys here — no warning — so do NOT put nodeLinker etc. in this file.
+#
+# This file is intentionally near-empty in Phase 1: there are no private registries or auth
+# tokens yet. It exists (and is committed) only so EAS/CI tooling finds the expected marker.
+# Add registry/auth lines here as infra accounts appear, e.g.:
+#   # registry=https://registry.npmjs.org/
+#   # //registry.example.com/:_authToken=${NPM_TOKEN}
 ```
 
 **Commands:**
@@ -110,9 +106,9 @@ prefer-frozen-lockfile=true
 # no command — file is consumed by the next pnpm install
 ```
 
-**Why.** Key design ruling #6 in PLAN.md: "`.npmrc` with `node-linker=hoisted` (still the documented happy path); … never set `disableHierarchicalLookups`." The `.npmrc` is also explicitly called out as **committed** in PLAN "Workflows" because the `eas-build.yml` runner relies on it for workspace detection. `prefer-frozen-lockfile` keeps CI installs deterministic.
+**Why.** Under pnpm 11 the `.npmrc` is **auth/registry-only**; the linker and lockfile/build-script settings that used to live here have moved to `pnpm-workspace.yaml` (Step 3) as camelCase keys. We keep a committed (near-empty) `.npmrc` because PLAN "Workflows" calls it out as **committed** — the `eas-build.yml` runner looks for it for workspace detection — and because it's where future registry/auth lines belong.
 
-⚠️ **OPEN / TO CONFIRM:** pnpm 10 blocks dependency build scripts by default (`only-built-dependencies`). PLAN.md doesn't enumerate which deps need build scripts; leave the allowlist commented until a Phase 2+ dep (e.g. an esbuild/native binary) actually needs it, then add it explicitly.
+> **pnpm 10 → 11 migration note.** If you are migrating an existing pnpm-10 repo, `pnpm dlx codemod run pnpm-v10-to-v11` performs the `.npmrc` → `pnpm-workspace.yaml` split automatically (including `only-built-dependencies` → `allowBuilds`). The ruling #6 "hoisted linker / never `disableHierarchicalLookups`" guidance is unchanged — only the *location* of the setting moved.
 
 ---
 
@@ -125,6 +121,29 @@ prefer-frozen-lockfile=true
 ```yaml
 # pnpm-workspace.yaml — the JS dependency universe (PLAN "Package management model":
 # ONE root pnpm workspace, ONE pnpm-lock.yaml, hoisted node_modules, single pnpm install).
+#
+# Under pnpm 11 this file ALSO holds the pnpm settings that used to live in .npmrc
+# (relocated as camelCase keys — see Step 2). Auth/registry lines stay in .npmrc.
+
+# --- pnpm settings (pnpm 11; camelCase) ---
+# Key design ruling #6: pnpm + Expo/Metro requires the HOISTED node-linker (flat node_modules
+# is the documented Expo happy path). Never set disableHierarchicalLookups — metro's
+# nodeModulesPaths walk depends on hierarchical lookup working.
+nodeLinker: hoisted
+
+# Keep the lockfile authoritative + installs reproducible across machines and CI. (pnpm also
+# auto-enables frozen-lockfile in CI, and pnpm 11 fails a CI install if the lockfile was written
+# by a NEWER pnpm major — so keep the pnpm major aligned across dev/CI, Step 1 + Step 4.)
+preferFrozenLockfile: true
+
+# Build-script allowlist. pnpm blocks dependency lifecycle (build) scripts by default; pnpm 11
+# replaced the old `only-built-dependencies` API with this `allowBuilds` map (package → boolean).
+# Empty in Phase 1; add entries as Phase 2+ introduces native tooling that needs a build step:
+#   allowBuilds:
+#     esbuild: true
+allowBuilds: {}
+
+# --- workspace globs ---
 packages:
   - "packages/*"
   # Each product is THREE JS workspaces + a generated client (PLAN ruling #1):
@@ -140,7 +159,11 @@ packages:
 # no command — consumed by pnpm install
 ```
 
-**Why.** PLAN "Package management model" + Directory tree: `pnpm-workspace.yaml` globs are `packages/*` and `products/*/{app,desktop,api,api-client}`. Listing the four product sub-workspace types explicitly (rather than `products/*`) avoids pnpm trying to treat `products/<name>/supabase` or `products/<name>` itself as a package. In Phase 1 only `packages/config` matches; the product globs are inert no-ops until Phase 2+.
+**Why.** PLAN "Package management model" + Directory tree: the `packages:` globs are `packages/*` and `products/*/{app,desktop,api,api-client}`. Listing the four product sub-workspace types explicitly (rather than `products/*`) avoids pnpm trying to treat `products/<name>/supabase` or `products/<name>` itself as a package. In Phase 1 only `packages/config` matches; the product globs are inert no-ops until Phase 2+.
+
+Under **pnpm 11** this same file is now also where the pnpm *settings* live: `nodeLinker: hoisted` (relocated from `.npmrc` per ruling #6), `preferFrozenLockfile: true`, and the `allowBuilds` map (the pnpm-11 replacement for the removed `only-built-dependencies`). These keys are silently ignored if left in `.npmrc`, so they MUST be here.
+
+⚠️ **REVIEW:** PLAN "Workflows" notes EAS relied on a committed `.npmrc` for workspace detection. Verify EAS (Phase 8) still keys off `.npmrc` presence vs. needing the linker setting itself — under pnpm 11 the linker is in `pnpm-workspace.yaml`, so if EAS expected `node-linker` *inside* `.npmrc` that workaround may need revisiting.
 
 ---
 
@@ -154,10 +177,10 @@ packages:
 {
   "name": "platform-template",
   "private": true,
-  "packageManager": "pnpm@10.0.0",
+  "packageManager": "pnpm@11.6.0",
   "engines": {
-    "node": ">=22",
-    "pnpm": ">=10"
+    "node": ">=22.13",
+    "pnpm": ">=11"
   },
   "scripts": {
     "prepare": "lefthook install",
@@ -188,11 +211,11 @@ pnpm install            # installs devDeps, links @platform/config, runs `prepar
 
 **Why.**
 - `"prepare": "lefthook install"` — PLAN Phase 1 explicitly says "hooks install via `pnpm prepare`". pnpm runs `prepare` automatically after `pnpm install`, so cloning + installing is the only step needed to get hooks.
-- `"packageManager": "pnpm@10.0.0"` — PLAN "Workflows" calls out the `packageManager` field as the **eas-cli workspace detection workaround**; it also lets corepack/CI pick the right pnpm.
+- `"packageManager": "pnpm@11.6.0"` — PLAN "Workflows" calls out the `packageManager` field as the **eas-cli workspace detection workaround**; it also lets corepack/CI pick the right pnpm. Corepack expects a full exact semver, so set it to the exact pnpm version the lockfile resolves (the `11.6.0` shown is the current pnpm 11 patch as of June 2026 — replace with the lockfile's actual patch). Keeping this aligned with `mise.toml` matters MORE under pnpm 11, which fails a CI install when the lockfile was written by a newer pnpm major.
 - `scripts: new-product, bootstrap` and `devDeps: turbo, prettier, lefthook` come verbatim from the Directory-tree annotation for `package.json`. `bootstrap` = "mise → install → supabase start" (PLAN "Operational defaults"); the `supabase:start` per-package script is `--if-present` so it's a no-op until products exist.
 - `@platform/config` as a `workspace:*` devDep makes the shared ESLint/Prettier/tsconfig presets resolvable from the root.
 
-⚠️ **OPEN / TO CONFIRM:** Exact dep versions. PLAN.md pins **Turborepo 2.9** (so `turbo` is set to `2.9.0` — confirm the exact 2.9.x patch at install time). Prettier/lefthook/typescript patch versions are not pinned in PLAN; the `^` ranges above are reasonable defaults — replace with whatever the lockfile resolves and pin if stricter reproducibility is wanted. `"name": "platform-template"` matches the repo dir, but note PLAN's naming convention warns the **monorepo name never drives app/infra ids** (those come from product names) — so this name is cosmetic only.
+⚠️ **OPEN / TO CONFIRM:** Exact dep versions. PLAN.md pins **Turborepo 2.9** (so `turbo` is set to `2.9.0` — confirm the exact 2.9.x patch at install time; the 2.9.x line is live as of June 2026). Prettier/lefthook/typescript patch versions are not pinned in PLAN; the `^` ranges above are reasonable defaults — replace with whatever the lockfile resolves and pin if stricter reproducibility is wanted. `"name": "platform-template"` stays `platform-template` (matches the repo template), but note PLAN's naming convention warns the **monorepo name never drives app/infra ids** (those come from product names) — so this name is cosmetic only.
 
 ---
 
@@ -204,7 +227,7 @@ pnpm install            # installs devDeps, links @platform/config, runs `prepar
 
 ```json
 {
-  "$schema": "https://turbo.build/schema.json",
+  "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
   "tasks": {
     "openapi": {
@@ -685,7 +708,7 @@ ls -la .git/hooks/      # expect lefthook-managed pre-commit & pre-push shims
 
 ## Gotchas & pitfalls
 
-- **`node-linker=hoisted` is mandatory, not optional** (PLAN ruling #6). Without it, Expo/Metro can't resolve hoisted deps and `products/*/app` breaks in Phase 2. Never set `disableHierarchicalLookups`.
+- **`nodeLinker: hoisted` is mandatory, not optional** (PLAN ruling #6) — and under pnpm 11 it lives in `pnpm-workspace.yaml` (camelCase), NOT `.npmrc` (where it would be silently ignored). Without it, Expo/Metro can't resolve hoisted deps and `products/*/app` breaks in Phase 2. Never set `disableHierarchicalLookups`.
 - **`.npmrc` must be committed** — `eas-build.yml` (Phase 8) relies on it on the runner for workspace detection, and so does the `packageManager` field in root `package.json` (PLAN "Workflows").
 - **Hooks install via `pnpm prepare`, not a manual step.** If hooks don't fire, the cause is usually that `prepare` didn't run (e.g. `--ignore-scripts`) — re-run `pnpm install` or `pnpm rebuild`. Verify `.git/hooks/pre-commit` is a Lefthook shim.
 - **Python `inputs` globs in `turbo.json` are mandatory** (PLAN gotcha): `openapi` must declare `inputs: ["src/**/*.py","pyproject.toml","uv.lock"]` or turbo's content hash ignores `.py` changes and serves a stale cached `openapi.json`. This bites in Phase 4 (typegen drift) if forgotten now.
@@ -694,7 +717,7 @@ ls -la .git/hooks/      # expect lefthook-managed pre-commit & pre-push shims
 - **`packages/ui` has no tailwind config** (PLAN gotcha) — the semantic-token mapping lives ONLY in `@platform/config/tailwind-preset` and is pulled in by each product's `tailwind.config.js`. Don't duplicate it.
 - **The preset declares token NAMES, not VALUES.** Putting concrete colors in the preset would break per-product branding (PLAN ruling #8). Values land in `packages/ui/src/lib/theme.ts` and each product's `theme.ts`/`global.css` (Phase 2).
 - **`.gitignore` env negation is easy to get backwards.** Only `.env`, `.env.local`, `.env.*.local` are ignored. The three committed per-env files must stay tracked (PLAN "Env/config").
-- **`prefer-frozen-lockfile`** means a `package.json` dep change without a lockfile update will fail install in CI — run `pnpm install` locally to refresh the lockfile before pushing.
+- **`preferFrozenLockfile: true`** (in `pnpm-workspace.yaml` under pnpm 11, not `.npmrc`) means a `package.json` dep change without a lockfile update will fail install in CI — run `pnpm install` locally to refresh the lockfile before pushing. Note pnpm 11 also fails a CI install when the lockfile was written by a newer pnpm major, so keep the pnpm major aligned across dev/CI.
 - **Generated client is never linted/edited.** The ESLint ignore for `products/*/api-client/src/**` enforces PLAN's "never-edit-generated-client" invariant; don't remove it.
 
 ---
@@ -707,8 +730,8 @@ Run from repo root. Maps 1:1 to **Definition of done**.
 ```bash
 mise install
 mise current
-node -v        # v22.x
-pnpm -v        # 10.x
+node -v        # v24.x
+pnpm -v        # 11.x
 python --version  # 3.13.x
 uv --version
 ```

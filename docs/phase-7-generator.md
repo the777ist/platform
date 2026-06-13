@@ -5,8 +5,8 @@
 (plain Node, zero deps) copies `_template → products/<name>`, whole-word-rewrites the
 literal product token `template` (kebab/Pascal/snake) in **contents AND paths**, offsets
 every port by the new product's `portIndex`, copies the placeholder brand assets, registers
-the product's brand mode in `figma.config.json`, runs `pnpm install`, and prints the infra
-checklist. Running it once produces `products/demo` (`portIndex=1`) — a second, fully
+the product's brand mode in the token-pipeline config `tokens.config.json`, runs
+`pnpm install`, and prints the infra checklist. Running it once produces `products/demo` (`portIndex=1`) — a second, fully
 independent product proving the scaffold is portable. A root `pnpm bootstrap`
 (`mise → install → supabase start`) brings every product's local stack up together.
 
@@ -39,7 +39,8 @@ secrets in native stores), the **Naming conventions** header, **Key rulings #1**
 = 3 workspaces + generated `api-client`) and **#7** (`_template` is a working product using
 the literal name `template`; the generator whole-word-replaces `template`
 kebab/Pascal/snake in contents AND paths), the **Generator** subsection (the 6 numbered
-steps), the **Figma bridge** note (the generator adds the new product's brand mode to
+steps), the **Figma bridge** note (the generator adds the new product's brand mode to the
+token-pipeline config `tokens.config.json`, distinct from Code Connect's root
 `figma.config.json`), and the `product.json` shape `{"name":"template","portIndex":0}`
 (`demo` = `portIndex=1`). Anything PLAN.md does not pin is marked
 **⚠️ OPEN / TO CONFIRM**.
@@ -52,10 +53,13 @@ steps), the **Figma bridge** note (the generator adds the new product's brand mo
   all of its workspaces. By Key ruling #1 a product = **3 workspaces** (`app`, `desktop`,
   `api`) **+ a generated `api-client`**, plus its `supabase/` stack. Concretely, before
   this phase `_template` already has:
-  - **Phase 1** root tooling: `mise.toml` (Node 22 / pnpm 10 / Python 3.13 / uv),
-    `.npmrc` (`node-linker=hoisted`), `pnpm-workspace.yaml`
-    (`packages/*`, `products/*/{app,desktop,api,api-client}`), `turbo.json`,
-    `tsconfig.base.json`, `lefthook.yml`, `packages/config`.
+  - **Phase 1** root tooling: `mise.toml` (Node 24 / pnpm 11 / Python 3.13 / uv),
+    `pnpm-workspace.yaml`
+    (`packages/*`, `products/*/{app,desktop,api,api-client}` + pnpm 11 settings:
+    `nodeLinker: hoisted`, `preferFrozenLockfile: true`, `allowBuilds`),
+    `.npmrc` (auth/registry only under pnpm 11 — settings relocated to
+    `pnpm-workspace.yaml`), `turbo.json`, `tsconfig.base.json`, `lefthook.yml`,
+    `packages/config`.
   - **Phase 2** `packages/ui` (owned react-native-reusables + CSS-var theme, Storybook),
     `packages/core` (query+persist, env), and the `_template/app` shell (tabs, settings,
     theme toggle, `tailwind.config.js`, `theme.ts`/`global.css`).
@@ -73,10 +77,15 @@ steps), the **Figma bridge** note (the generator adds the new product's brand mo
   names `example-template-api-stg|prod`, the Python module `template_api`, the alembic
   config, the Supabase `project_id` `example-template`, and the product's `README.md` /
   `CLAUDE.md` / `.claude/commands/*`.
-- **`figma.config.json`** exists at root (from Phase 2) mapping
-  `{ fileKey, modes: { "template": <modeId>, ... } }`.
-- **`scripts/figma-tokens.mjs`** exists (Phase 2). Phase 7 only *appends a mode entry*; it
-  does not change the token script.
+- **`tokens.config.json`** exists at root (from Phase 2) — the **token-pipeline** config
+  read by `scripts/figma-tokens.mjs`, mapping
+  `{ fileKey, modes: { "template": <modeId>, ... } }`. (This is named separately from
+  Code Connect's own `figma.config.json` — which also lives at the repo root, holds the
+  `codeConnect.include` globs, is **NOT per-product**, and is **not** touched by the
+  generator — to avoid a filename collision. Per PLAN.md Figma-bridge note + ruling #11.)
+- **`scripts/figma-tokens.mjs`** exists (Phase 2). Phase 7 only *appends a mode entry* to
+  `tokens.config.json`; it does not change the token script and does not touch
+  `figma.config.json`.
 
 > Phase 7 introduces two artifacts that PLAN.md attributes to it but that earlier phases
 > consume: the **brand-asset placeholders + regen script** under
@@ -114,7 +123,8 @@ steps), the **Figma bridge** note (the generator adds the new product's brand mo
       **both** products' graphs.
 - [ ] `products/demo/app/assets/brand/` carries demo's **own** placeholder assets (copied,
       not symlinked).
-- [ ] `figma.config.json` gains a `"demo": "<placeholder-modeId>"` entry.
+- [ ] `tokens.config.json` gains a `"demo": "<placeholder-modeId>"` mode entry (Code
+      Connect's root `figma.config.json` is left untouched — it is not per-product).
 - [ ] The generator **preserves placeholders** unchanged: org `example`,
       `com.example.*`, `TODO-EAS-PROJECT-ID`, releases-repo owner placeholder. These are
       *not* product tokens, so the whole-word replacement must not touch them.
@@ -247,7 +257,7 @@ open. These outputs are committed (raster PNGs) so CI/build never needs the rast
 {
   "name": "platform-template",
   "private": true,
-  "packageManager": "pnpm@10.0.0",
+  "packageManager": "pnpm@11.6.0",
   "scripts": {
     "new-product": "node scripts/new-product.mjs",
     "bootstrap": "node scripts/bootstrap.mjs"
@@ -424,8 +434,10 @@ function applyPorts(dest, i) {
 }
 
 // ---- Figma bridge: register the new product's brand mode (placeholder modeId) -----------
+// Edits the TOKEN-PIPELINE config `tokens.config.json` (fileKey + modes) — NOT Code
+// Connect's root `figma.config.json` (which is repo-wide, not per-product, and untouched).
 function addFigmaMode(name) {
-  const f = join(ROOT, "figma.config.json");
+  const f = join(ROOT, "tokens.config.json");
   if (!existsSync(f)) return;
   const cfg = JSON.parse(readFileSync(f, "utf8"));
   cfg.modes = cfg.modes || {};
@@ -469,7 +481,7 @@ function printChecklist(name, portIndex) {
  [ ] BRAND: replace placeholder assets in products/${name}/app/assets/brand/source.svg
           then run: node products/${name}/app/assets/brand/gen-brand.mjs
  [ ] FIGMA: ask design to create the "${name}" brand mode, then replace the
-          TODO-FIGMA-MODE-ID in figma.config.json and run /sync-tokens
+          TODO-FIGMA-MODE-ID in tokens.config.json and run /sync-tokens
 ────────────────────────────────────────────────────────────────────
 `);
 }
@@ -526,8 +538,10 @@ This is the literal implementation of PLAN.md's **Generator** subsection, point 
 6. **Print the infra checklist** — `printChecklist()` emits the exact items PLAN.md lists.
 
 The Figma-bridge addition (`addFigmaMode`) is PLAN.md's "the generator adds the new
-product's brand mode to `figma.config.json` (placeholder modeId until the designer creates
-it)."
+product's brand mode to the token-pipeline config (placeholder modeId until the designer
+creates it)." That config is **`tokens.config.json`** at the repo root — kept name-distinct
+from Code Connect's own root **`figma.config.json`** (which is repo-wide and not per-product,
+so the generator never touches it).
 
 > The exact `template_api → <snake>_api` artifacts touched (the "explicit list"): package
 > names `@platform/template-{app,desktop,api,api-client}`; Expo `slug`/`scheme` + bundle id
@@ -562,7 +576,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PRODUCTS = join(ROOT, "products");
 const run = (cmd, cwd = ROOT) => execSync(cmd, { cwd, stdio: "inherit" });
 
-run("mise install");          // pin & install Node 22 / pnpm 10 / Python 3.13 / uv
+run("mise install");          // pin & install Node 24 / pnpm 11 / Python 3.13 / uv
 run("pnpm install");          // single JS dependency universe (frozen-ish; one lockfile)
 
 // supabase start per product — each reads its own config.toml (offset ports), so all
@@ -744,8 +758,9 @@ independently.
 
 **6. Figma mode registered**
 ```bash
-jq '.modes' figma.config.json
+jq '.modes' tokens.config.json
 # EXPECT: { "template": "<modeId>", "demo": "TODO-FIGMA-MODE-ID" }
+# (Code Connect's root figma.config.json is unchanged — it is not per-product.)
 ```
 
 ---
@@ -765,7 +780,7 @@ Suggested split on a `phase-7-generator` branch:
 3. **`feat(scripts): pnpm bootstrap (mise → install → supabase start)`** —
    `scripts/bootstrap.mjs` + root `bootstrap` script. (Steps 3, 5)
 4. **`feat(products): stamp demo product (portIndex=1)`** — the generated
-   `products/demo/**` tree + the `figma.config.json` `demo` mode entry. (Step 6)
+   `products/demo/**` tree + the `tokens.config.json` `demo` mode entry. (Step 6)
 
 > Keep the generated `products/demo` tree in its **own** commit so its diff is reviewable
 > as "what the generator produced," distinct from the generator's source.
@@ -794,8 +809,9 @@ Suggested split on a `phase-7-generator` branch:
 - **Text-vs-binary classification** — `isText()` uses an extension allow-list. A new
   template file type outside the list would be copied verbatim (no token replacement). Keep
   `TEXT_EXT` in sync with the template's file types. **⚠️ OPEN / TO CONFIRM.**
-- **`figma.config.json` shape** — this guide assumes `{ fileKey, modes: {...} }` (PLAN.md
-  Figma-bridge note). If Phase 2 settled on the Tokens-Studio-JSON default (no `fileKey`),
+- **`tokens.config.json` shape** — this guide assumes `{ fileKey, modes: {...} }` (PLAN.md
+  Figma-bridge note; the token-pipeline config, name-distinct from Code Connect's root
+  `figma.config.json`). If Phase 2 settled on the Tokens-Studio-JSON default (no `fileKey`),
   the mode-registration key may differ. **⚠️ OPEN / TO CONFIRM** against Phase 2.
 - **`GH_TOKEN` vs per-product secret naming** in the checklist (`FLY_API_TOKEN_<NAME>`
   etc.) — exact secret names are owned by Phase 8 (CI/CD). The checklist here is the
