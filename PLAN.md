@@ -373,6 +373,20 @@ mock transport — integration tests hit the real DB, never mock the session.
 
 ## Phases (each independently verifiable)
 
+> **Execution guides:** each phase below has a deep, literal build checklist (exact files,
+> code/config skeletons, commands, gotchas, verification) under `docs/`. PLAN.md is the
+> authoritative spine — the locked decisions, rulings, and conventions live here and the
+> guides MUST stay faithful to them; the guides are the step-by-step "how", not new
+> decisions. Index:
+> [Phase 1 — root tooling](docs/phase-1-root-tooling.md) ·
+> [Phase 2 — design system & Figma](docs/phase-2-design-system.md) ·
+> [Phase 3 — API](docs/phase-3-api.md) ·
+> [Phase 4 — typegen](docs/phase-4-typegen.md) ·
+> [Phase 5 — desktop](docs/phase-5-desktop.md) ·
+> [Phase 6 — auth](docs/phase-6-auth.md) ·
+> [Phase 7 — generator](docs/phase-7-generator.md) ·
+> [Phase 8 — CI/CD & observability](docs/phase-8-cicd-obs.md)
+
 | # | Build | Verify |
 |---|---|---|
 | 1 | Root tooling: mise.toml, .npmrc, workspace+turbo+tsconfig, .gitignore, `packages/config`, lefthook.yml (hooks install via pnpm prepare) | `mise install && pnpm install && pnpm turbo run lint` (clean no-op); a commit triggers staged lint; a push triggers the affected gate |
