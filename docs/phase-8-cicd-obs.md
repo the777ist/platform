@@ -527,6 +527,13 @@ async def broadcast_invalidate(resource: str, *, http: httpx.AsyncClient | None 
         if http is None:
             await client.aclose()
 ```
+> ⚠️ REVIEW: the broadcast-only architecture and the client side
+> (`supabase.channel(...).on("broadcast", {event}, cb).subscribe()`) are confirmed current
+> supabase-js. The **server-side HTTP broadcast path** `POST /realtime/v1/api/broadcast` with
+> `apikey` + service-role bearer matches Supabase's documented "send broadcast from the
+> server" REST approach, but Supabase has iterated on Realtime auth (RLS on
+> `realtime.messages`); verify the exact path + whether the service-role key alone suffices
+> against the live project when it exists. The architecture does not change either way.
 
 `api/.../services/items.py` (extend the create/update/delete paths — broadcast after commit):
 ```python
@@ -982,7 +989,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v4
-      - run: pnpm install --frozen-lockfile     # committed .npmrc (node-linker=hoisted) honoured
+      - run: pnpm install --frozen-lockfile     # honours pnpm-workspace.yaml `nodeLinker: hoisted` (pnpm 11)
       - uses: expo/expo-github-action@v8
         with:
           eas-version: latest
@@ -1222,7 +1229,7 @@ packages/{config,ui,core}; products/{_template,demo}/{app,desktop,api,api-client
 - Errors are RFC 9457 problem+json; the generated api-client is NEVER hand-edited.
 
 ## Gotchas
-- pnpm hoisted linker (`node-linker=hoisted`); never set disableHierarchicalLookups.
+- pnpm hoisted linker (`nodeLinker: hoisted` in pnpm-workspace.yaml, pnpm 11); never set disableHierarchicalLookups.
 - Supabase pooler 6543 = transaction-mode only (psycopg3, NullPool, prepare_threshold=None);
   Alembic migrates over direct 5432 (DATABASE_MIGRATION_URL).
 - Sentry = @sentry/react-native (NOT sentry-expo).
@@ -1361,8 +1368,10 @@ product-scoped and load from the session's project root.
 - **Sentry SDK is `@sentry/react-native`, NOT `sentry-expo`.** `sentry-expo` is deprecated;
   PLAN.md locks `@sentry/react-native`. Using the wrong package is a silent footgun.
 - **eas-cli workspace detection workaround.** In a pnpm workspace, `eas build`/`eas update`
-  misdetect the package manager unless BOTH the committed `.npmrc` (`node-linker=hoisted`)
-  and a `"packageManager": "pnpm@10.x"` field in the **root** `package.json` are present.
+  misdetect the package manager unless BOTH the committed hoisted node-linker
+  (`nodeLinker: hoisted` in `pnpm-workspace.yaml` — pnpm 11's home for it; `.npmrc`
+  `node-linker=hoisted` still honoured) and a `"packageManager": "pnpm@11.x"` field in the
+  **root** `package.json` are present.
   Both must ship.
 - **Web has NO workflow.** Do not add a `web-deploy.yml`. Vercel git integration handles web;
   adding a workflow would double-deploy. Skip-unaffected is now Vercel's built-in
