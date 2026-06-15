@@ -14,6 +14,13 @@
 > 3. **Deferred (by design)** — cross-phase handoffs owned by a later phase; they live in
 >    each guide's `## Open questions / deferred` section and are picked up by the dependent
 >    phase's `## Prerequisites`. Not gaps.
+>
+> **Resolved by user decision (2026-06-15):** Expo SDK strategy = start on 56, fall back to
+> 54 only if NativeWind v4 is unworkable (settled empirically in Phase 2); UUIDv7 = app-side
+> `uuid-utils` (PG-version-independent, not Postgres-native); brand rasterizer = `sharp`.
+> *(Reach: "only the decisions I ask" — version pins, cross-phase reconciliations, and the
+> proposed operational defaults (broadcast log+swallow, 90-day stale tokens, etc.) were left
+> OPEN by choice and can be closed on request.)*
 
 ## 1. ⚠️ REVIEW / TO CONFIRM items (verify-or-ask)
 
@@ -43,11 +50,11 @@
 - L787: // ⚠️ OPEN / TO CONFIRM: replace the placeholder node URL once the real Figma
 - L831: ⚠️ Filename collision: the token-pipeline config (step (e)) is named `tokens.config.json`
 - L846: ⚠️ Env-var distinction: the Code Connect CLI uses `FIGMA_ACCESS_TOKEN`
-- L1736: - ⚠️ NativeWind v4 ↔ SDK 56 outcome — must be settled during execution; if SDK 56 is
-- L1740: - ⚠️ Exact version pins — freeze to what the CLI/`expo install` emit at execution time;
-- L1751: - ⚠️ Real Figma file key + mode IDs — `figma.config.json` ships `TODO-*` placeholders;
+- L1736: - ⚠️ NativeWind v4 ↔ SDK 56 outcome — STRATEGY CONFIRMED (user decision 2026-06-15):
+- L1743: - ⚠️ Exact version pins — freeze to what the CLI/`expo install` emit at execution time;
+- L1754: - ⚠️ Real Figma file key + mode IDs — `figma.config.json` ships `TODO-*` placeholders;
 
-### `docs/phase-3-api.md` (10)
+### `docs/phase-3-api.md` (9)
 
 - L47: "Testing strategy". Anything PLAN.md does not pin is marked ⚠️ OPEN / TO CONFIRM.
 - L154: "slowapi==0.1.9",                # ⚠️ REVIEW: pin to the current slowapi release (self-described "alpha" — pin exact)
@@ -56,9 +63,8 @@
 - L957: ⚠️ REVIEW (JWKS path): confirm the JWKS discovery path
 - L1319: ⚠️ OPEN / TO CONFIRM (output path): `parents[3]` resolves
 - L1583: role bypasses (⚠️ REVIEW: exact role/credentials are project-specific).
-- L2107: package (Python 3.13 has no stdlib `uuid7` — that lands in 3.14). The only remaining ⚠️
-- L2117: (`BYPASSRLS`, bypasses even `FORCE RLS`); ⚠️ REVIEW the exact credentials when the project
-- L2119: - ⚠️ export_openapi output path depth (`parents[3]`) — verify against the final layout;
+- L2118: (`BYPASSRLS`, bypasses even `FORCE RLS`); ⚠️ REVIEW the exact credentials when the project
+- L2120: - ⚠️ export_openapi output path depth (`parents[3]`) — verify against the final layout;
 
 ### `docs/phase-4-typegen.md` (16)
 
@@ -95,19 +101,17 @@
 - L1151: - ⚠️ OPEN / TO CONFIRM — Phase 3 reconciliation. The Phase 3 guide (`docs/phase-3-api.md`)
 - L1155: - ⚠️ OPEN / TO CONFIRM — Phase 2 export names for `ThemeProvider` / `QueryProvider` and the
 
-### `docs/phase-7-generator.md` (11)
+### `docs/phase-7-generator.md` (9)
 
 - L46: ⚠️ OPEN / TO CONFIRM.
-- L203: // ⚠️ OPEN / TO CONFIRM — exact rasterizer. The size MATRIX below is the contract.
-- L607: ⚠️ OPEN / TO CONFIRM — whether `pnpm bootstrap` should start all products or just the
-- L793: (`sharp` / `@resvg/resvg-js` / Expo's own tooling) ⚠️ OPEN / TO CONFIRM. The
-- L797: enumerating them; the matrix above is this guide's concrete set. ⚠️ OPEN / TO CONFIRM
-- L800: all (to satisfy the simultaneous-stacks verify). ⚠️ OPEN / TO CONFIRM.
-- L803: ports `config.toml` declares; confirm none exceed the block or collide. ⚠️ OPEN / TO
-- L807: ports at all (vs real hosts that the infra checklist later fills) is ⚠️ OPEN / TO
-- L811: `TEXT_EXT` in sync with the template's file types. ⚠️ OPEN / TO CONFIRM.
-- L815: the mode-registration key may differ. ⚠️ OPEN / TO CONFIRM against Phase 2.
-- L821: `prepare`. ⚠️ OPEN / TO CONFIRM.
+- L609: ⚠️ OPEN / TO CONFIRM — whether `pnpm bootstrap` should start all products or just the
+- L800: enumerating them; the matrix above is this guide's concrete set. ⚠️ OPEN / TO CONFIRM
+- L803: all (to satisfy the simultaneous-stacks verify). ⚠️ OPEN / TO CONFIRM.
+- L806: ports `config.toml` declares; confirm none exceed the block or collide. ⚠️ OPEN / TO
+- L810: ports at all (vs real hosts that the infra checklist later fills) is ⚠️ OPEN / TO
+- L814: `TEXT_EXT` in sync with the template's file types. ⚠️ OPEN / TO CONFIRM.
+- L818: the mode-registration key may differ. ⚠️ OPEN / TO CONFIRM against Phase 2.
+- L824: `prepare`. ⚠️ OPEN / TO CONFIRM.
 
 ### `docs/phase-8-cicd-obs.md` (9)
 

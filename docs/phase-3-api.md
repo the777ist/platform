@@ -2104,9 +2104,10 @@ Suggested commit sequence on a feature branch (one phase = one or a few logical 
 - **UUIDv7 generator library — RESOLVED** — use the maintained **`uuid-utils`**
   (`from uuid_utils import uuid7`, returns a stdlib-compatible UUID) or **`uuid6`**
   (`from uuid6 import uuid7`), pinned exact; NOT the stale 2021 `uuid7`/`uuid_extensions`
-  package (Python 3.13 has no stdlib `uuid7` — that lands in 3.14). The only remaining ⚠️
-  REVIEW is the exact pinned version and whether PG18's native `uuidv7()` should replace the
-  Python generator (depends on the Supabase Postgres version) (Step 1, Step 6).
+  package (Python 3.13 has no stdlib `uuid7` — that lands in 3.14). **App-side generation is
+  the locked choice (user decision 2026-06-15): do NOT depend on Postgres-native `uuidv7()`,
+  so the template is PG-version-independent and works on any Supabase Postgres today.** The
+  only remaining confirm is pinning the exact current `uuid-utils` version at install (Step 1, Step 6).
 - **Cursor envelope field names — RESOLVED** — keep `{ items, next_cursor }` + opaque
   base64-on-`id`; matches best practice + UUIDv7 monotonic keyset. Phase 4 `features/home` must
   match these names (Step 5).

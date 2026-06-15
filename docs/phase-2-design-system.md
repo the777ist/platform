@@ -1733,10 +1733,13 @@ the repo's git conventions (branch off the default branch first).
 
 ## Open questions / deferred
 
-- **⚠️ NativeWind v4 ↔ SDK 56 outcome** — must be settled during execution; if SDK 56 is
-  unworkable with NativeWind v4, fall back to **SDK 54** (NOT 55 — 55 is also New-Arch-only
-  and not the NativeWind-validated SDK; 54 is the last officially-validated SDK with a
-  legacy-arch escape hatch) and record the pin. (PLAN.md mandates settling this in Phase 2.)
+- **⚠️ NativeWind v4 ↔ SDK 56 outcome — STRATEGY CONFIRMED (user decision 2026-06-15):
+  target SDK 56, fall back to SDK 54 only if NativeWind v4 proves unworkable.** Still settled
+  empirically during execution (this is the one item that can only be proven by building): if
+  SDK 56 is unworkable with NativeWind v4, fall back to **SDK 54** (NOT 55 — 55 is also
+  New-Arch-only and not the NativeWind-validated SDK; 54 is the last officially-validated SDK
+  with a legacy-arch escape hatch) and record the pin. Do NOT downgrade preemptively — start
+  on 56.
 - **⚠️ Exact version pins** — freeze to what the CLI/`expo install` emit at execution time;
   PLAN.md names the packages, not the numbers. Current (June 2026) reference values resolved
   by the accuracy review: `nativewind 4.2.5` (+ pin `react-native-css-interop` exact),
