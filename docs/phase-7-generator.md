@@ -87,12 +87,13 @@ token-pipeline config `tokens.config.json`, distinct from Code Connect's root
   `tokens.config.json`; it does not change the token script and does not touch
   `figma.config.json`.
 
-> Phase 7 introduces two artifacts that PHILOSOPHY.md attributes to it but that earlier phases
+> Phase 7 introduces one artifact that PHILOSOPHY.md attributes to it but that earlier phases
 > consume: the **brand-asset placeholders + regen script** under
 > `products/_template/app/assets/brand/` (the directory is referenced from Phase 2/5 but
-> the single-source + regen pipeline is specified here), and the **root `pnpm bootstrap`**
-> script. If a thin `assets/brand/` already exists from an earlier phase, this phase
-> formalizes the single-source + regen-script shape below.
+> the single-source + regen pipeline is specified here). If a thin `assets/brand/` already
+> exists from an earlier phase, this phase formalizes the single-source + regen-script shape
+> below. (The root `pnpm bootstrap` / `scripts/bootstrap.mjs` is **not** introduced here — it
+> ships in Phase 1 as a single data-driven definition; this phase only exercises it.)
 
 ---
 
@@ -108,9 +109,10 @@ token-pipeline config `tokens.config.json`, distinct from Code Connect's root
       (validate + collision + `portIndex`; copy with skip-list keeping `uv.lock`;
       whole-word token replace in contents AND paths; port offsets; write
       `.env.example` + `product.json` + `pnpm install`; print the infra checklist).
-- [ ] Root `package.json` has `"new-product"` and `"bootstrap"` scripts.
-- [ ] `scripts/bootstrap.mjs` runs `mise install → pnpm install → supabase start` for
-      **every** product (or `pnpm bootstrap` does this via a small per-product loop).
+- [ ] Root `package.json` `"new-product"` + `"bootstrap"` script entries are present
+      (both from Phase 1) — `new-product` now resolves to the generator built this phase.
+- [ ] `scripts/bootstrap.mjs` (from Phase 1, data-driven) brings up **both** `template` and
+      `demo` stacks on offset ports without a redefinition in this phase.
 - [ ] `pnpm new-product demo` produces `products/demo` with `product.json`
       `{"name":"demo","portIndex":1}`.
 - [ ] **`git grep -iw template products/demo` returns empty** — no `template` token
@@ -248,18 +250,15 @@ open. These outputs are committed (raster PNGs) so CI/build never needs the rast
 
 ---
 
-### Step 3 — Root `package.json` scripts: `new-product` + `bootstrap`
+### Step 3 — Root `package.json` script entries (verify; both already exist from Phase 1)
 
 **Files**
 - `package.json` (root)
 
-**Contents** (scripts excerpt — keep existing `devDeps: turbo, prettier, lefthook` and the
-`packageManager` field intact):
+**Contents** — both root scripts were added in Phase 1's root `package.json`; **nothing to add
+here, just confirm they are present and unchanged**:
 ```json
 {
-  "name": "platform",
-  "private": true,
-  "packageManager": "pnpm@11.6.0",
   "scripts": {
     "new-product": "node scripts/new-product.mjs",
     "bootstrap": "node scripts/bootstrap.mjs"
@@ -269,18 +268,17 @@ open. These outputs are committed (raster PNGs) so CI/build never needs the rast
 
 **Commands**
 ```bash
-pnpm new-product demo          # -> node scripts/new-product.mjs demo
-pnpm bootstrap                 # -> node scripts/bootstrap.mjs
+pnpm new-product demo          # -> node scripts/new-product.mjs demo (the generator built in Step 4)
+pnpm bootstrap                 # -> node scripts/bootstrap.mjs (data-driven, built in Phase 1)
 ```
 
 **Why**
-PHILOSOPHY.md directory tree: root `package.json # scripts: new-product, bootstrap`. `pnpm
-new-product <name>` is the documented generator entry point (Multi-product bullet); `pnpm
-bootstrap` is the one-command onboarding (`mise → install → supabase start`, Operational
-defaults). Root name is `platform` and the scope is `@platform/*` — these are
+The `new-product` entry points at the generator this phase builds (Step 4); the `bootstrap`
+entry + `scripts/bootstrap.mjs` already shipped in **Phase 1** (data-driven over `products/*`,
+so it needs no change here — it picks up the freshly-stamped `demo` automatically). Keep the
+`packageManager` field + `devDeps` intact. Root name `platform` and the `@platform/*` scope are
 **not** product tokens and are never rewritten by the generator (naming derives from the
-*product*, not the repo). The `packageManager` field is also the eas-cli workspace-detection
-workaround (Phase 8 note) — leave it.
+*product*, not the repo).
 
 ---
 
@@ -558,53 +556,26 @@ so the generator never touches it).
 
 ---
 
-### Step 5 — `scripts/bootstrap.mjs` + `pnpm bootstrap`
+### Step 5 — `pnpm bootstrap` (already built in Phase 1 — verify only)
 
 **Files**
-- `scripts/bootstrap.mjs`
-
-**Contents**
-```js
-#!/usr/bin/env node
-// scripts/bootstrap.mjs — one-command onboarding.
-// PHILOSOPHY.md (Operational defaults): root `pnpm bootstrap` = mise -> install -> supabase start.
-// Brings up EVERY product's local Supabase stack (offset ports => they coexist).
-import { readdirSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { execSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
-
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const PRODUCTS = join(ROOT, "products");
-const run = (cmd, cwd = ROOT) => execSync(cmd, { cwd, stdio: "inherit" });
-
-run("mise install");          // pin & install Node 24 / pnpm 11 / Python 3.13 / uv
-run("pnpm install");          // single JS dependency universe (frozen-ish; one lockfile)
-
-// supabase start per product — each reads its own config.toml (offset ports), so all
-// stacks run simultaneously without colliding.
-for (const entry of readdirSync(PRODUCTS)) {
-  const cfg = join(PRODUCTS, entry, "supabase", "config.toml");
-  if (!existsSync(cfg)) continue;
-  console.log(`→ supabase start (${entry})`);
-  run("supabase start", join(PRODUCTS, entry));
-}
-console.log("✅ bootstrap complete — all local stacks up on offset ports");
-```
+- _none_ — `scripts/bootstrap.mjs` was created in **Phase 1** (Step 4b) as a single,
+  data-driven definition. It loops `products/*` and runs `supabase start` in each product dir,
+  so it requires **no change** when this phase stamps `demo` — it picks the new product up
+  automatically. Do not re-create or fork it here.
 
 **Commands**
 ```bash
 pnpm bootstrap
-# verify the stacks are up on distinct ports:
-supabase status   # run inside each product dir, or check the printed URLs
+# verify BOTH stacks are up on distinct (offset) ports:
+supabase status   # run inside each product dir (template, demo), or check the printed URLs
 ```
 
 **Why**
-PHILOSOPHY.md Operational defaults: "root `pnpm bootstrap` (mise → install → supabase start) for
-one-command onboarding." Because each product's `supabase/config.toml` carries offset ports
-(Step 4), `supabase start` per product yields **simultaneously running** local stacks — the
-exact condition Verify #3 and the end-to-end "Multi-product proof" check. `mise install`
-first guarantees the toolchain is pinned before anything resolves.
+Because each product's `supabase/config.toml` carries offset ports (Step 4), the Phase 1
+`bootstrap.mjs` loop yields **simultaneously running** local stacks for `template` AND `demo` —
+the exact condition Verify #3 and the end-to-end "Multi-product proof" check. This phase only
+*exercises* bootstrap (now that a second product exists); it does not build it.
 
 > ⚠️ OPEN / TO CONFIRM — whether `pnpm bootstrap` should start **all** products or just the
 > one the dev is working on. PHILOSOPHY.md says "supabase start" (singular flow) for onboarding
@@ -777,12 +748,13 @@ Suggested split on a `phase-7-generator` branch:
    + committed placeholder PNGs, `brand:gen` app script. (Steps 1–2)
 2. **`feat(scripts): zero-dep new-product generator`** — `scripts/new-product.mjs`
    (validate/collision/portIndex, copy + skip-list, whole-word replace in contents+paths,
-   port offsets, figma mode, pnpm install, infra checklist) + root `package.json`
-   `new-product` script. (Steps 3–4)
-3. **`feat(scripts): pnpm bootstrap (mise → install → supabase start)`** —
-   `scripts/bootstrap.mjs` + root `bootstrap` script. (Steps 3, 5)
-4. **`feat(products): stamp demo product (portIndex=1)`** — the generated
+   port offsets, figma mode, pnpm install, infra checklist). The root `new-product` +
+   `bootstrap` script entries already exist from Phase 1. (Steps 3–4)
+3. **`feat(products): stamp demo product (portIndex=1)`** — the generated
    `products/demo/**` tree + the `tokens.config.json` `demo` mode entry. (Step 6)
+
+> `scripts/bootstrap.mjs` is **not** a Phase 7 commit — it ships in Phase 1 (data-driven),
+> and Step 5 here only exercises it against the newly-stamped `demo`.
 
 > Keep the generated `products/demo` tree in its **own** commit so its diff is reviewable
 > as "what the generator produced," distinct from the generator's source.

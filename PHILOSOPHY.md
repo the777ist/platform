@@ -166,6 +166,7 @@ that's a new architecture decision, not a default.
 │   ├── e2e-nightly.yml            # Playwright E2E + Storybook visual regression (schedule)
 │   └── electron-release.yml       # tag <product>-desktop-v* → 3-OS matrix
 ├── scripts/new-product.mjs        # generator (plain Node, zero deps)
+├── scripts/bootstrap.mjs          # one-command onboarding: mise → install → per-product supabase start
 ├── scripts/figma-tokens.mjs       # Figma Variables API → Style Dictionary → CSS-var theme
 │                                  #   files (one-way, committed); reads figma.config.json
 ├── figma.config.json              # fileKey + variable-collection → product mode mapping

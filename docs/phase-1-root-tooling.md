@@ -37,6 +37,7 @@ Each bullet is independently testable (see **Verification** for the exact comman
 7. **pre-commit hook fires.** Committing a deliberately mis-formatted `.ts` file is reformatted/flagged by the staged Prettier + ESLint job before the commit completes.
 8. **pre-push hook fires.** A push invokes `turbo run typecheck test build --affected` (a no-op clean pass while no products exist, but the gate runs).
 9. **Hooks auto-installed.** `lefthook` git hooks were installed by `pnpm prepare` (the `.git/hooks/pre-commit` and `pre-push` are Lefthook shims), with zero manual `lefthook install`.
+10. **`pnpm bootstrap` runs.** `scripts/bootstrap.mjs` exists; `pnpm bootstrap` runs `mise install` + `pnpm install` and the `products/*` supabase loop is a clean no-op (no products yet). It is the single, data-driven definition reused unchanged in every later phase.
 
 ---
 
@@ -184,7 +185,7 @@ Under **pnpm 11** this same file is now also where the pnpm *settings* live: `no
   },
   "scripts": {
     "prepare": "lefthook install",
-    "bootstrap": "mise install && pnpm install && pnpm -r --if-present run supabase:start",
+    "bootstrap": "node scripts/bootstrap.mjs",
     "new-product": "node scripts/new-product.mjs",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
@@ -212,10 +213,63 @@ pnpm install            # installs devDeps, links @platform/config, runs `prepar
 **Why.**
 - `"prepare": "lefthook install"` — PHILOSOPHY Phase 1 explicitly says "hooks install via `pnpm prepare`". pnpm runs `prepare` automatically after `pnpm install`, so cloning + installing is the only step needed to get hooks.
 - `"packageManager": "pnpm@11.6.0"` — PHILOSOPHY "Workflows" calls out the `packageManager` field as the **eas-cli workspace detection workaround**; it also lets corepack/CI pick the right pnpm. Corepack expects a full exact semver, so set it to the exact pnpm version the lockfile resolves (the `11.6.0` shown is the current pnpm 11 patch as of June 2026 — replace with the lockfile's actual patch). Keeping this aligned with `mise.toml` matters MORE under pnpm 11, which fails a CI install when the lockfile was written by a newer pnpm major.
-- `scripts: new-product, bootstrap` and `devDeps: turbo, prettier, lefthook` come verbatim from the Directory-tree annotation for `package.json`. `bootstrap` = "mise → install → supabase start" (PHILOSOPHY "Operational defaults"); the `supabase:start` per-package script is `--if-present` so it's a no-op until products exist.
+- `scripts: new-product, bootstrap` and `devDeps: turbo, prettier, lefthook` come verbatim from the Directory-tree annotation for `package.json`. `bootstrap` = "mise → install → supabase start" (PHILOSOPHY "Operational defaults"), implemented as `scripts/bootstrap.mjs` (created in Step 4b below) — a single, data-driven definition so there is no inline-vs-script drift to reconcile in a later phase. The `new-product` entry points at `scripts/new-product.mjs`, which is built in Phase 7 (the entry exists now; running it before Phase 7 errors with "file not found" — expected).
 - `@platform/config` as a `workspace:*` devDep makes the shared ESLint/Prettier/tsconfig presets resolvable from the root.
 
 ⚠️ **OPEN / TO CONFIRM:** Exact dep versions. PHILOSOPHY.md pins **Turborepo 2.9** (so `turbo` is set to `2.9.0` — confirm the exact 2.9.x patch at install time; the 2.9.x line is live as of June 2026). Prettier/lefthook/typescript patch versions are not pinned in PHILOSOPHY; the `^` ranges above are reasonable defaults — replace with whatever the lockfile resolves and pin if stricter reproducibility is wanted. `"name": "platform"` is the root monorepo name; note PHILOSOPHY's naming convention warns the **monorepo name never drives app/infra ids** (those come from product names) — so this name is cosmetic only, independent of the git repo name.
+
+---
+
+### Step 4b — `scripts/bootstrap.mjs` (one-command onboarding, data-driven)
+
+**Files**
+- `scripts/bootstrap.mjs`
+
+**Contents**
+```js
+#!/usr/bin/env node
+// scripts/bootstrap.mjs — one-command onboarding.
+// PHILOSOPHY.md (Operational defaults): root `pnpm bootstrap` = mise -> install -> supabase start.
+// Brings up EVERY product's local Supabase stack (offset ports => they coexist).
+import { readdirSync, existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { execSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const PRODUCTS = join(ROOT, "products");
+const run = (cmd, cwd = ROOT) => execSync(cmd, { cwd, stdio: "inherit" });
+
+run("mise install");          // pin & install Node 24 / pnpm 11 / Python 3.13 / uv
+run("pnpm install");          // single JS dependency universe (one lockfile)
+
+// supabase start per product — each reads its own config.toml (offset ports), so all
+// stacks run simultaneously without colliding. Data-driven: a no-op until products exist,
+// and automatically covers every product the Phase 7 generator stamps later.
+if (existsSync(PRODUCTS)) {
+  for (const entry of readdirSync(PRODUCTS)) {
+    const cfg = join(PRODUCTS, entry, "supabase", "config.toml");
+    if (!existsSync(cfg)) continue;
+    console.log(`→ supabase start (${entry})`);
+    run("supabase start", join(PRODUCTS, entry));
+  }
+}
+console.log("✅ bootstrap complete");
+```
+
+**Commands**
+```bash
+pnpm bootstrap   # in Phase 1: runs mise install + pnpm install (no products yet -> empty loop)
+```
+
+**Why.** `pnpm bootstrap` must run `supabase start` in **each product's directory** (where
+`products/<name>/supabase/config.toml` lives) — but `products/<name>` is **not** a workspace
+(the glob is `products/*/{app,desktop,api,api-client}`), so an inline `pnpm -r run
+supabase:start` would execute from the wrong cwd and `supabase` wouldn't find its config. A
+tiny Node loop over `products/*` runs `supabase start` with the correct cwd. It is built
+**here, in Phase 1, as the single definition** — data-driven so it is a no-op now (no products
+yet) and automatically covers every product Phase 7+ stamps, with **no redefinition in a later
+phase**. (`mise install` first guarantees the toolchain is pinned before anything resolves.)
 
 ---
 
@@ -808,7 +862,7 @@ Suggested boundaries on the `phase-1-root-tooling` feature branch (PHILOSOPHY: "
 
 1. `chore: pin toolchain with mise.toml` — Step 1.
 2. `chore: pnpm workspace + .npmrc (hoisted linker)` — Steps 2-3.
-3. `chore: root package.json, turbo.json, tsconfig.base.json` — Steps 4-6.
+3. `chore: root package.json + scripts/bootstrap.mjs, turbo.json, tsconfig.base.json` — Steps 4-6 (incl. Step 4b bootstrap).
 4. `feat(config): add @platform/config shared presets` — Step 7 (eslint flat, prettier, tailwind preset, tsconfig presets).
 5. `chore: .gitignore (ignore artifacts, keep per-env .env)` — Step 8.
 6. `chore: lefthook hooks (staged pre-commit, --affected pre-push)` — Step 9.
