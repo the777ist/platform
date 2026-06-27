@@ -1733,16 +1733,15 @@ the repo's git conventions (branch off the default branch first).
 
 ## Open questions / deferred
 
-- **⚠️ NativeWind v4 ↔ SDK 56 outcome — STRATEGY CONFIRMED (user decision 2026-06-15):
-  target SDK 56, fall back to SDK 54 only if NativeWind v4 proves unworkable.** Still settled
-  empirically during execution (this is the one item that can only be proven by building): if
-  SDK 56 is unworkable with NativeWind v4, fall back to **SDK 54** (NOT 55 — 55 is also
-  New-Arch-only and not the NativeWind-validated SDK; 54 is the last officially-validated SDK
-  with a legacy-arch escape hatch) and record the pin. Do NOT downgrade preemptively — start
-  on 56.
+- **⚠️ NativeWind v4 ↔ SDK 56 outcome** — policy: **target SDK 56, fall back to SDK 54 only
+  if NativeWind v4 proves unworkable; do NOT downgrade preemptively.** This is the one item
+  that can only be settled empirically (by building): if SDK 56 is unworkable with NativeWind
+  v4, fall back to **SDK 54** (NOT 55 — 55 is also New-Arch-only and not the
+  NativeWind-validated SDK; 54 is the last officially-validated SDK with a legacy-arch escape
+  hatch) and record the pin.
 - **⚠️ Exact version pins** — freeze to what the CLI/`expo install` emit at execution time;
-  PLAN.md names the packages, not the numbers. Current (June 2026) reference values resolved
-  by the accuracy review: `nativewind 4.2.5` (+ pin `react-native-css-interop` exact),
+  PLAN.md names the packages, not the numbers. Current reference values: `nativewind 4.2.5`
+  (+ pin `react-native-css-interop` exact),
   `@rn-primitives/* 1.4.0` (slot/types/portal), `class-variance-authority 0.7.1`, `clsx 2.1.1`,
   `tailwind-merge 2.6.x` (Tailwind-v3 line — do NOT use 3.x, which assumes Tailwind v4),
   `tailwindcss@^3.4` (NOT v4), Storybook + `@storybook/react-native-web-vite` `9.1.x`,

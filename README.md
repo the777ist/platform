@@ -6,8 +6,7 @@ segregated per-environment infrastructure.
 
 One component, authored once in `@platform/ui`, renders to every target: native via Expo, web
 via react-native-web, desktop via an Electron shell wrapping the same web build. There is **no
-separate web or desktop app** and (deliberately) **no Next.js** — it's one frontend codebase
-plus a Python backend.
+separate web or desktop app** — it's one frontend codebase plus a Python backend.
 
 ---
 

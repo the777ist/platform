@@ -200,9 +200,9 @@ step 3 parenthetical).
 //
 // Rasterization dep is intentionally NOT vendored into the zero-dep generator — this
 // script lives in the app workspace and uses the app's toolchain.
-// RESOLVED (user decision 2026-06-15): rasterizer = `sharp` (rasterizes the SVG source and
-// resizes every PNG size in one dependency). Add `sharp` to the app workspace devDeps, pinned
-// exact at install. The size MATRIX below is the contract.
+// Rasterizer: `sharp` (rasterizes the SVG source and resizes every PNG size in one
+// dependency). Add `sharp` to the app workspace devDeps, pinned exact at install. The size
+// MATRIX below is the contract.
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -791,11 +791,10 @@ Suggested split on a `phase-7-generator` branch:
 
 ## Open questions / deferred
 
-- **Brand rasterizer — RESOLVED (user decision 2026-06-15): `sharp`.** `gen-brand.mjs` uses
-  `sharp` (rasterize SVG source + resize every PNG), added to the app workspace devDeps and
-  pinned exact at install. The *size matrix* (`icon` 1024 / `adaptive-icon` / `splash` /
-  `favicon`) remains the contract; still align it with whatever `app.config.ts` references
-  (read it from Phase 2).
+- **Brand rasterizer: `sharp`.** `gen-brand.mjs` uses `sharp` (rasterize SVG source + resize
+  every PNG), added to the app workspace devDeps and pinned exact at install. The *size matrix*
+  (`icon` 1024 / `adaptive-icon` / `splash` / `favicon`) is the contract; align it with
+  whatever `app.config.ts` references (read it from Phase 2).
 - **Exact splash/icon sizes & extra densities** — PLAN.md says "all sizes" without
   enumerating them; the matrix above is this guide's concrete set. **⚠️ OPEN / TO CONFIRM**
   against `app.config.ts` + EAS requirements.
