@@ -1,7 +1,7 @@
 # Phase 3 — FastAPI backend (strict layered OOP)
 
 **Goal:** Build `products/_template/api` into a working FastAPI service in the **strict
-layered OOP** shape locked by PLAN.md — `models/` (SQLModel tables, persistence only) →
+layered OOP** shape locked by PHILOSOPHY.md — `models/` (SQLModel tables, persistence only) →
 `services/` (class per aggregate, holds the session via `Depends`, owns business logic
 AND data access) → `schemas/` (Pydantic v2 DTOs = the API contract) ↔ `routers/` (thin,
 map schema↔domain). UUIDv7 PKs on a SQLModel base; RFC 9457 problem+json errors; cursor
@@ -15,7 +15,7 @@ deny-all**; `seed.py`; polyfactory factories; pyright strict + Pydantic strict; 
 multi-stage uv Dockerfile; staging/production fly tomls; pytest against **real Postgres**
 with per-test transaction rollback.
 
-This is the concrete expansion of the PLAN.md **Phase 3** row:
+This is the concrete expansion of the PHILOSOPHY.md **Phase 3** row:
 
 > `_template/api`: strict layered OOP — `models/`, `schemas/` (DTOs), `services/`
 > (BaseService + ItemService/PushService, hold session), thin `routers/`; UUIDv7 base,
@@ -24,7 +24,7 @@ This is the concrete expansion of the PLAN.md **Phase 3** row:
 > deny-all), seed.py, polyfactory factories, pyright-strict config, Dockerfile, fly
 > tomls, pytest (real Postgres).
 
-**Verify (restated from PLAN.md):**
+**Verify (restated from PHILOSOPHY.md):**
 1. `turbo run dev --filter=*template-api` + `curl /healthz` returns healthy.
 2. Items **CRUD + paging** round-trips.
 3. **problem+json** error bodies on failures.
@@ -36,7 +36,7 @@ This is the concrete expansion of the PLAN.md **Phase 3** row:
 9. `turbo run test lint` green (Postgres service container).
 10. `docker build` succeeds.
 
-This guide is faithful to PLAN.md's locked decisions: Decision Sheet bullets on Backend,
+This guide is faithful to PHILOSOPHY.md's locked decisions: Decision Sheet bullets on Backend,
 Topology, Contracts, API hardening, Background/scheduled jobs, Operational defaults, DB
 conventions, "API conventions / architecture", and Realtime; Key design rulings #4
 (psycopg3 + NullPool + `prepare_threshold=None`, Alembic over 5432 via
@@ -44,7 +44,7 @@ conventions, "API conventions / architecture", and Realtime; Key design rulings 
 ALL environments incl. local, HS256 a genuine fallback only), #10 (strict layered OOP but Pythonic, `model → service → schema → router`); the
 `api/` directory tree; the `api/db.py` / `auth.py` / `export_openapi.py` / Dockerfile /
 Python-deps notes in "Config essentials & gotchas"; and the API unit + integration rows in
-"Testing strategy". Anything PLAN.md does not pin is marked **⚠️ OPEN / TO CONFIRM**.
+"Testing strategy". Anything PHILOSOPHY.md does not pin is marked **⚠️ OPEN / TO CONFIRM**.
 
 ---
 
@@ -619,7 +619,7 @@ time-ordered property is what makes the cursor pagination keyset stable. ⚠️ 
 Pydantic strict; if the chosen lib returns its own UUID subtype, wrap with `uuid.UUID(str(...))`
 in the `default_factory` or switch to `uuid6` (which returns a stdlib `uuid.UUID`).
 `push_token` carries the per-user+device row
-PLAN.md specifies for the push loop. These tables are created by the initial Alembic
+PHILOSOPHY.md specifies for the push loop. These tables are created by the initial Alembic
 migration (Step 20), never by `SQLModel.metadata.create_all` in production.
 
 ---
@@ -769,7 +769,7 @@ class PushService(BaseService):
 **Why:** services are the **only** layer that touches both business logic and data access
 (no repository layer, Key ruling #10). Each takes the `Session` via `Depends` in
 `__init__`, so a router declares `svc: ItemService = Depends()` and FastAPI wires the
-session through. `send_push()` uses httpx exactly as PLAN.md specifies (mockable via httpx
+session through. `send_push()` uses httpx exactly as PHILOSOPHY.md specifies (mockable via httpx
 mock transport in unit tests); `prune_stale()` is the scheduled-job entry point.
 
 ---
@@ -978,7 +978,7 @@ from .settings import get_settings
 
 
 def _rate_key(request: Request) -> str:
-    # Per-user when authenticated, else per-IP (PLAN: per-IP + per-user). Key on the verified
+    # Per-user when authenticated, else per-IP (PHILOSOPHY: per-IP + per-user). Key on the verified
     # JWT `sub` claim — a token slice would key per-TOKEN (a refreshed token = a new bucket),
     # not per-USER. An unverified decode here is acceptable: the real auth dependency verifies
     # the same token on the protected route; this is only for choosing a rate-limit bucket.
@@ -1998,7 +1998,7 @@ hit the real DB.
 
 ## Verification
 
-Each maps to a DoD / PLAN.md Verify item. Run from repo root unless noted.
+Each maps to a DoD / PHILOSOPHY.md Verify item. Run from repo root unless noted.
 
 1. **dev + /healthz (Verify 1).**
    ```bash
@@ -2130,4 +2130,4 @@ Suggested commit sequence on a feature branch (one phase = one or a few logical 
   `middleware.py`; the `send_push()` send path + realtime broadcast (service-role HTTP
   call); the Fly scheduled machine invoking `tasks.py prune-stale-tokens`; CI Postgres
   service container wiring in `ci.yml`; `deploy-api.yml` Fly deploys.
-- **Deferred (PLAN-level)** — ADRs vs ARCHITECTURE.md decision-record format.
+- **Deferred (PHILOSOPHY-level)** — ADRs vs ARCHITECTURE.md decision-record format.

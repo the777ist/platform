@@ -19,7 +19,7 @@ built template. Setting up therefore has two stages:
 2. **Stamp a product** with `pnpm new-product <name>` — see *Stage 2*. This is the everyday
    flow once the template exists.
 
-The authoritative architecture and decisions live in **[`PLAN.md`](PLAN.md)**; the literal,
+The authoritative architecture and decisions live in **[`PHILOSOPHY.md`](PHILOSOPHY.md)**; the literal,
 step-by-step build instructions live in **[`docs/`](docs/)** (`phase-1` … `phase-8`).
 
 ---
@@ -105,7 +105,7 @@ products/
     desktop/            # thin Electron wrapper around the web build
     api/                # FastAPI service (its own uv project)
     api-client/         # generated TS client (committed, never hand-edited)
-docs/                   # PLAN execution guides (phase-1 … phase-8) + research/
+docs/                   # phase-by-phase build guides (phase-1 … phase-8) + research/
 ```
 
 ---
@@ -142,7 +142,7 @@ pnpm 11 · Node 24 · Python 3.13 · **Expo SDK 56** (RN 0.85) · **NativeWind v
 
 | Doc | What it is |
 |---|---|
-| [`PLAN.md`](PLAN.md) | Architecture, locked decisions, conventions, repo spec |
+| [`PHILOSOPHY.md`](PHILOSOPHY.md) | Architecture, locked decisions, conventions, repo spec |
 | [`docs/phase-*.md`](docs/) | Literal step-by-step build guides (one per phase) |
 | [`docs/research/`](docs/research/) | The fact-check behind every stack choice, with sources |
 | [`packages/ui/FIGMA.md`](packages/ui/FIGMA.md) | Design-system / token contract (also the designer handover doc) |

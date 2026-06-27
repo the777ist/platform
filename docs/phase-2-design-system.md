@@ -1,8 +1,8 @@
 # Phase 2 — Design system, Storybook, Figma bridge & app shell
 
 > Execution guide for **Phase 2** of the multi-product cross-platform monorepo scaffold.
-> Authoritative spec: [`PLAN.md`](../PLAN.md). This guide expands the Phase 2 row into a
-> literal, ordered build checklist. Where `PLAN.md` is silent, items are marked
+> Authoritative spec: [`PHILOSOPHY.md`](../PHILOSOPHY.md). This guide expands the Phase 2 row into a
+> literal, ordered build checklist. Where `PHILOSOPHY.md` is silent, items are marked
 > **⚠️ OPEN / TO CONFIRM** rather than invented.
 
 ## Goal
@@ -17,7 +17,7 @@ This is the design-side keystone: per Key design ruling **#8** theming is CSS va
 (not tailwind values), and per **#11** Figma modes ARE the per-product brand modes — both
 mechanisms are established here.
 
-### Verify (restated from PLAN.md Phase 2 row)
+### Verify (restated from PHILOSOPHY.md Phase 2 row)
 
 - dev server → themed components at `localhost:8081`, dark toggle works;
 - `pnpm --filter @platform/ui storybook` renders the gallery, light/dark + brand toolbar
@@ -388,7 +388,7 @@ pnpm --filter @platform/ui exec tsc --noEmit
 > convention; map it in `packages/ui/tsconfig.json` `compilerOptions.paths` (`"@/*": ["src/*"]`)
 > and mirror it in the Storybook Vite + Jest configs (steps c, i).
 
-**Why** — PLAN.md Design system bullet + Component-lifecycle bullet: primitives are
+**Why** — PHILOSOPHY.md Design system bullet + Component-lifecycle bullet: primitives are
 **Tier-1 OWNED** source (shadcn model), consume **semantic tokens ONLY**, expose cva
 variants + a `className` escape hatch, and are consumed as source (no build) so one set
 ships to all four targets.
@@ -585,7 +585,7 @@ packages/ui/src/components/ui/input.stories.tsx
 packages/ui/src/components/ui/card.stories.tsx
 ```
 
-Target **Storybook 9 (9.1.x)** (PLAN.md locked call — chosen over ESM-only Storybook 10 for
+Target **Storybook 9 (9.1.x)** (PHILOSOPHY.md locked call — chosen over ESM-only Storybook 10 for
 broadest RN-web-vite + NativeWind compat). Add Storybook devDeps to
 `packages/ui/package.json` (exact pins — freeze to the installed 9.1.x versions):
 `storybook` (9.1.x), `@storybook/react-native-web-vite` (9.1.x), `vite`, `react`,
@@ -755,7 +755,7 @@ pnpm --filter @platform/ui build-storybook  # -> storybook-static/ + index.json
 > Storybook dev port: **6006** (Storybook's default) — confirmed not to clash with the app's
 > fixed **8081** (Expo). Resolved; keep 6006.
 
-**Why** — PLAN.md "Design system workbench" bullet + "Storybook" gotcha: a SINGLE shared
+**Why** — PHILOSOPHY.md "Design system workbench" bullet + "Storybook" gotcha: a SINGLE shared
 workbench in `packages/ui` renders the SAME RN components through react-native-web
 (`@storybook/react-native-web-vite`, NOT on-device `@storybook/react-native`); the global
 decorator imports `global.css` + the theme provider so `className`/NativeWind utilities
@@ -849,7 +849,7 @@ FIGMA_ACCESS_TOKEN=… pnpm dlx @figma/code-connect parse
 > `file_variables:read` and stays **Enterprise-only**. Using one env name for both silently
 > fails the publish step.
 
-**Why** — PLAN.md "Figma bridge" plane (2): colocated `*.figma.tsx` maps Figma component
+**Why** — PHILOSOPHY.md "Figma bridge" plane (2): colocated `*.figma.tsx` maps Figma component
 props → cva variants so MCP `get_design_context` returns owned `@platform/ui` components,
 not generic JSX. Key ruling **#11**: Code Connect maps are the only design artifacts that
 live in-repo as source.
@@ -984,7 +984,7 @@ console.log("regenerated global.css (web) + theme.ts (native)");
 > tree: the stock **`css/variables`** format writes the web `:root`/`.dark` blocks in
 > `global.css`, and a small **JS format** writes the native `theme.ts` `vars()` objects. This
 > resolves the prior "does it also rewrite global.css?" TODO — **yes, both web and native are
-> co-generated**, matching the PLAN's "both derive from the same modes". SD v5 is **ESM-only
+> co-generated**, matching the PHILOSOPHY's "both derive from the same modes". SD v5 is **ESM-only
 > + DTCG-default**, which is why the script is `.mjs` and the fixture is DTCG.
 
 `packages/ui/figma/tokens.json` — the committed Tokens Studio fixture **in DTCG format** (the
@@ -1004,7 +1004,7 @@ node scripts/figma-tokens.mjs                          # regenerate theme.ts
 git diff --exit-code packages/ui/src/lib/theme.ts      # second run must be clean (idempotent)
 ```
 
-**Why** — PLAN.md "Figma bridge" plane (1) + Key ruling **#11** + the explicit Phase 2
+**Why** — PHILOSOPHY.md "Figma bridge" plane (1) + Key ruling **#11** + the explicit Phase 2
 note "source-abstracted: Tokens Studio JSON default / REST on Enterprise". One-directional
 (Figma → code, committed) keeps generated theme files reviewable. The REST Variables API is
 **Enterprise-only**, which is exactly why Tokens Studio JSON is the default (see Gotchas).
@@ -1112,7 +1112,7 @@ Regenerate theme files from the Figma token source. Never hand-edit generated th
 
 **Commands** — none (docs/commands; exercised via the slash commands).
 
-**Why** — PLAN.md "Docs & agent surface" + "Bootstrap the design system from Figma" +
+**Why** — PHILOSOPHY.md "Docs & agent surface" + "Bootstrap the design system from Figma" +
 Component-lifecycle bullets. Commands live at the **`packages/ui` level** (operate on the
 shared design system), distinct from root product-arg commands.
 
@@ -1132,7 +1132,7 @@ packages/core/src/persist.web.ts    # localStorage persister
 packages/core/src/persist.native.ts # AsyncStorage persister
 ```
 
-> Scope note: PLAN.md Phase 2 only requires `packages/core` **(query+persist, env)**. The
+> Scope note: PHILOSOPHY.md Phase 2 only requires `packages/core` **(query+persist, env)**. The
 > other `core` files in the directory tree (`supabase.ts`, `auth.ts`, `realtime.ts`,
 > `notifications.ts`, `storage.ts`, `api.ts`, `sentry.ts`) are built in later phases (6, 8)
 > — do NOT build them here.
@@ -1705,7 +1705,7 @@ turbo run test --filter=@platform/ui                         # Button test green
 #   export in index.ts, and a committed VR baseline (light+dark).
 ```
 
-**Phase-2 Verify (from PLAN.md) restated as a final gate:** dev server themed at
+**Phase-2 Verify (from PHILOSOPHY.md) restated as a final gate:** dev server themed at
 `localhost:8081` with working dark toggle; Storybook gallery with live light/dark + brand
 switching; `node scripts/figma-tokens.mjs` regenerates `theme.ts`; `/add-component` yields
 primitive + story + Code Connect + baseline; Expo Go on device matches; `turbo run
@@ -1716,7 +1716,7 @@ v4↔SDK56 compat decision recorded (fallback target = SDK 54).
 
 ## Commits
 
-Phase 2 = one feature branch, a few logical commits (PLAN.md: "Each phase = one commit (or
+Phase 2 = one feature branch, a few logical commits (PHILOSOPHY.md: "Each phase = one commit (or
 a few logical commits) on a feature branch"). Suggested grouping:
 
 1. `feat(ui): scaffold @platform/ui + adopt react-native-reusables primitives (button/text/input/card) + cn()/theme` — steps (a)(b).
@@ -1740,7 +1740,7 @@ the repo's git conventions (branch off the default branch first).
   NativeWind-validated SDK; 54 is the last officially-validated SDK with a legacy-arch escape
   hatch) and record the pin.
 - **⚠️ Exact version pins** — freeze to what the CLI/`expo install` emit at execution time;
-  PLAN.md names the packages, not the numbers. Current reference values: `nativewind 4.2.5`
+  PHILOSOPHY.md names the packages, not the numbers. Current reference values: `nativewind 4.2.5`
   (+ pin `react-native-css-interop` exact),
   `@rn-primitives/* 1.4.0` (slot/types/portal), `class-variance-authority 0.7.1`, `clsx 2.1.1`,
   `tailwind-merge 2.6.x` (Tailwind-v3 line — do NOT use 3.x, which assumes Tailwind v4),
@@ -1757,7 +1757,7 @@ the repo's git conventions (branch off the default branch first).
   co-generates **both** via Style Dictionary v5: the stock `css/variables` format writes the
   web `:root`/`.dark` blocks in `global.css` and a JS format writes the native `theme.ts`
   `vars()` objects, both from one resolved token tree (a custom `color/hsl-channels` transform
-  emits the space-separated HSL channels the `hsl(var(--x))` preset needs). Matches PLAN.md's
+  emits the space-separated HSL channels the `hsl(var(--x))` preset needs). Matches PHILOSOPHY.md's
   "both web and native derive from the same modes". (Style Dictionary docs / SD v5 migration.)
 - **VR baseline tooling wiring** (`/add-component` step 6 + nightly `e2e-nightly.yml`) — the
   Playwright-over-`storybook-static/index.json` runner is defined in Testing strategy but

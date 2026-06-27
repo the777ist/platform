@@ -2,7 +2,7 @@
 
 ## Summary
 
-**21 claims checked** across PLAN.md (Decision Sheet, ruling #6, "Config essentials") and `docs/phase-1-root-tooling.md` (Steps 1–9).
+**21 claims checked** across PHILOSOPHY.md (Decision Sheet, ruling #6, "Config essentials") and `docs/phase-1-root-tooling.md` (Steps 1–9).
 
 Issue counts: **❌ 4 / ⚠️ 5 / ❓ 1** (remainder ✅ correct & current).
 
@@ -20,7 +20,7 @@ Issue counts: **❌ 4 / ⚠️ 5 / ❓ 1** (remainder ✅ correct & current).
 ## Findings
 
 ### 1. pnpm version pin (`pnpm 10`)
-- **Location:** PLAN.md Decision Sheet ("mise pins … pnpm 10"); `phase-1` Step 1 `mise.toml` `pnpm = "10"`; `package.json` `"packageManager": "pnpm@10.0.0"`, `"pnpm": ">=10"`.
+- **Location:** PHILOSOPHY.md Decision Sheet ("mise pins … pnpm 10"); `phase-1` Step 1 `mise.toml` `pnpm = "10"`; `package.json` `"packageManager": "pnpm@10.0.0"`, `"pnpm": ">=10"`.
 - **Claim:** pnpm 10 is the current/appropriate version.
 - **Status:** ⚠️ outdated-but-works.
 - **Finding:** pnpm **11.0** released **28 Apr 2026**; latest is **11.6.0** (published ~12 Jun 2026). pnpm 10.x is still maintained but is the prior major. pnpm 10 *works*, but the plan should be a conscious pin, not an accident of being written pre-11. Note pnpm 11 is pure ESM and requires Node ≥ 22.13.
@@ -28,7 +28,7 @@ Issue counts: **❌ 4 / ⚠️ 5 / ❓ 1** (remainder ✅ correct & current).
 - **Source(s):** https://pnpm.io/blog/releases/11.0 ; https://www.npmjs.com/package/pnpm?activeTab=versions ; https://www.infoq.com/news/2026/04/pnpm-11-rc-release/
 
 ### 2. `.npmrc` holds `node-linker=hoisted` (and other settings)
-- **Location:** PLAN.md ruling #6 + Directory tree (`.npmrc # node-linker=hoisted`); `phase-1` Step 2 `.npmrc`.
+- **Location:** PHILOSOPHY.md ruling #6 + Directory tree (`.npmrc # node-linker=hoisted`); `phase-1` Step 2 `.npmrc`.
 - **Claim:** `node-linker=hoisted` (plus `prefer-frozen-lockfile`, `only-built-dependencies`) live in `.npmrc`.
 - **Status:** ❌ wrong-or-removed **under pnpm 11** (✅ correct under pnpm 10).
 - **Finding:** In **pnpm 11, `.npmrc` is read for auth/registry only.** Every other setting — `node-linker`, `hoist-pattern`, `save-exact`, `prefer-frozen-lockfile`, etc. — must move to **`pnpm-workspace.yaml`** (or `~/.config/pnpm/config.yaml`) as **camelCase** keys, e.g. `nodeLinker: hoisted`, `preferFrozenLockfile: true`. pnpm 11 **silently ignores** the old `.npmrc` settings (no deprecation warning — community-confirmed footgun). The official `codemod run pnpm-v10-to-v11` performs the split automatically.
@@ -63,7 +63,7 @@ Issue counts: **❌ 4 / ⚠️ 5 / ❓ 1** (remainder ✅ correct & current).
 - **Source(s):** https://pnpm.io/settings ; https://pnpm.io/continuous-integration ; https://pnpm.io/blog/releases/11.0
 
 ### 5. Node 22 pin
-- **Location:** PLAN.md Decision Sheet ("Node 22"); ruling sheet "Node 22"; `mise.toml` `node = "22"`; `package.json` `"node": ">=22"`; `tsconfig` posture.
+- **Location:** PHILOSOPHY.md Decision Sheet ("Node 22"); ruling sheet "Node 22"; `mise.toml` `node = "22"`; `package.json` `"node": ">=22"`; `tsconfig` posture.
 - **Claim:** Node 22 is the right LTS to pin.
 - **Status:** ⚠️ outdated-but-works.
 - **Finding:** Node **24 'Krypton'** has been **Active LTS since Oct 2025** and is the recommended runtime for new 2026 projects (supported through ~Apr 2028). **Node 22 entered Maintenance LTS in Oct 2025** (EOL Apr 2027) — it receives only critical fixes after ~Oct 2026. A greenfield scaffold started mid-2026 would normally pin Node 24. Node 22 still works (and Expo SDK / RN tooling support it), but it's the prior LTS with ~10 months of full support left.
@@ -71,15 +71,15 @@ Issue counts: **❌ 4 / ⚠️ 5 / ❓ 1** (remainder ✅ correct & current).
 - **Source(s):** https://nodejs.org/en/blog/release/v24.11.0 ; https://endoflife.date/nodejs ; https://github.com/nodejs/node/releases/tag/v24.16.0 ; https://www.pkgpulse.com/guides/nodejs-24-lts-upgrade-from-node-22-2026
 
 ### 6. `node-linker=hoisted` is the documented happy path for pnpm + Expo/Metro
-- **Location:** PLAN.md ruling #6; `phase-1` Step 2 "Why" + gotchas; Decision Sheet.
+- **Location:** PHILOSOPHY.md ruling #6; `phase-1` Step 2 "Why" + gotchas; Decision Sheet.
 - **Claim:** hoisted linker is still the documented happy path for pnpm + Expo; never set `disableHierarchicalLookups`; configure `watchFolders`/`nodeModulesPaths` in metro.
 - **Status:** ✅ correct & current (mechanism), with a config-location caveat.
-- **Finding:** Still true in 2026. pnpm's default linker is `isolated` (symlinked virtual store); React-Native/Metro tooling expects a flat `node_modules`, so **`hoisted` remains the recommended fix**, and the Expo monorepo guide still documents `watchFolders` + `resolver.nodeModulesPaths`. The only thing that changed is **where you write the setting** (see finding 2: `nodeLinker: hoisted` in `pnpm-workspace.yaml` on pnpm 11). The metro.config.js shape in PLAN ("Config essentials") is correct and current. The "never `disableHierarchicalLookups`" guidance is sound.
+- **Finding:** Still true in 2026. pnpm's default linker is `isolated` (symlinked virtual store); React-Native/Metro tooling expects a flat `node_modules`, so **`hoisted` remains the recommended fix**, and the Expo monorepo guide still documents `watchFolders` + `resolver.nodeModulesPaths`. The only thing that changed is **where you write the setting** (see finding 2: `nodeLinker: hoisted` in `pnpm-workspace.yaml` on pnpm 11). The metro.config.js shape in PHILOSOPHY ("Config essentials") is correct and current. The "never `disableHierarchicalLookups`" guidance is sound.
 - **Recommended change:** Keep the mechanism; only relocate the setting if on pnpm 11.
 - **Source(s):** https://docs.expo.dev/guides/monorepos/ ; https://pnpm.io/settings ; https://www.callstack.com/blog/react-native-monorepo-with-pnpm-workspaces
 
 ### 7. `pnpm prepare` → `lefthook install` hook installation
-- **Location:** PLAN.md Phase 1 row ("hooks install via pnpm prepare"); Decision Sheet Git-hooks; `phase-1` Step 4 `package.json` `"prepare": "lefthook install"`, Step 9, DoD 9.
+- **Location:** PHILOSOPHY.md Phase 1 row ("hooks install via pnpm prepare"); Decision Sheet Git-hooks; `phase-1` Step 4 `package.json` `"prepare": "lefthook install"`, Step 9, DoD 9.
 - **Claim:** A root `"prepare": "lefthook install"` script auto-installs Lefthook hooks on `pnpm install`.
 - **Status:** ✅ correct & current.
 - **Finding:** This is still the standard pattern for npm-installed Lefthook: `npm/pnpm install lefthook` then `lefthook install`, with the `prepare` lifecycle script triggering it post-install. (The "remove the prepare script" advice circulating online applies specifically to *migrating off Husky*, not to this Lefthook-via-prepare pattern.) `stage_fixed: true` is a current, documented pre-commit option that re-stages auto-fixed files. Lefthook remains a maintained standalone binary in 2026.
@@ -87,7 +87,7 @@ Issue counts: **❌ 4 / ⚠️ 5 / ❓ 1** (remainder ✅ correct & current).
 - **Source(s):** https://lefthook.dev/install/ ; https://lefthook.dev/configuration/stage_fixed/ ; https://lefthook.dev/
 
 ### 8. Turborepo 2.9 — `tasks` key (not `pipeline`)
-- **Location:** PLAN.md Decision Sheet + "Config essentials" (turbo.json 2.9 `tasks`); `phase-1` Step 5 `turbo.json`.
+- **Location:** PHILOSOPHY.md Decision Sheet + "Config essentials" (turbo.json 2.9 `tasks`); `phase-1` Step 5 `turbo.json`.
 - **Claim:** Turborepo 2.9 uses the `tasks` key; `pipeline` is legacy.
 - **Status:** ✅ correct & current.
 - **Finding:** Confirmed — all Turborepo v2.x configs use `tasks`; the v1 `pipeline` key is deprecated/removed. Turborepo 2.9 shipped (Mar 2026); current line is 2.9.x (canaries up to 2.9.17 in early Jun 2026). 2.9 is "quality-focused," makes `turbo query` stable, and introduces **Future Flags + deprecations ahead of 3.0** (e.g. the `daemon` option and `--graph` raster/json formats are deprecated for 3.0). `npx @turbo/codemod migrate` is the upgrade path. None of the 3.0 deprecations touch the `tasks`/`inputs`/`outputs`/`dependsOn` surface the plan uses.
@@ -95,7 +95,7 @@ Issue counts: **❌ 4 / ⚠️ 5 / ❓ 1** (remainder ✅ correct & current).
 - **Source(s):** https://turborepo.dev/blog/2-9 ; https://turborepo.dev/docs/reference/configuration ; https://github.com/vercel/turborepo/releases
 
 ### 9. Turborepo `--affected`, `inputs`/`outputs`, `dependsOn ^`, package-level turbo.json
-- **Location:** PLAN.md Decision Sheet (`--affected`), "Config essentials" (openapi inputs/outputs, package-level edges, `^openapi`/`^build`/`^export:web`), `phase-4` turbo task graph; `phase-1` Step 5 + gotchas.
+- **Location:** PHILOSOPHY.md Decision Sheet (`--affected`), "Config essentials" (openapi inputs/outputs, package-level edges, `^openapi`/`^build`/`^export:web`), `phase-4` turbo task graph; `phase-1` Step 5 + gotchas.
 - **Claim:** `--affected` flag exists; `inputs`/`outputs` arrays; `dependsOn: ["^build"]` means "this task depends on the same task in package dependencies"; package-level `turbo.json` can override per-package; directory globs in inputs/outputs expand to `dir/**`.
 - **Status:** ✅ correct & current.
 - **Finding:** All confirmed against the 2.9 configuration reference. `turbo run … --affected` is stable. Package-level (workspace) `turbo.json` overrides are supported. `^` denotes topological dependency on the same task across a package's dependencies. Directory globs (`dist` ≡ `dist/**`) behave as the plan assumes. The `dev: { cache: false, persistent: true }` shape is correct. The plan's note that affected-scoping needs a git base ref (`TURBO_SCM_BASE`/fetch depth in CI) is accurate.
@@ -111,7 +111,7 @@ Issue counts: **❌ 4 / ⚠️ 5 / ❓ 1** (remainder ✅ correct & current).
 - **Source(s):** https://github.com/vercel/turborepo/blob/main/turbo.json ; https://turborepo.dev/docs/reference/configuration ; https://github.com/vercel/turborepo/discussions/7466
 
 ### 11. `mise.toml` `[tools]` schema (node/pnpm/python/uv)
-- **Location:** PLAN.md Decision Sheet + Directory tree; `phase-1` Step 1.
+- **Location:** PHILOSOPHY.md Decision Sheet + Directory tree; `phase-1` Step 1.
 - **Claim:** `[tools] node="22" pnpm="10" python="3.13" uv="latest"` is valid mise.toml.
 - **Status:** ✅ correct & current (schema), version values per findings 1 & 5.
 - **Finding:** The `[tools]` table with string version specifiers (`"22"`, `"latest"`) is the correct, current mise schema; mise has built-in providers for node, pnpm, python, and uv, so pinning all four is supported. (Note: mise's UV_PYTHON export integrates with uv; the plan's per-product uv usage is compatible.) The schema is fine; only the *pinned values* (pnpm 10, node 22) are stale.
@@ -127,7 +127,7 @@ Issue counts: **❌ 4 / ⚠️ 5 / ❓ 1** (remainder ✅ correct & current).
 - **Source(s):** https://mise.jdx.dev/configuration/settings.html ; https://mac.install.guide/mise/mise-configuration ; https://mise.jdx.dev/environments/
 
 ### 13. `mise-action` for CI
-- **Location:** PLAN.md "Workflows" (`ci.yml` — mise-action → pnpm frozen install …); `phase-1` cross-ref.
+- **Location:** PHILOSOPHY.md "Workflows" (`ci.yml` — mise-action → pnpm frozen install …); `phase-1` cross-ref.
 - **Claim:** A `mise-action` provisions the toolchain in GitHub Actions.
 - **Status:** ❓ unverifiable in this pass (assumed current).
 - **Finding:** `jdx/mise-action` is the established GitHub Action for installing mise-managed tools and is widely used in 2026; I did not fetch its release page in this pass to confirm the exact current major (the action exists and is the documented CI path). No evidence it's deprecated. Flagged ❓ only because I did not pin its current version/version-syntax this round.
@@ -135,7 +135,7 @@ Issue counts: **❌ 4 / ⚠️ 5 / ❓ 1** (remainder ✅ correct & current).
 - **Source(s):** https://mise.jdx.dev/ (CI/continuous-integration docs reference mise-action)
 
 ### 14. `pnpm-workspace.yaml` package globs
-- **Location:** PLAN.md Directory tree + "Package management model"; `phase-1` Step 3.
+- **Location:** PHILOSOPHY.md Directory tree + "Package management model"; `phase-1` Step 3.
 - **Claim:** `packages:` list with `packages/*`, `products/*/app`, `…/desktop`, `…/api`, `…/api-client` is valid.
 - **Status:** ✅ correct & current.
 - **Finding:** The `packages:` key for workspace globs is correct and unchanged in pnpm 11. Listing the four product sub-workspaces explicitly (rather than `products/*`) is sound. **Caveat from finding 2:** under pnpm 11, this same file is now *also* where `nodeLinker`/`preferFrozenLockfile`/`allowBuilds` belong — so `pnpm-workspace.yaml` gains those keys alongside `packages:`.
@@ -143,7 +143,7 @@ Issue counts: **❌ 4 / ⚠️ 5 / ❓ 1** (remainder ✅ correct & current).
 - **Source(s):** https://pnpm.io/settings ; https://pnpm.io/migration
 
 ### 15. `packageManager: "pnpm@10.0.0"` field (EAS workspace-detection workaround)
-- **Location:** PLAN.md "Workflows" (packageManager field = eas-cli workspace detection workaround); `phase-1` Step 4.
+- **Location:** PHILOSOPHY.md "Workflows" (packageManager field = eas-cli workspace detection workaround); `phase-1` Step 4.
 - **Claim:** The `packageManager` field is needed and set to `pnpm@10.0.0`.
 - **Status:** ⚠️ field valid; version stale + should be exact.
 - **Finding:** The `packageManager` field (Corepack convention, `name@x.y.z`) is correct and still used by tooling/CI to select the right pnpm. The value should track the actual pnpm major (10 vs 11 per finding 1) and be an **exact** version (Corepack expects a full semver; `10.0.0` is exact but likely behind the real lockfile patch). Keeping `packageManager` aligned with the installed pnpm major is *more* important under pnpm 11 because of the new "fail CI on newer-major lockfile" behavior (finding 4).
@@ -151,7 +151,7 @@ Issue counts: **❌ 4 / ⚠️ 5 / ❓ 1** (remainder ✅ correct & current).
 - **Source(s):** https://pnpm.io/installation ; https://pnpm.io/blog/releases/11.0
 
 ### 16. `@hey-api/openapi-ts` typegen pin (build-tooling-adjacent)
-- **Location:** PLAN.md Decision Sheet + "Config essentials → Typegen"; `phase-4`.
+- **Location:** PHILOSOPHY.md Decision Sheet + "Config essentials → Typegen"; `phase-4`.
 - **Claim:** `@hey-api/openapi-ts` (pinned exact, pre-1.0) + client-fetch + TanStack Query plugin.
 - **Status:** ❓ out-of-domain (flagged for the typegen reviewer).
 - **Finding:** Versioning/API-surface of hey-api is outside the monorepo/build-tooling domain and belongs to the Phase-4 typegen review; not verified here. The *turbo wiring* around it (the `openapi` task `inputs`/`outputs`, `api-client#build` `dependsOn: ["^openapi","^build"]`) is in-domain and is correct (finding 9).
@@ -162,7 +162,7 @@ Issue counts: **❌ 4 / ⚠️ 5 / ❓ 1** (remainder ✅ correct & current).
 
 ## Resolved OPEN / TO CONFIRM (in-scope flags from phase-1)
 
-- **OPEN (Step 1): "uv exact pin — PLAN says 'uv', mise uses `latest`."**
+- **OPEN (Step 1): "uv exact pin — PHILOSOPHY says 'uv', mise uses `latest`."**
   Resolved (advisory): `uv = "latest"` is valid mise syntax and fine for dev; for reproducible CI/Docker, pin an exact uv in `mise.toml` once Phase 3's Dockerfile depends on it. mise's built-in uv provider supports both. Not a correctness bug. Source: https://mise.jdx.dev/dev-tools/deps.html
 
 - **OPEN (Step 2): "pnpm 10 blocks dependency build scripts by default (`only-built-dependencies`); leave allowlist commented."**
@@ -174,7 +174,7 @@ Issue counts: **❌ 4 / ⚠️ 5 / ❓ 1** (remainder ✅ correct & current).
 - **OPEN (Step 5): "Confirm exact turbo 2.9.x schema URL/fields against the installed version."**
   Resolved: fields (`tasks`/`inputs`/`outputs`/`dependsOn`/`cache`/`persistent`/`ui`) are correct for 2.9; prefer `$schema: https://turborepo.dev/schema.json` (canonical host) — `turbo.build/schema.json` still works (finding 10). Source: https://turborepo.dev/docs/reference/configuration
 
-- **OPEN (Step 6 / tsconfig): "extra strict flags conventional, not PLAN-mandated."**
+- **OPEN (Step 6 / tsconfig): "extra strict flags conventional, not PHILOSOPHY-mandated."**
   Out of strict scope for this domain (TS compiler config), but no monorepo/build-tooling conflict: `moduleResolution: "bundler"`, `noEmit`, `verbatimModuleSyntax` are all current and compatible with the Turborepo/pnpm setup. No action from a build-tooling standpoint.
 
 - **OPEN (Step 9 / lefthook): "lefthook `^1.7.0` chosen; pin to lockfile."**

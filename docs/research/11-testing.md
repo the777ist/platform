@@ -8,7 +8,7 @@
 - ✅ Accurate / current: **11**
 - ⚠️ Needs a change / caveat: **5**
 - ❌ Wrong as written (will break at execution): **2**
-- ❓ Unverifiable from PLAN/guides alone: **0** (all resolved against docs)
+- ❓ Unverifiable from PHILOSOPHY/guides alone: **0** (all resolved against docs)
 
 **Headline:** The testing toolchain is fundamentally sound and current — **jest-expo is
 still Expo's recommended unit runner and version 56.0.4 supports SDK 56 / RN 0.85**, RNTL is
@@ -32,7 +32,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
 ## Findings
 
 ### 1. jest-expo as the single JS runner for SDK 56 / RN 0.85
-- **Location:** PLAN.md "Quality" bullet + Testing strategy row 1; Phase 2 step (i)
+- **Location:** PHILOSOPHY.md "Quality" bullet + Testing strategy row 1; Phase 2 step (i)
   (`preset: "jest-expo"`); Phase 2 Gotchas (NativeWind v4 ↔ SDK 56).
 - **Claim:** "single Jest runner (jest-expo preset) + RNTL for ALL JS tests"; viable on
   Expo SDK 56 / RN 0.85.
@@ -121,7 +121,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
   github.com/callstack/react-native-testing-library/releases (v14 dropped RN 18 / renderer changes).
 
 ### 5. Frontend tests mock at the generated-client boundary
-- **Location:** PLAN.md mocking conventions ("frontend tests mock at the generated-client
+- **Location:** PHILOSOPHY.md mocking conventions ("frontend tests mock at the generated-client
   boundary (never fetch)").
 - **Claim:** Mock the hey-api generated client, not `fetch`.
 - **Status:** ✅
@@ -209,7 +209,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
   (`ItemCreate`, `PushTokenCreate`) — which is the right call: polyfactory's `ModelFactory` is
   for Pydantic models, not SQLModel **table** classes directly (SQLModel tables are also
   Pydantic models but generating them needs DB-managed fields handled; building DTOs and
-  letting the service persist is cleaner). PLAN's phrase "Pydantic/SQLModel factories" is
+  letting the service persist is cleaner). PHILOSOPHY's phrase "Pydantic/SQLModel factories" is
   satisfied by factoring the DTOs.
 - **Recommended change:** Pin polyfactory exact (current 2.x line). If a factory ever targets
   a SQLModel **table** class, use `SQLAlchemyFactory`/`ModelFactory` with care around the
@@ -218,7 +218,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
   polyfactory.litestar.dev/latest/reference/factories/pydantic_factory.html.
 
 ### 9. send_push() unit test with httpx MockTransport
-- **Location:** PLAN mocking conventions; Phase 8 step (b) `test_push.py`
+- **Location:** PHILOSOPHY mocking conventions; Phase 8 step (b) `test_push.py`
   (`httpx.MockTransport(handler)`, inject `http=` AsyncClient).
 - **Claim:** Mock external HTTP (Expo Push) via httpx mock transport.
 - **Status:** ✅

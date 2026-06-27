@@ -33,7 +33,7 @@ Tailwind-v3-style `tailwind.config.js` (matches the plan, but worth noting).
 ## Findings
 
 ### 1. NativeWind v4 is current/stable; v5 is pre-release — plan is correct
-- **Location:** PLAN.md L29 ("NativeWind v4 (v5 is pre-release — do NOT use)"); ruling #8;
+- **Location:** PHILOSOPHY.md L29 ("NativeWind v4 (v5 is pre-release — do NOT use)"); ruling #8;
   phase-2 L31, Gotchas L1427 ("Use NativeWind v4 (v5 is pre-release — forbidden)").
 - **Claim:** v4 is the production choice; v5 is pre-release and must not be used.
 - **Status:** ✅
@@ -48,7 +48,7 @@ Tailwind-v3-style `tailwind.config.js` (matches the plan, but worth noting).
   https://www.nativewind.dev/v5 ; https://www.nativewind.dev/v5/guides/migrate-from-v4
 
 ### 2. What v5 changes (for the record) — confirms why v4 is the safe choice
-- **Location:** PLAN.md L29; phase-2 Gotchas L1427–1433.
+- **Location:** PHILOSOPHY.md L29; phase-2 Gotchas L1427–1433.
 - **Claim (implicit):** v5 is a meaningfully different setup not worth adopting yet.
 - **Status:** ✅
 - **Finding:** v5's headline changes: it moves to **Tailwind CSS v4.1+** (CSS-first
@@ -64,7 +64,7 @@ Tailwind-v3-style `tailwind.config.js` (matches the plan, but worth noting).
   https://www.nativewind.dev/v5/guides/themes ; https://www.nativewind.dev/docs/api/css-interop
 
 ### 3. NativeWind v4 uses Tailwind CSS **v3**, not v4 — preset approach is correct
-- **Location:** PLAN.md ruling #8, "Theming wiring" gotcha L263; phase-2 step (b)
+- **Location:** PHILOSOPHY.md ruling #8, "Theming wiring" gotcha L263; phase-2 step (b)
   tailwind-preset.js; DoD #4.
 - **Claim (implicit):** a JS `tailwind.config.js`/preset mapping semantic names to
   `hsl(var(--x))` is the right mechanism.
@@ -84,7 +84,7 @@ Tailwind-v3-style `tailwind.config.js` (matches the plan, but worth noting).
   (`latest 4.3.1`, `v3-lts 3.4.19`).
 
 ### 4. `withNativeWind` metro + `jsxImportSource: "nativewind"` babel setup — correct for v4
-- **Location:** PLAN.md "metro.config.js"/"babel.config.js" gotchas L257–259; phase-2
+- **Location:** PHILOSOPHY.md "metro.config.js"/"babel.config.js" gotchas L257–259; phase-2
   step (h) metro.config.js + babel.config.js.
 - **Claim:** `module.exports = withNativeWind(config, { input: "./global.css" })`;
   babel `["babel-preset-expo",{jsxImportSource:"nativewind"}],"nativewind/babel"`.
@@ -99,7 +99,7 @@ Tailwind-v3-style `tailwind.config.js` (matches the plan, but worth noting).
   NativeWind v4 announcement https://www.nativewind.dev/blog/announcement-nativewind-v4
 
 ### 5. `vars()` for native theming — valid in v4 (deprecated only in v5)
-- **Location:** PLAN.md ruling #8 ("NativeWind `vars()` objects on native"); phase-2
+- **Location:** PHILOSOPHY.md ruling #8 ("NativeWind `vars()` objects on native"); phase-2
   step (b) `theme.ts` (`vars({...})`) + `theme-provider.tsx`.
 - **Claim:** native side applies theme tokens via `vars()` objects on a wrapping `View`,
   shared down the tree via context.
@@ -118,7 +118,7 @@ Tailwind-v3-style `tailwind.config.js` (matches the plan, but worth noting).
   https://www.nativewind.dev/docs/guides/themes
 
 ### 6. `cssInterop` — exists in v4; plan does not actually rely on it
-- **Location:** Domain prompt asks to verify `cssInterop`. PLAN.md / phase-2 do not use
+- **Location:** Domain prompt asks to verify `cssInterop`. PHILOSOPHY.md / phase-2 do not use
   `cssInterop` in any build step.
 - **Claim:** n/a (no plan claim to verify; included for completeness per domain).
 - **Status:** ✅ (no issue)
@@ -133,7 +133,7 @@ Tailwind-v3-style `tailwind.config.js` (matches the plan, but worth noting).
   https://www.nativewind.dev/docs/guides/third-party-components
 
 ### 7. The `hsl(var(--x))` semantic-token preset is the documented best practice — confirmed
-- **Location:** PLAN.md ruling #8; phase-2 step (b) tailwind-preset.js + global.css.
+- **Location:** PHILOSOPHY.md ruling #8; phase-2 step (b) tailwind-preset.js + global.css.
 - **Claim:** semantic CSS variables (`--background`, `--primary`, …) as HSL triples,
   consumed via `hsl(var(--x))`, with `:root` (light) + `.dark` (dark) blocks; products
   override values, not components.
@@ -155,7 +155,7 @@ Tailwind-v3-style `tailwind.config.js` (matches the plan, but worth noting).
   Medium "System Theme Support with NativeWind v4 and React Native Reusables".
 
 ### 8. react-native-reusables IS the shadcn-for-RN model (copy-in / owned) — confirmed
-- **Location:** PLAN.md L30 ("shadcn model: components are copied in and OWNED");
+- **Location:** PHILOSOPHY.md L30 ("shadcn model: components are copied in and OWNED");
   Component-lifecycle bullet; phase-2 step (a) "adopt … via its CLI (copies OWNED source)".
 - **Claim:** rn-reusables follows the shadcn copy-paste/ownership model.
 - **Status:** ✅
@@ -169,7 +169,7 @@ Tailwind-v3-style `tailwind.config.js` (matches the plan, but worth noting).
   https://reactnativereusables.com/docs ; reactscript.com rn-reusables overview.
 
 ### 9. CLI `add` command form — correct; note the org move + a known CLI bug
-- **Location:** PLAN.md L43/L159 ("react-native-reusables components copied in via its
+- **Location:** PHILOSOPHY.md L43/L159 ("react-native-reusables components copied in via its
   CLI"); phase-2 step (a) command
   `pnpm --filter @platform/ui dlx @react-native-reusables/cli@latest add text button input card`;
   add-component.md `pnpm --filter @platform/ui dlx @react-native-reusables/cli add <name>`.
@@ -196,7 +196,7 @@ Tailwind-v3-style `tailwind.config.js` (matches the plan, but worth noting).
   https://github.com/founded-labs/react-native-reusables (README).
 
 ### 10. Component list (button / text / input / card) — all exist
-- **Location:** PLAN.md L393/L173 (button.tsx, text.tsx, …); phase-2 step (a) adds
+- **Location:** PHILOSOPHY.md L393/L173 (button.tsx, text.tsx, …); phase-2 step (a) adds
   `text button input card`; DoD #1.
 - **Claim:** rn-reusables provides Button, Text, Input, Card.
 - **Status:** ✅
@@ -210,7 +210,7 @@ Tailwind-v3-style `tailwind.config.js` (matches the plan, but worth noting).
   reactscript.com rn-reusables overview ; reactnativereusables.com/docs.
 
 ### 11. react-native-reusables now supports Uniwind **and** NativeWind — context worth noting
-- **Location:** PLAN.md L30 / phase-2 (assumes rn-reusables == NativeWind-only).
+- **Location:** PHILOSOPHY.md L30 / phase-2 (assumes rn-reusables == NativeWind-only).
 - **Claim (implicit):** rn-reusables is a NativeWind library.
 - **Status:** ⚠️
 - **Finding:** Current rn-reusables README/docs describe components "with Nativewind**/
@@ -228,7 +228,7 @@ Tailwind-v3-style `tailwind.config.js` (matches the plan, but worth noting).
   https://github.com/founded-labs/react-native-reusables/issues/505 (Uniwind CSS-first init).
 
 ### 12. `@rn-primitives/*` are NO LONGER pre-1.0 — version + rationale drift
-- **Location:** PLAN.md L269 ("Pin react-native-reusables' `@rn-primitives/*` deps exactly
+- **Location:** PHILOSOPHY.md L269 ("Pin react-native-reusables' `@rn-primitives/*` deps exactly
   like other pre-1.0 tools"); L36/L43 (treat as pre-1.0); phase-2 step (a) package.json
   pins `@rn-primitives/slot 1.2.0`, `@rn-primitives/types 1.2.0`; OPEN note L162; Gotcha
   L1444 ("Pre-1.0; a caret bump can break owned components").
@@ -277,7 +277,7 @@ Tailwind-v3-style `tailwind.config.js` (matches the plan, but worth noting).
 - **Source(s):** rn-reusables docs / shadcn convention (initial-setup).
 
 ### 15. CSS-variable light/dark on web vs native — mechanism is correct on all four targets
-- **Location:** PLAN.md ruling #8; phase-2 step (b) global.css (`:root`/`.dark:root`) +
+- **Location:** PHILOSOPHY.md ruling #8; phase-2 step (b) global.css (`:root`/`.dark:root`) +
   theme.ts (`vars()`) + theme-provider.tsx (`colorScheme.set` toggles `.dark` on web).
 - **Claim:** web uses `:root`/`.dark` CSS blocks; native uses `vars()` objects; same
   semantic names everywhere; `colorScheme` controls the dark class on web.
@@ -318,7 +318,7 @@ Tailwind-v3-style `tailwind.config.js` (matches the plan, but worth noting).
 - **Source(s):** npm `style-dictionary` dist-tags (`latest 5.4.4`).
 
 ### 18. Figma REST Variables API is Enterprise-only — correct
-- **Location:** PLAN.md "Figma bridge" (REST on Enterprise); phase-2 step (e) +
+- **Location:** PHILOSOPHY.md "Figma bridge" (REST on Enterprise); phase-2 step (e) +
   Gotcha L1448.
 - **Claim:** `GET /v1/files/:key/variables/local` requires an Enterprise plan; hence
   Tokens Studio JSON default.

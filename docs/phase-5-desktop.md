@@ -52,7 +52,7 @@ confirm:
    the single `index.html` SPA the `app://` handler depends on. No further confirmation needed.
 3. **Turbo graph wiring is understood:** `desktop#build` `dependsOn: ["^export:web"]` and the
    desktop→app dependency edge comes from a real `devDependency` on `@platform/template-app`
-   (see turbo notes in PLAN.md "Config essentials"). This guide creates that edge.
+   (see turbo notes in PHILOSOPHY.md "Config essentials"). This guide creates that edge.
 4. **Electron version target (resolved):** pin **Electron `42.4.0`** exact (stable since
    2026-05-07; Chromium 148, **Node 24.15.0**). Supported majors under the "latest 3 stable"
    policy are **42 / 41 / 40** — 42.4.0 has the longest support runway; do NOT use 43 (alpha/beta).
@@ -383,7 +383,7 @@ pnpm --filter @platform/template-desktop run start   # electron .
 **Why:**
 - **`registerSchemesAsPrivileged` runs at module top-level**, before `app.whenReady()`.
   Chromium freezes scheme registration once the app is ready; registering late silently
-  fails and the SPA loses secure-context / fetch behaviour (PLAN.md "Electron main.ts
+  fails and the SPA loses secure-context / fetch behaviour (PHILOSOPHY.md "Electron main.ts
   essentials" + Gotchas below).
 - **`protocol.handle("app", …)`** is the modern (Electron ≥25) API and the documented
   replacement for the deprecated `registerFileProtocol` / `registerBufferProtocol` /
@@ -449,7 +449,7 @@ contextBridge.exposeInMainWorld("desktop", api);
   surface consumes it. This whole `{ platform, getVersion }` surface is fully compatible with
   `sandbox: true` (a sandboxed preload still gets the polyfilled `contextBridge` + `ipcRenderer`
   subset).
-- **Bridge API surface — resolved as a design choice.** PLAN.md specifies no concrete desktop
+- **Bridge API surface — resolved as a design choice.** PHILOSOPHY.md specifies no concrete desktop
   bridge API, and no Electron doc dictates one, so this is config, not a doc-fact: the minimal
   `{ platform, getVersion }` is correct and security-compliant. Keep it deliberately tiny and
   **grow one method at a time on real need** — only adding the matching `ipcMain.handle` when UI
@@ -509,7 +509,7 @@ pnpm --filter @platform/template-desktop run copy:renderer
   bloat the package or shadow new ones.
 - **Fails loudly if `dist/index.html` is missing** — this is the contract that
   `^export:web` must have run first; the error message points at the turbo edge.
-- Source is exactly `../app/dist` and dest exactly `renderer/`, matching the PLAN.md turbo
+- Source is exactly `../app/dist` and dest exactly `renderer/`, matching the PHILOSOPHY.md turbo
   note ("copies `../app/dist` → `renderer/`").
 
 ### 6. Package-level Turbo config — `turbo.json`
@@ -546,7 +546,7 @@ turbo run build --filter=@platform/template-desktop
 ```
 
 **Why:**
-- **`build.dependsOn: ["^export:web"]`** is the exact wiring from PLAN.md "Config
+- **`build.dependsOn: ["^export:web"]`** is the exact wiring from PHILOSOPHY.md "Config
   essentials" — the desktop build is gated on the app's web export. `^` means "the
   `export:web` task of my dependencies", and the dependency is the `workspace:*` edge to the
   app.
@@ -631,7 +631,7 @@ cd products/_template/desktop && pnpm exec electron-builder --dir
 ```
 
 **Why:**
-- **`appId: com.example.template.desktop`** — locked exactly (PLAN.md desktop tree). The
+- **`appId: com.example.template.desktop`** — locked exactly (PHILOSOPHY.md desktop tree). The
   generator rewrites `template` → `<product>`; `com.example.*` is the marked bundle-id
   placeholder.
 - **`files` includes `renderer/**`** so the SPA ships inside the package; `build/**` ships
@@ -640,7 +640,7 @@ cd products/_template/desktop && pnpm exec electron-builder --dir
 - **Per-OS targets** chosen to be electron-updater-friendly (`zip`/`AppImage` are formats the
   updater can diff/apply).
 - **mac signing gated:** `identity: null`, `hardenedRuntime: false` keep unsigned local /
-  `--dir` builds working; macOS auto-update needs signing + notarization (PLAN.md "macOS
+  `--dir` builds working; macOS auto-update needs signing + notarization (PHILOSOPHY.md "macOS
   auto-update needs signing/notarization → gate publish to win/linux until certs"). The
   publish gate lives in `electron-release.yml` (publish win/linux only for now).
 - **`publish` block is the per-product repo** (`<org>/template-desktop-releases`) — Key
@@ -717,7 +717,7 @@ cd products/_template/desktop && pnpm exec electron-builder --dir
    produces a real `Origin` header, and a cross-origin `fetch` from the renderer to the API is
    CORS-checked. A request from `app://-/` sends the literal Origin **`app://-`** (scheme +
    host, **no trailing slash**) — so that exact string is what the FastAPI env-driven allowlist
-   must contain (not `app://`, and not `app://-/`). PLAN.md "API hardening" lists the desktop
+   must contain (not `app://`, and not `app://-/`). PHILOSOPHY.md "API hardening" lists the desktop
    `app://` origin; pin it precisely as `app://-` (the host `-` chosen in `win.loadURL("app://-/")`
    is what determines the origin string — if the host ever changes, the allowlist entry must
    change with it). Owned by Phase 3; verify empirically once the shell runs (a mismatch is a
@@ -779,7 +779,7 @@ releases repo**, producing an unpacked application under `release/` (e.g.
 `release/<os>-unpacked/`). Launching that unpacked binary opens the same window as V1.
 
 ### V5 — launch smoke (Desktop testing row)
-Per PLAN.md testing strategy, desktop has **no separate E2E** — the same web bundle is already
+Per PHILOSOPHY.md testing strategy, desktop has **no separate E2E** — the same web bundle is already
 covered by web Playwright. Phase 5's check is the **launch smoke** above (V1 + V3): the shell
 launches and shows the screen. Playwright `_electron` is only added later *if* shell logic
 grows (deferred — see Open questions).
@@ -817,7 +817,7 @@ proves `--dir` packs locally.
   Electron 42 but CJS is the deliberate lowest-risk choice — it makes the **before-`ready`**
   `registerSchemesAsPrivileged` call unambiguous (ESM's async-import timing is the risk).
   Revisit only if the whole repo standardizes on ESM.
-- ✅ RESOLVED — **desktop bridge API surface.** No PLAN.md/Electron doc dictates one, so this is
+- ✅ RESOLVED — **desktop bridge API surface.** No PHILOSOPHY.md/Electron doc dictates one, so this is
   a design choice: the minimal `{ platform, getVersion }` over `contextBridge` is correct and
   sandbox-safe. Keep it tiny; grow one method at a time on real need.
 - ✅ RESOLVED (mechanism) — **`DESKTOP_RELEASES_CONFIGURED` env flag.** This env-var name is this
@@ -827,11 +827,11 @@ proves `--dir` packs locally.
   is to gate on detecting a **non-placeholder `publish.owner`** (owner !== `example`) baked into
   the build — either works; the env flag is simplest.
 - ⚠️ REVIEW — **build-resources / icons.** `electron-builder.yml` references `build-resources/`;
-  desktop app icons (per-OS `.ico`/`.icns`/`.png`) are not specified by PLAN.md. PLAN.md's brand
+  desktop app icons (per-OS `.ico`/`.icns`/`.png`) are not specified by PHILOSOPHY.md. PHILOSOPHY.md's brand
   assets live in `app/assets/brand/` (web favicon/icon) — wiring a regen step to also emit
   desktop icon formats is unspecified. Reuse the brand source when the asset pipeline (Phase 7
   regen script) is in place.
-- **Deferred (per PLAN.md testing row):** Playwright `_electron` desktop E2E — only if shell
+- **Deferred (per PHILOSOPHY.md testing row):** Playwright `_electron` desktop E2E — only if shell
   logic grows beyond a thin wrapper. Phase 5 ships the launch smoke only.
 - **Deferred to Phase 8:** `electron-release.yml` (3-OS matrix, `--publish always`, tag
   `<product>-desktop-v*`); real signing/notarization; creating the actual

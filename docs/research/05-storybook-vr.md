@@ -2,7 +2,7 @@
 
 ## Summary
 
-**14 claims checked** across PLAN.md (Design-system-workbench bullet, Testing-strategy VR
+**14 claims checked** across PHILOSOPHY.md (Design-system-workbench bullet, Testing-strategy VR
 row, directory tree) and `docs/phase-2-design-system.md` step (c) / `docs/phase-8-cicd-obs.md`
 step (e).
 
@@ -34,7 +34,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
 ## Findings
 
 ### 1. Framework package name `@storybook/react-native-web-vite`
-- **Location:** PLAN.md Decision-sheet "Design system workbench" + line 292 ("framework
+- **Location:** PHILOSOPHY.md Decision-sheet "Design system workbench" + line 292 ("framework
   `@storybook/react-native-web-vite`"); phase-2 step (c) `main.ts`.
 - **Claim:** A Storybook framework package named `@storybook/react-native-web-vite` exists and
   renders RN components through react-native-web via Vite (not on-device
@@ -69,7 +69,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   peerDependencies.
 
 ### 3. NativeWind/Tailwind through Vite — missing `jsxImportSource: "nativewind"`
-- **Location:** PLAN.md line 293–294 ("Vite config … runs the NativeWind/Tailwind step on
+- **Location:** PHILOSOPHY.md line 293–294 ("Vite config … runs the NativeWind/Tailwind step on
   `global.css`"); phase-2 step (c) `main.ts` `viteFinal`.
 - **Claim:** NativeWind utilities resolve in Storybook by importing `global.css` and running a
   Tailwind step; the `main.ts` shown only sets `resolve.alias`.
@@ -101,7 +101,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   `.storybook/main.ts`; Storybook issue #32018; Storybook discussion #28399.
 
 ### 4. Manual `react-native` → `react-native-web` alias in `viteFinal`
-- **Location:** PLAN.md line 293 ("Vite config aliases `react-native` → `react-native-web`");
+- **Location:** PHILOSOPHY.md line 293 ("Vite config aliases `react-native` → `react-native-web`");
   phase-2 step (c) `main.ts` `resolve.alias`; phase-2 Gotchas ("Without the `resolve.alias`
   … RN imports fail").
 - **Claim:** You must manually alias `react-native` → `react-native-web` in the Storybook Vite
@@ -138,7 +138,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   blog (CSF factories); `dannyhw/vite-rnw-example` preview.
 
 ### 6. Static build → `storybook-static/` + `index.json`
-- **Location:** PLAN.md line 299–300 ("`storybook build` → `storybook-static/`; Playwright
+- **Location:** PHILOSOPHY.md line 299–300 ("`storybook build` → `storybook-static/`; Playwright
   reads `storybook-static/index.json`"); phase-2 DoD #6; phase-8 step (e) VR spec
   (`index.entries`, filter `type === "story"`).
 - **Claim:** `storybook build` emits `storybook-static/` containing `index.json`, whose
@@ -156,7 +156,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   lost-pixel issue #431 ("index.json in 9.x, stories.json removed in v8").
 
 ### 7. Playwright `toHaveScreenshot` + committed baselines, nightly
-- **Location:** PLAN.md Testing-strategy VR row + line 299–300; phase-8 step (e)
+- **Location:** PHILOSOPHY.md Testing-strategy VR row + line 299–300; phase-8 step (e)
   `visual-regression.spec.ts` (`toHaveScreenshot`) + `playwright.config.ts`; `e2e-nightly.yml`.
 - **Claim:** Playwright `toHaveScreenshot` against the served static build, committed
   baselines, run nightly + on-demand.
@@ -174,7 +174,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   jamesiv.es); Bug0 Playwright VR 2026.
 
 ### 8. Navigating `iframe.html?id=<story>&globals=theme:dark`
-- **Location:** PLAN.md line 300; phase-8 VR spec
+- **Location:** PHILOSOPHY.md line 300; phase-8 VR spec
   (`/iframe.html?id=${story.id}&globals=theme:${theme}`).
 - **Claim:** Setting the toolbar theme global via the iframe URL using `globals=theme:dark`
   drives the light/dark decorator per story.
@@ -187,13 +187,13 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   The plan uses the correct form.
 - **Recommended change:** None. (Optional: the VR spec only sweeps `theme` × {light,dark}; to
   fully cover the locked "brand switcher" it should also sweep `brand:template|demo`, e.g.
-  `globals=theme:dark,brand:demo`, to baseline the demo brand mode — consistent with PLAN.md's
+  `globals=theme:dark,brand:demo`, to baseline the demo brand mode — consistent with PHILOSOPHY.md's
   "each story × {light,dark}" which currently omits brand.)
 - **Source(s):** Storybook PR #15056 (globals URL param); Storybook toolbars-and-globals docs;
   issue #11604; discussion #23328.
 
 ### 9. `globalTypes` + toolbar for theme + brand; decorator wraps in theme provider
-- **Location:** PLAN.md line 293–294 ("toolbar exposes a light/dark toggle AND a brand
+- **Location:** PHILOSOPHY.md line 293–294 ("toolbar exposes a light/dark toggle AND a brand
   switcher … two toolbar `globalTypes`"); phase-2 step (c) `preview.tsx`.
 - **Claim:** Two `globalTypes` (`theme`, `brand`) render as toolbar dropdowns; a global
   decorator imports `global.css`, wraps in the theme provider, and applies theme/brand.
@@ -209,7 +209,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   discussion #18446.
 
 ### 10. `*.stories.tsx` CSF3, one story per cva variant
-- **Location:** PLAN.md line 42 ("`*.stories.tsx`, one story per cva variant"); phase-2 step
+- **Location:** PHILOSOPHY.md line 42 ("`*.stories.tsx`, one story per cva variant"); phase-2 step
   (c) `button.stories.tsx`.
 - **Claim:** CSF3 `*.stories.tsx` with a `meta` default export + per-variant named `StoryObj`
   exports.
@@ -260,7 +260,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   `@storybook/builder-vite`, `vite-plugin-rnw`).
 
 ### 14. Chromatic declined / self-hosted Playwright VR
-- **Location:** PLAN.md line 42 ("Chromatic deliberately declined … self-hosted Playwright").
+- **Location:** PHILOSOPHY.md line 42 ("Chromatic deliberately declined … self-hosted Playwright").
 - **Claim:** Self-hosted Playwright VR over the static build is a viable free alternative to
   Chromatic, consistent with the no-paid-SaaS stance.
 - **Status:** ✅
@@ -286,7 +286,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   `vite-plugin-rnw` (bundled by the framework) aliases it automatically (Finding 4). Keep only
   the `@` → `src` alias.
 - **❓ Still open (out of pure-VR scope but flagged):** whether the VR sweep should also cover
-  the **brand** global (`globals=theme:…,brand:…`) — PLAN.md's VR row says "each story ×
+  the **brand** global (`globals=theme:…,brand:…`) — PHILOSOPHY.md's VR row says "each story ×
   {light,dark}" only, yet the workbench's locked feature is the brand switcher. Recommend
   extending the matrix to baseline `brand:demo` as well (Finding 8). Needs a product decision,
   not a doc fact.

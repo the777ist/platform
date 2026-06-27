@@ -8,22 +8,22 @@ orders the work `openapi → api-client#build → app build/export:web` from **r
 edges**; and `features/home` renders the cursor-paginated `/v1/items` through a generated
 `useInfiniteQuery` hook, cache-persisted so a reload paints instantly.
 
-This is the concrete expansion of the PLAN.md **Phase 4** row:
+This is the concrete expansion of the PHILOSOPHY.md **Phase 4** row:
 
 > Typegen: `export_openapi.py`, `api-client/` (hey-api), turbo wiring; `features/home`
 > list screen renders the cursor-paginated `/v1/items` via generated `useInfiniteQuery`
 > hook (cache-persisted).
 
-**Verify (restated from PLAN.md):**
+**Verify (restated from PHILOSOPHY.md):**
 1. `turbo run build --filter=*template-app` shows **openapi → client → app** order.
 2. A model change (edit a Pydantic response DTO) **regenerates types**.
 3. Web **renders paginated API data**.
 4. **Reload shows cached data instantly** (TanStack Query cache persistence).
 
-This guide is faithful to PLAN.md's locked decisions (Decision Sheet "Contracts" bullet,
+This guide is faithful to PHILOSOPHY.md's locked decisions (Decision Sheet "Contracts" bullet,
 the turbo.json notes, the "Typegen" subsection of Config essentials, the `api-client/`
 and `features/home` directory trees, the Contract testing row, and Key ruling #1 —
-"a product = 3 workspaces + generated `api-client`"). Anything PLAN.md does not pin is
+"a product = 3 workspaces + generated `api-client`"). Anything PHILOSOPHY.md does not pin is
 marked **⚠️ OPEN / TO CONFIRM**.
 
 ---
@@ -44,7 +44,7 @@ marked **⚠️ OPEN / TO CONFIRM**.
   (Node 24 LTS / pnpm 11 / Python 3.13 / uv). Note: `@hey-api/openapi-ts` requires
   **Node 22+** as a hard floor — the Node 24 pin clears it comfortably.
 - The cursor-pagination response shape from Phase 3 is the contract this phase consumes.
-  PLAN.md fixes it as `useInfiniteQuery`-ready but does **not** pin exact field names.
+  PHILOSOPHY.md fixes it as `useInfiniteQuery`-ready but does **not** pin exact field names.
   This guide assumes `{ items: Item[], next_cursor: string | null }`. The **exact DTO
   field names** are **⚠️ OPEN / TO CONFIRM** — read them from Phase 3's `schemas/` and
   match them in `features/home`.
@@ -99,7 +99,7 @@ marked **⚠️ OPEN / TO CONFIRM**.
 ```python
 """Dump the FastAPI OpenAPI document to a stable JSON file (no server needed).
 
-PLAN.md (Config essentials → export_openapi.py): writes app.openapi() JSON with sorted
+PHILOSOPHY.md (Config essentials → export_openapi.py): writes app.openapi() JSON with sorted
 keys for stable diffs. This is the source the hey-api client is generated from, and the
 artifact the CI drift check compares.
 """
@@ -137,7 +137,7 @@ cd products/_template/api && uv run python -m template_api.export_openapi
 ```
 
 **Why**
-PLAN.md fixes `export_openapi.py` as "writes `app.openapi()` JSON, sorted keys (stable
+PHILOSOPHY.md fixes `export_openapi.py` as "writes `app.openapi()` JSON, sorted keys (stable
 diffs), no server needed." Importing `app` and calling `app.openapi()` builds the schema
 in-process — no uvicorn, no port, no DB. `sort_keys=True` guarantees byte-stable output so
 the committed `openapi.json` and the generated client only change when the **contract**
@@ -244,7 +244,7 @@ pnpm install   # links the workspace deps under the single hoisted node_modules
 **Why**
 Key ruling #1: "A product = 3 workspaces (`app`, `desktop`, `api`) + generated
 `api-client`." This is that fourth workspace. The **critical line** is
-`"@platform/template-api": "workspace:*"` in `devDependencies`: PLAN.md's turbo notes say
+`"@platform/template-api": "workspace:*"` in `devDependencies`: PHILOSOPHY.md's turbo notes say
 "Dependency edges come from real `dependencies`/`devDependencies` (`api-client` devDepends
 on its `api`...)." That real edge is what makes Turbo schedule the api's `openapi` task
 **before** this package's `build`. The package is consumed **as source** (`main`/`types`
@@ -262,11 +262,11 @@ point at `src/index.ts`, no separate build artifact — same no-build pattern as
 ```ts
 import { defineConfig } from "@hey-api/openapi-ts";
 
-// PLAN.md (api-client/ tree): input ../api/openapi.json; output committed under src/.
+// PHILOSOPHY.md (api-client/ tree): input ../api/openapi.json; output committed under src/.
 // Plugins: the bundled @hey-api/client-fetch client (referenced by PLUGIN string only —
 // it ships inside @hey-api/openapi-ts since 0.73, NOT a separate install) + the TanStack
 // Query plugin (generates queryOptions / infiniteQueryOptions + a typed SDK), which
-// PLAN.md picks over openapi-typescript + openapi-fetch precisely because it needs no
+// PHILOSOPHY.md picks over openapi-typescript + openapi-fetch precisely because it needs no
 // hand-written glue.
 export default defineConfig({
   input: "../api/openapi.json",
@@ -342,7 +342,7 @@ Prettier config so the drift check only flags real contract changes.
 ```
 
 **Why**
-PLAN.md, verbatim: "`api-client#build` runs openapi-ts (`dependsOn: ["^openapi","^build"]`
+PHILOSOPHY.md, verbatim: "`api-client#build` runs openapi-ts (`dependsOn: ["^openapi","^build"]`
 via package-level turbo.json)." The `^openapi` edge means "run the `openapi` task of my
 dependencies first" — and because Step 3 made the api a real workspace dependency, that
 resolves to `@platform/template-api`'s `openapi` task, producing `../api/openapi.json`
@@ -396,7 +396,7 @@ drop tasks added in earlier phases)
 ```
 
 > The `api-client#build` block above mirrors the package-level `turbo.json` from Step 5.
-> PLAN.md describes the ordering "`api-client#build` runs openapi-ts ... **via
+> PHILOSOPHY.md describes the ordering "`api-client#build` runs openapi-ts ... **via
 > package-level turbo.json**", so the package-level file (Step 5) is authoritative; the
 > root `api-client#build` entry is optional belt-and-suspenders. Keep them **identical**
 > if you declare both, or rely solely on Step 5. **⚠️ OPEN / TO CONFIRM** which single
@@ -408,7 +408,7 @@ pnpm turbo run build --filter=@platform/template-app --dry=json | less   # inspe
 ```
 
 **Why**
-The `openapi` task's `inputs` globs are **mandatory** — PLAN.md: "Python `inputs` globs
+The `openapi` task's `inputs` globs are **mandatory** — PHILOSOPHY.md: "Python `inputs` globs
 are mandatory or caching is wrong." Without them Turbo can't tell when the Python source
 changed, so it would serve a stale cached `openapi.json` and a model change would silently
 fail to regenerate types (breaking Verify #2). `outputs: ["openapi.json"]` registers the
@@ -445,7 +445,7 @@ pnpm install   # relinks; the workspace:* edge now feeds the turbo graph
 **Why**
 This `workspace:*` edge is the second real dependency that drives ordering: it is why the
 app's `build`/`export:web` (with `dependsOn: ["^build"]`) waits for `api-client#build`,
-which in turn waits for the api's `openapi`. PLAN.md's whole ordering claim
+which in turn waits for the api's `openapi`. PHILOSOPHY.md's whole ordering claim
 ("Dependency edges come from real `dependencies`/`devDependencies`") rests on edges like
 this one. It also makes the generated hooks importable from app code as
 `@platform/template-api-client`.
@@ -462,7 +462,7 @@ this one. It also makes the generated hooks importable from app code as
 **Contents** (`packages/core/src/api.ts` — Phase 4 scope: baseUrl from
 `EXPO_PUBLIC_API_URL`; the auth-header and `X-Request-Id` injection land in Phases 6/8)
 ```ts
-// PLAN.md (Config essentials → Typegen): "App sets client baseUrl from EXPO_PUBLIC_API_URL
+// PHILOSOPHY.md (Config essentials → Typegen): "App sets client baseUrl from EXPO_PUBLIC_API_URL
 // at startup." packages/core (api.ts) is the client wrapper: baseUrl, auth header,
 // X-Request-Id injection. This phase wires baseUrl only.
 import { client } from "@platform/template-api-client";
@@ -495,11 +495,11 @@ export function configureApiClient(): void {
 >
 > **core ↔ client coupling seam (resolved for this phase).** In the template, `packages/core`
 > importing the **template-specific** generated client by name is the correct Phase 4 wiring
-> and matches PLAN.md's `packages/core` tree (`api.ts` = the client wrapper: baseUrl, auth
+> and matches PHILOSOPHY.md's `packages/core` tree (`api.ts` = the client wrapper: baseUrl, auth
 > header, X-Request-Id). `core` is "plumbing only" but is consumed as `workspace:*` source
 > per product, so name-importing the sibling client is acceptable here. The longer-term
 > injection shape (passing the client into `core` rather than importing it) is **not pinned
-> by PLAN.md** and is **deferred** — flagged here so a future shared-`core` refactor knows
+> by PHILOSOPHY.md** and is **deferred** — flagged here so a future shared-`core` refactor knows
 > the seam exists; it is out of Phase 4 scope.
 
 **Commands**
@@ -511,7 +511,7 @@ pnpm --filter @platform/template-app exec expo start --web
 
 **Why**
 The generated SDK/hooks call through one shared fetch client; its `baseUrl` must point at
-the running api. PLAN.md fixes the source of that URL as `EXPO_PUBLIC_API_URL` (the
+the running api. PHILOSOPHY.md fixes the source of that URL as `EXPO_PUBLIC_API_URL` (the
 publishable, per-env, committed env var — `EXPO_PUBLIC_*` is the only frontend config
 class allowed). Configuring once at startup (idempotent guard) means every generated hook
 shares the right base. Per the env decision, the dev value (port `8000` for `portIndex=0`)
@@ -527,7 +527,7 @@ lives in `app/.env.development`, written by Phase 2/3 and re-ported by the gener
 
 **Contents** (`home-screen.tsx`)
 ```tsx
-// PLAN.md (features/home tree): "list screen via generated API hooks".
+// PHILOSOPHY.md (features/home tree): "list screen via generated API hooks".
 // Renders cursor-paginated /v1/items through the generated useInfiniteQuery hook.
 // Loading / error / empty states; cache-persisted (the persister is configured in
 // packages/core query.ts from Phase 2, so a reload paints cached pages instantly).
@@ -624,7 +624,7 @@ export function HomeScreen() {
 >   against the plugin's default `{{name}}InfiniteOptions` camelCase template. The only thing
 >   to verify is the **operationId** (`list_items` → `listItems`) in Phase 3, not the plugin
 >   naming. The non-infinite helper would be `listItemsOptions`.
-> - **List component — use RN's built-in `FlatList`.** PLAN.md's `features/home` tree says
+> - **List component — use RN's built-in `FlatList`.** PHILOSOPHY.md's `features/home` tree says
 >   only "list screen via generated API hooks" and does **not** pin `@shopify/flash-list`,
 >   which is not listed anywhere in the Decision Sheet's dependency set. To avoid introducing
 >   an unpinned dependency, this guide uses React Native's built-in `FlatList` (the props
@@ -646,7 +646,7 @@ pnpm --filter @platform/template-app run typecheck
 **Why**
 This is the screen the Verify row demands: cursor-paginated `/v1/items` through the
 **generated** `useInfiniteQuery` hook. Consuming the generated infinite-options helper
-(rather than hand-writing fetch glue) is the entire reason PLAN.md chose the hey-api
+(rather than hand-writing fetch glue) is the entire reason PHILOSOPHY.md chose the hey-api
 TanStack plugin over `openapi-typescript + openapi-fetch`. The three states (loading /
 error / empty) plus infinite scroll satisfy the rich-starter expectation; cache
 persistence is inherited from `packages/core`'s `query.ts` (Phase 2), so no extra wiring is
@@ -684,7 +684,7 @@ into `packages/*` later without dragging routing concerns along.
   CLAUDE.md invariants ("never-edit-generated-client"). To change the client, change the
   **contract** (a Pydantic model/route in the api) and regenerate.
 
-- **Drift check is the contract guard.** PLAN.md's exact command:
+- **Drift check is the contract guard.** PHILOSOPHY.md's exact command:
   ```bash
   turbo run openapi build --filter=*api-client* && \
     git diff --exit-code products/*/api-client products/*/api/openapi.json
@@ -701,7 +701,7 @@ into `packages/*` later without dragging routing concerns along.
   silently reorders/parallelizes, producing stale generation. Verify with
   `turbo run build --filter=@platform/template-app --dry=json`.
 
-- **Python `inputs` globs on the `openapi` task are mandatory.** PLAN.md: "Python `inputs`
+- **Python `inputs` globs on the `openapi` task are mandatory.** PHILOSOPHY.md: "Python `inputs`
   globs are mandatory or caching is wrong." Without
   `["src/**/*.py","pyproject.toml","uv.lock"]`, Turbo treats the openapi task as
   cacheable-with-no-key and a model change won't bust the cache — Verify #2 fails
@@ -797,7 +797,7 @@ if anything is stale.
 
 ## Commits
 
-Per PLAN.md "Each phase = one commit (or a few logical commits) on a feature branch."
+Per PHILOSOPHY.md "Each phase = one commit (or a few logical commits) on a feature branch."
 Suggested split on a `phase-4-typegen` branch:
 
 1. **`feat(template-api): stable server-free openapi export`** — confirm/finish
@@ -836,19 +836,19 @@ Suggested split on a `phase-4-typegen` branch:
   the generated `getNextPageParam` keys off the query param, not just the response field) and
   the `Item` DTO fields — defined by Phase 3's `schemas/`; match them. **⚠️ OPEN / TO
   CONFIRM** (in-domain unverifiable — owned by Phase 3).
-- **List component** — uses RN's built-in `FlatList`; PLAN.md does not pin
+- **List component** — uses RN's built-in `FlatList`; PHILOSOPHY.md does not pin
   `@shopify/flash-list` and it is absent from the Decision Sheet dependency set, so no new
   dependency is introduced. Swap to FlashList only if a product standardizes on it. **Resolved
   (FlatList).**
 - **`core/api.ts` ↔ template-client coupling** — name-importing the template-specific client
-  into `packages/core` is the correct Phase 4 wiring (matches PLAN.md's `core` tree). The
-  injection seam for a future truly-shared `core` is unspecified by PLAN.md and **deferred**
+  into `packages/core` is the correct Phase 4 wiring (matches PHILOSOPHY.md's `core` tree). The
+  injection seam for a future truly-shared `core` is unspecified by PHILOSOPHY.md and **deferred**
   (out of Phase 4 scope).
 - **Single vs duplicated `api-client#build` declaration** (package-level `turbo.json`
   alone vs also in root) — standardize on one. **⚠️ OPEN / TO CONFIRM.**
 - **Query persistence tuning** (`maxAge`, `gcTime`, dehydrate filters) lives in Phase 2's
   `query.ts`; not re-specified here. **Deferred to Phase 2.**
-- **Auth header + `X-Request-Id` injection** in `core/api.ts` — PLAN.md assigns these to
+- **Auth header + `X-Request-Id` injection** in `core/api.ts` — PHILOSOPHY.md assigns these to
   Phases 6 (auth) and 8 (observability), not Phase 4. **Deferred.**
 - **`pnpm catalog`** existence for shared TS/React Query versions assumed from Phase 1; if
   absent, pin exact versions inline. **⚠️ OPEN / TO CONFIRM.**

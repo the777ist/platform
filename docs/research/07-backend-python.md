@@ -29,7 +29,7 @@ stamping `demo`, and apply the ⚠️ tweaks for robustness.
 ## Findings
 
 ### 1. FastAPI version + lifespan + exception handlers
-- **Location:** PLAN.md L34, L52; phase-3 Step 4, Step 16; phase-8 (a).
+- **Location:** PHILOSOPHY.md L34, L52; phase-3 Step 4, Step 16; phase-8 (a).
 - **Claim:** FastAPI with Pydantic v2; `register_exception_handlers`; (phase-8) request-id
   middleware. The guides use `@app.exception_handler(...)` and never use deprecated
   `@app.on_event`.
@@ -101,7 +101,7 @@ stamping `demo`, and apply the ⚠️ tweaks for robustness.
   "Add uuid7 in uuid module"; PyPI `uuid7` (2021) vs `uuid-utils` / `uuid6`.
 
 ### 5. SQLModel — version, maintenance, Pydantic v2 + SQLAlchemy 2 compatibility
-- **Location:** PLAN.md L34, L51; phase-3 deps + models.
+- **Location:** PHILOSOPHY.md L34, L51; phase-3 deps + models.
 - **Claim:** SQLModel is the table/ORM layer, compatible with Pydantic v2 + SQLAlchemy 2.
 - **Status:** ✅ (maintenance is slow — see note)
 - **Finding:** Latest SQLModel is **0.0.27**; it supports Pydantic v2 (since 0.0.14) and
@@ -135,7 +135,7 @@ stamping `demo`, and apply the ⚠️ tweaks for robustness.
   #909; SQLAlchemy 2.x "UPDATE/DELETE" docs (`Result.rowcount`).
 
 ### 7. Supabase pooler — psycopg3 + `prepare_threshold=None` + NullPool (Key ruling #4)
-- **Location:** PLAN.md L72 (Key ruling #4); phase-3 Step 3, "Gotchas".
+- **Location:** PHILOSOPHY.md L72 (Key ruling #4); phase-3 Step 3, "Gotchas".
 - **Claim:** Pooler port 6543 is transaction-mode-only; **psycopg v3 + `prepare_threshold=None`
   + NullPool** is required; Alembic migrates over direct 5432.
 - **Status:** ✅ (remedy correct) / ❌ (justification "session mode removed 2025" is wrong —
@@ -153,7 +153,7 @@ stamping `demo`, and apply the ⚠️ tweaks for robustness.
   discussion #28239 (Disabling Prepared Statements); Supavisor terminology doc.
 
 ### 8. "Supabase session mode removed 2025" rationale
-- **Location:** PLAN.md L72 ("session mode removed 2025"); phase-3 Step 3 comment + Gotchas
+- **Location:** PHILOSOPHY.md L72 ("session mode removed 2025"); phase-3 Step 3 comment + Gotchas
   ("Session mode was removed in 2025").
 - **Claim:** Supabase session-mode pooling was removed in 2025, leaving only transaction mode
   on 6543.
@@ -193,7 +193,7 @@ stamping `demo`, and apply the ⚠️ tweaks for robustness.
 - **Sources:** Alembic docs (`env.py` patterns); SQLAlchemy 2.x; SQLModel + Alembic tutorial.
 
 ### 10. uv — `uv sync --frozen --no-dev`, lockfile, `uv run`, Docker image
-- **Location:** PLAN.md L281; phase-3 Step 1, Step 21; phase-8 ci.yml.
+- **Location:** PHILOSOPHY.md L281; phase-3 Step 1, Step 21; phase-8 ci.yml.
 - **Claim:** Multi-stage Docker on `ghcr.io/astral-sh/uv:python3.13-bookworm-slim`, builder
   runs `uv sync --frozen --no-install-project --no-dev` then `uv sync --frozen --no-dev`;
   `UV_COMPILE_BYTECODE=1`, `UV_LINK_MODE=copy`, cache mount `/root/.cache/uv`; runtime stage
@@ -242,7 +242,7 @@ stamping `demo`, and apply the ⚠️ tweaks for robustness.
 - **Sources:** pyright configuration docs; pylance typeCheckingMode docs.
 
 ### 13. psycopg v3 — `postgresql+psycopg://`, `prepare_threshold=None`, `psycopg[binary]`
-- **Location:** PLAN.md L283–284 (deps), phase-3 Step 3.
+- **Location:** PHILOSOPHY.md L283–284 (deps), phase-3 Step 3.
 - **Status:** ✅
 - **Finding:** `postgresql+psycopg://` is the correct SQLAlchemy URL scheme selecting psycopg3
   (not psycopg2, not asyncpg). `connect_args={"prepare_threshold": None}` is the correct
@@ -256,7 +256,7 @@ stamping `demo`, and apply the ⚠️ tweaks for robustness.
 - **Sources:** Supabase SQLAlchemy troubleshooting (prepare_threshold=None); psycopg3 docs.
 
 ### 14. slowapi — Limiter + `app.state.limiter` + `SlowAPIMiddleware` + RateLimitExceeded
-- **Location:** PLAN.md L45; phase-3 Step 10, Step 16, Step 4 (429 handler).
+- **Location:** PHILOSOPHY.md L45; phase-3 Step 10, Step 16, Step 4 (429 handler).
 - **Status:** ✅ (one required wiring detail → ⚠️)
 - **Finding:** The wiring is the documented slowapi pattern: build `Limiter(key_func=...,
   default_limits=[...])`, assign `app.state.limiter`, `app.add_middleware(SlowAPIMiddleware)`,
@@ -304,11 +304,11 @@ stamping `demo`, and apply the ⚠️ tweaks for robustness.
   deleted.
 - **Recommended change:** Delete the `request_id_var: structlog.contextvars` line. Optionally
   use `ConsoleRenderer` in local/dev and `JSONRenderer` in staging/prod (env-gated) — common
-  practice, not required by PLAN.
+  practice, not required by PHILOSOPHY.
 - **Sources:** structlog "Context Variables" + API docs; FastAPI+structlog guides.
 
 ### 17. RFC 9457 problem+json — media type + member names
-- **Location:** PLAN.md L52; phase-3 Step 4 (`PROBLEM_CONTENT_TYPE = "application/problem+json"`),
+- **Location:** PHILOSOPHY.md L52; phase-3 Step 4 (`PROBLEM_CONTENT_TYPE = "application/problem+json"`),
   Step 8 (`Problem` model: `type`/`title`/`status`/`detail`/`instance`).
 - **Status:** ✅
 - **Finding:** Fully conformant. Media type is exactly `application/problem+json` (IANA-
@@ -323,7 +323,7 @@ stamping `demo`, and apply the ⚠️ tweaks for robustness.
 - **Sources:** RFC 9457 (rfc-editor.org); IANA media-types `application/problem+json`.
 
 ### 18. polyfactory — name + import path
-- **Location:** PLAN.md L48, L284; phase-3 Step 23 (`from polyfactory.factories.pydantic_factory
+- **Location:** PHILOSOPHY.md L48, L284; phase-3 Step 23 (`from polyfactory.factories.pydantic_factory
   import ModelFactory`).
 - **Status:** ✅
 - **Finding:** Correct and current. The library was renamed from **pydantic-factories →
@@ -335,7 +335,7 @@ stamping `demo`, and apply the ⚠️ tweaks for robustness.
 - **Sources:** polyfactory docs (library_factories, pydantic_factory reference); PyPI.
 
 ### 19. Cursor pagination — envelope field names + opaque base64 + keyset (OPEN)
-- **Location:** PLAN.md L52; phase-3 Step 5 (`Page{items, next_cursor}`, base64 cursor keyed
+- **Location:** PHILOSOPHY.md L52; phase-3 Step 5 (`Page{items, next_cursor}`, base64 cursor keyed
   on `id`) + its OPEN flag, Step 7 keyset query.
 - **Status:** ✅ (best-practice aligned) — resolves OPEN
 - **Finding:** The design matches current best practice: **opaque base64-encoded cursor** that
@@ -369,7 +369,7 @@ stamping `demo`, and apply the ⚠️ tweaks for robustness.
   response_model is incomplete).
 
 ### 21. RLS deny-all + privileged/BYPASSRLS role (OPEN)
-- **Location:** PLAN.md L51; phase-3 Step 20 + its OPEN flag, Gotchas.
+- **Location:** PHILOSOPHY.md L51; phase-3 Step 20 + its OPEN flag, Gotchas.
 - **Status:** ✅ / ⚠️ (resolves OPEN)
 - **Finding:** `ENABLE` + `FORCE ROW LEVEL SECURITY` with no policy denies all non-bypassing
   roles — correct for keeping the schema private from PostgREST/Realtime (anon/authenticated).
@@ -389,7 +389,7 @@ stamping `demo`, and apply the ⚠️ tweaks for robustness.
   (`postgres`/`service_role`).
 
 ### 22. JWKS via PyJWKClient + HS256 fallback (Key ruling #5)
-- **Location:** PLAN.md L75–77; phase-3 Step 9.
+- **Location:** PHILOSOPHY.md L75–77; phase-3 Step 9.
 - **Status:** ✅ (one ⚠️ on the JWKS URL)
 - **Finding:** `PyJWKClient` with `get_signing_key_from_jwt` + `jwt.decode(algorithms=
   ["ES256","RS256"], audience="authenticated")` is correct PyJWT usage and matches current

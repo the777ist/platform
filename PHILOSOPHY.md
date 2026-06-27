@@ -1,4 +1,14 @@
-# Multi-Product Cross-Platform Monorepo — Scaffold Plan
+# Multi-Product Cross-Platform Monorepo — Philosophy
+
+> **What this document is.** The architecture, the locked decisions, and the *why* behind
+> them — the enduring rationale for the whole monorepo. It is the **gospel**: while the
+> template is being built, the implementing agent follows it literally and never contradicts
+> it; whenever a foundational question comes up later ("why is it this way / can we change
+> X"), this is the authority. It is **not** a daily-development doc — once the monorepo
+> exists, the day-to-day loop (add-a-feature, add-a-component, release) runs off the
+> `CLAUDE.md` files and the slash commands, which distill these decisions into operational
+> recipes. Change a decision here only deliberately, and propagate it into the affected
+> `CLAUDE.md`/guides in the same change.
 
 > **Naming conventions:** package scope `@platform/*`; bundle ids `com.example.*`
 > (placeholder until a real reverse-domain is chosen); infra names follow
@@ -391,7 +401,7 @@ mock transport — integration tests hit the real DB, never mock the session.
 ## Phases (each independently verifiable)
 
 > **Execution guides:** each phase below has a deep, literal build checklist (exact files,
-> code/config skeletons, commands, gotchas, verification) under `docs/`. PLAN.md is the
+> code/config skeletons, commands, gotchas, verification) under `docs/`. PHILOSOPHY.md is the
 > authoritative spine — the locked decisions, rulings, and conventions live here and the
 > guides MUST stay faithful to them; the guides are the step-by-step "how", not new
 > decisions. Index:

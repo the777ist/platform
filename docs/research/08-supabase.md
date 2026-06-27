@@ -1,6 +1,6 @@
 # Supabase — accuracy review (June 2026)
 
-Scope: the Supabase claims in PLAN.md (Topology, rulings #4 and #5, Realtime broadcast-only,
+Scope: the Supabase claims in PHILOSOPHY.md (Topology, rulings #4 and #5, Realtime broadcast-only,
 DB conventions) and the three execution guides `docs/phase-3-api.md`, `docs/phase-6-auth.md`,
 `docs/phase-8-cicd-obs.md`. Domain: Auth/JWT, connection pooling/Supavisor, supabase-js,
 Realtime, Storage, Supabase CLI, RLS. Verified against current docs/issues (June 2026).
@@ -46,7 +46,7 @@ Verdict on the three load-bearing claims:
 ## Findings
 
 ### 1. Ruling #5 / Phase 3 §9 / Phase 6 §12 — "local CLI stack still issues HS256"
-- **Location:** PLAN.md ruling #5 (lines 75–77); `docs/phase-3-api.md` Step 9 + Gotchas
+- **Location:** PHILOSOPHY.md ruling #5 (lines 75–77); `docs/phase-3-api.md` Step 9 + Gotchas
   ("the local CLI stack still issues HS256"); `docs/phase-6-auth.md` §1 Why, §12 Why, Gotchas
   ("the local CLI stack signs tokens with HS256").
 - **Claim:** New projects sign asymmetrically (JWKS), but the **local** Supabase CLI stack
@@ -75,7 +75,7 @@ Verdict on the three load-bearing claims:
 - **Source(s):** supabase/cli#4726; CLI v2.71.1 changelog note; JWT Signing Keys docs.
 
 ### 2. Ruling #5 — asymmetric default for new projects
-- **Location:** PLAN.md ruling #5; Phase 3 Step 9 / Phase 6 §12.
+- **Location:** PHILOSOPHY.md ruling #5; Phase 3 Step 9 / Phase 6 §12.
 - **Claim:** "new Supabase projects use asymmetric keys → verify via JWKS (PyJWKClient,
   ES256/RS256, cached)".
 - **Status:** ✅.
@@ -103,7 +103,7 @@ Verdict on the three load-bearing claims:
 - **Source(s):** JWT Signing Keys docs; supabase/auth#1724 (`.well-known/jwks.json` for REST).
 
 ### 4. Ruling #5 — `audience="authenticated"`
-- **Location:** PLAN.md ruling #5 (implied); Phase 3 Step 9; Phase 6 §12 + Gotchas.
+- **Location:** PHILOSOPHY.md ruling #5 (implied); Phase 3 Step 9; Phase 6 §12 + Gotchas.
 - **Claim:** Verify with `audience="authenticated"`; omitting it raises `InvalidAudienceError`.
 - **Status:** ✅.
 - **Finding:** Correct — Supabase user access tokens carry `aud: "authenticated"`, and PyJWT
@@ -112,7 +112,7 @@ Verdict on the three load-bearing claims:
 - **Source(s):** Supabase JWT docs (access-token claims); PyJWT behavior (well established).
 
 ### 5. Ruling #4 / Phase 3 — pooler 6543 transaction-only, session mode removed 2025
-- **Location:** PLAN.md ruling #4 (lines 73–74); Phase 3 Step 3 `db.py` comment + Gotchas;
+- **Location:** PHILOSOPHY.md ruling #4 (lines 73–74); Phase 3 Step 3 `db.py` comment + Gotchas;
   root CLAUDE.md gotcha (Phase 8 §g).
 - **Claim:** Port 6543 is transaction-mode only (session mode removed 2025); Alembic migrates
   over direct **5432** via a separate `DATABASE_MIGRATION_URL`.
@@ -128,7 +128,7 @@ Verdict on the three load-bearing claims:
   Connect-to-Postgres docs; Supavisor FAQ.
 
 ### 6. Phrasing — "session mode removed 2025"
-- **Location:** PLAN.md ruling #4; Phase 3 Step 3 comment ("session mode removed 2025").
+- **Location:** PHILOSOPHY.md ruling #4; Phase 3 Step 3 comment ("session mode removed 2025").
 - **Claim:** Session mode was "removed" in 2025.
 - **Status:** ⚠️ (imprecise wording).
 - **Finding:** Session mode was **removed from port 6543**, not removed from the product.
@@ -164,7 +164,7 @@ Verdict on the three load-bearing claims:
   supabase/cli#4488 (`signing_keys` config); `supabase gen signing-key`.
 
 ### 8. Ruling #4 / Phase 3 — psycopg3 + `prepare_threshold=None` + NullPool
-- **Location:** PLAN.md ruling #4; Phase 3 Step 3 `db.py`, "Config essentials" `api/db.py`
+- **Location:** PHILOSOPHY.md ruling #4; Phase 3 Step 3 `db.py`, "Config essentials" `api/db.py`
   note, Gotchas.
 - **Claim:** Use psycopg v3 (`postgresql+psycopg://`) with
   `connect_args={"prepare_threshold": None}` and `poolclass=NullPool` over the 6543 pooler.
@@ -223,7 +223,7 @@ Verdict on the three load-bearing claims:
   and Presence Authorization".
 
 ### 11. Realtime — `realtime.broadcast_changes` vs raw HTTP
-- **Location:** PLAN.md Realtime bullet ("service-role HTTP call"); task brief mentions
+- **Location:** PHILOSOPHY.md Realtime bullet ("service-role HTTP call"); task brief mentions
   `realtime.broadcast_changes`.
 - **Claim:** Server broadcasts via a service-role HTTP call.
 - **Status:** ✅.
@@ -260,7 +260,7 @@ Verdict on the three load-bearing claims:
   `@supabase/supabase-js` (2.108.x).
 
 ### 13. supabase-js used ONLY for auth/Realtime/Storage; PKCE; storage adapter
-- **Location:** PLAN.md Topology; `docs/phase-6-auth.md` §2 `supabase.ts` (PKCE,
+- **Location:** PHILOSOPHY.md Topology; `docs/phase-6-auth.md` §2 `supabase.ts` (PKCE,
   `detectSessionInUrl` web-only, AsyncStorage native / localStorage web).
 - **Claim:** Frontend uses supabase-js only for auth/Realtime/Storage; PKCE flow;
   platform-specific storage adapter; `autoRefreshToken`/`persistSession` on.
@@ -274,7 +274,7 @@ Verdict on the three load-bearing claims:
 - **Source(s):** supabase-js v2 docs/blog; Supabase Auth (PKCE / session persistence) docs.
 
 ### 14. RLS deny-all default migration pattern + privileged-role bypass
-- **Location:** PLAN.md DB conventions / ruling on RLS; Phase 3 Step 20 (ENABLE + FORCE RLS,
+- **Location:** PHILOSOPHY.md DB conventions / ruling on RLS; Phase 3 Step 20 (ENABLE + FORCE RLS,
   no policy); Phase 6 §9 (storage bucket policies).
 - **Claim:** `ENABLE ROW LEVEL SECURITY` (+ `FORCE`) with **no policy** denies all access to
   non-bypassing roles; the API's privileged/BYPASSRLS role still reads/writes; Storage objects
@@ -306,7 +306,7 @@ Verdict on the three load-bearing claims:
 - **Source(s):** Storage public/signed-URL docs; supabase-js storage reference.
 
 ### 16. CLI ports / offset scheme
-- **Location:** `docs/phase-6-auth.md` §1 (base 54321, offset `+100·portIndex`); PLAN.md generator
+- **Location:** `docs/phase-6-auth.md` §1 (base 54321, offset `+100·portIndex`); PHILOSOPHY.md generator
   step 4.
 - **Claim:** Local stack ports offset per product from base 54321; API `8000+10i`.
 - **Status:** ✅.
@@ -331,7 +331,7 @@ Verdict on the three load-bearing claims:
 - **Source(s):** Supabase CLI config reference; Connect-to-Postgres docs.
 
 ### 18. Sentry SDK (`@sentry/react-native`, not `sentry-expo`) — Supabase-adjacent, noted
-- **Location:** PLAN.md Cross-cutting; Phase 8 §a.
+- **Location:** PHILOSOPHY.md Cross-cutting; Phase 8 §a.
 - **Claim:** Use `@sentry/react-native`; `sentry-expo` is deprecated.
 - **Status:** ✅ (out of strict Supabase scope, but verified true and unchanged).
 - **Finding:** `sentry-expo` is deprecated in favor of `@sentry/react-native`. Not a Supabase

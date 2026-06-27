@@ -10,14 +10,14 @@ the product's brand mode in the token-pipeline config `tokens.config.json`, runs
 independent product proving the scaffold is portable. A root `pnpm bootstrap`
 (`mise → install → supabase start`) brings every product's local stack up together.
 
-This is the concrete expansion of the PLAN.md **Phase 7** row:
+This is the concrete expansion of the PHILOSOPHY.md **Phase 7** row:
 
 > Generator + stamp `demo` product (brand-asset placeholders + regen script;
 > `pnpm bootstrap`) | Verify: `pnpm new-product demo`; both products build via
 > `--affected`; both local stacks run simultaneously via `pnpm bootstrap`; demo carries
 > its own placeholder brand assets; `git grep -iw template products/demo` empty.
 
-**Verify (restated from PLAN.md):**
+**Verify (restated from PHILOSOPHY.md):**
 1. `pnpm new-product demo` succeeds (validates name, computes `portIndex=1`, stamps).
 2. **Both products build via `--affected`** — `turbo run build --affected` touches
    `template` *and* `demo`.
@@ -28,7 +28,7 @@ This is the concrete expansion of the PLAN.md **Phase 7** row:
 5. **`git grep -iw template products/demo` returns empty** — no `template` token leaked
    into the stamped product's contents or paths.
 
-This guide stays faithful to PLAN.md's locked decisions: the **Multi-product** Decision
+This guide stays faithful to PHILOSOPHY.md's locked decisions: the **Multi-product** Decision
 Sheet bullet (`products/<name>/` consuming shared `packages/*`, `pnpm new-product <name>`,
 infra naming `<org>-<product>-<env>`), the **Branding assets** bullet (single-source
 placeholder icon/splash/favicon + regen script + generator copies them + prints a
@@ -42,7 +42,7 @@ kebab/Pascal/snake in contents AND paths), the **Generator** subsection (the 6 n
 steps), the **Figma bridge** note (the generator adds the new product's brand mode to the
 token-pipeline config `tokens.config.json`, distinct from Code Connect's root
 `figma.config.json`), and the `product.json` shape `{"name":"template","portIndex":0}`
-(`demo` = `portIndex=1`). Anything PLAN.md does not pin is marked
+(`demo` = `portIndex=1`). Anything PHILOSOPHY.md does not pin is marked
 **⚠️ OPEN / TO CONFIRM**.
 
 ---
@@ -82,12 +82,12 @@ token-pipeline config `tokens.config.json`, distinct from Code Connect's root
   `{ fileKey, modes: { "template": <modeId>, ... } }`. (This is named separately from
   Code Connect's own `figma.config.json` — which also lives at the repo root, holds the
   `codeConnect.include` globs, is **NOT per-product**, and is **not** touched by the
-  generator — to avoid a filename collision. Per PLAN.md Figma-bridge note + ruling #11.)
+  generator — to avoid a filename collision. Per PHILOSOPHY.md Figma-bridge note + ruling #11.)
 - **`scripts/figma-tokens.mjs`** exists (Phase 2). Phase 7 only *appends a mode entry* to
   `tokens.config.json`; it does not change the token script and does not touch
   `figma.config.json`.
 
-> Phase 7 introduces two artifacts that PLAN.md attributes to it but that earlier phases
+> Phase 7 introduces two artifacts that PHILOSOPHY.md attributes to it but that earlier phases
 > consume: the **brand-asset placeholders + regen script** under
 > `products/_template/app/assets/brand/` (the directory is referenced from Phase 2/5 but
 > the single-source + regen pipeline is specified here), and the **root `pnpm bootstrap`**
@@ -104,7 +104,7 @@ token-pipeline config `tokens.config.json`, distinct from Code Connect's root
       required size: `icon.png` (1024), `adaptive-icon.png` (foreground), `splash.png`,
       `favicon.png` — the exact set wired into `app.config.ts`.
 - [ ] `scripts/new-product.mjs` exists (plain Node, **zero runtime deps** beyond `node:*`).
-- [ ] The generator implements all **6 numbered steps** from PLAN.md's Generator subsection
+- [ ] The generator implements all **6 numbered steps** from PHILOSOPHY.md's Generator subsection
       (validate + collision + `portIndex`; copy with skip-list keeping `uv.lock`;
       whole-word token replace in contents AND paths; port offsets; write
       `.env.example` + `product.json` + `pnpm install`; print the infra checklist).
@@ -159,13 +159,13 @@ cat products/_template/product.json   # exactly {"name":"template","portIndex":0
 ```
 
 **Why**
-This is the generator's metadata anchor (PLAN.md directory tree:
+This is the generator's metadata anchor (PHILOSOPHY.md directory tree:
 `product.json # {"name":"template","portIndex":0} generator metadata`). The generator reads
 **every** `products/*/product.json`, takes `max(portIndex) + 1` for the new product, and
 writes the stamped product's own `product.json`. `name` is the canonical product token; all
 infra naming and ports derive from it (and from `portIndex`), never from the monorepo's
 name (Naming conventions header). The product's `README.md`/`CLAUDE.md` read their ports and
-infra names **from this file** so they stay accurate after stamping (PLAN.md Generator
+infra names **from this file** so they stay accurate after stamping (PHILOSOPHY.md Generator
 step 3 parenthetical).
 
 ---
@@ -195,7 +195,7 @@ step 3 parenthetical).
 ```js
 #!/usr/bin/env node
 // Regenerate ALL brand raster sizes from the single source.svg.
-// PLAN.md (Branding assets): "placeholder icon/splash/favicon ... from a single source;
+// PHILOSOPHY.md (Branding assets): "placeholder icon/splash/favicon ... from a single source;
 // a regen script produces all sizes". Run after editing source.svg.
 //
 // Rasterization dep is intentionally NOT vendored into the zero-dep generator — this
@@ -238,7 +238,7 @@ node products/_template/app/assets/brand/gen-brand.mjs   # regenerate all sizes
 ```
 
 **Why**
-PLAN.md's Branding-assets decision is **single source → regen produces all sizes → generator
+PHILOSOPHY.md's Branding-assets decision is **single source → regen produces all sizes → generator
 copies them + prints a replace checklist item**. Keeping `source.svg` as the only authored
 file means a product re-brands by replacing one file and re-running `gen-brand.mjs`. The
 generator (Step 4) copies the whole `assets/brand/` tree verbatim, so the stamped product
@@ -274,7 +274,7 @@ pnpm bootstrap                 # -> node scripts/bootstrap.mjs
 ```
 
 **Why**
-PLAN.md directory tree: root `package.json # scripts: new-product, bootstrap`. `pnpm
+PHILOSOPHY.md directory tree: root `package.json # scripts: new-product, bootstrap`. `pnpm
 new-product <name>` is the documented generator entry point (Multi-product bullet); `pnpm
 bootstrap` is the one-command onboarding (`mise → install → supabase start`, Operational
 defaults). Root name is `platform` and the scope is `@platform/*` — these are
@@ -289,11 +289,11 @@ workaround (Phase 8 note) — leave it.
 **Files**
 - `scripts/new-product.mjs`
 
-**Contents** — the full generator implementing all 6 PLAN.md steps:
+**Contents** — the full generator implementing all 6 PHILOSOPHY.md steps:
 ```js
 #!/usr/bin/env node
 // scripts/new-product.mjs — stamp a new product from products/_template.
-// Plain Node, ZERO runtime deps (node: builtins only). Implements PLAN.md's 6-step
+// Plain Node, ZERO runtime deps (node: builtins only). Implements PHILOSOPHY.md's 6-step
 // Generator spec: (1) validate+collision+portIndex, (2) copy w/ skip-list keep uv.lock,
 // (3) whole-word token replace in CONTENTS and PATHS, (4) port offsets, (5) write
 // .env.example + product.json + pnpm install, (6) print infra checklist.
@@ -340,7 +340,7 @@ function nextPortIndex() {
   return max + 1;
 }
 
-// ---- Naming variants (PLAN.md: kebab / Pascal / snake) ---------------------------------
+// ---- Naming variants (PHILOSOPHY.md: kebab / Pascal / snake) ---------------------------------
 function toPascal(kebab) {
   return kebab.split("-").map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join("");
 }
@@ -451,7 +451,7 @@ function addFigmaMode(name) {
 function writeMeta(dest, name, portIndex) {
   writeFileSync(join(dest, "product.json"), JSON.stringify({ name, portIndex }, null, 2) + "\n");
   // .env.example was copied + token-rewritten in copyTree; nothing more to write here
-  // unless a fresh header is desired. PLAN.md: ".env.example documents every consumed var".
+  // unless a fresh header is desired. PHILOSOPHY.md: ".env.example documents every consumed var".
 }
 
 // ---- Step 6: print infra checklist ------------------------------------------------------
@@ -516,7 +516,7 @@ node scripts/new-product.mjs demo     # or: pnpm new-product demo
 ```
 
 **Why**
-This is the literal implementation of PLAN.md's **Generator** subsection, point by point:
+This is the literal implementation of PHILOSOPHY.md's **Generator** subsection, point by point:
 
 1. **Validate `/^[a-z][a-z0-9-]*$/`, refuse collisions, `portIndex = max+1`** —
    `parseArgs()` + `nextPortIndex()`. It also reserves `template` and underscore-prefixed
@@ -537,9 +537,9 @@ This is the literal implementation of PLAN.md's **Generator** subsection, point 
    token-rewritten by `copyTree`; `writeMeta` writes the canonical `product.json`;
    `execSync("pnpm install")` resolves the new `@platform/<name>-*` workspaces into the one
    lockfile (Package-management model: one JS universe).
-6. **Print the infra checklist** — `printChecklist()` emits the exact items PLAN.md lists.
+6. **Print the infra checklist** — `printChecklist()` emits the exact items PHILOSOPHY.md lists.
 
-The Figma-bridge addition (`addFigmaMode`) is PLAN.md's "the generator adds the new
+The Figma-bridge addition (`addFigmaMode`) is PHILOSOPHY.md's "the generator adds the new
 product's brand mode to the token-pipeline config (placeholder modeId until the designer
 creates it)." That config is **`tokens.config.json`** at the repo root — kept name-distinct
 from Code Connect's own root **`figma.config.json`** (which is repo-wide and not per-product,
@@ -567,7 +567,7 @@ so the generator never touches it).
 ```js
 #!/usr/bin/env node
 // scripts/bootstrap.mjs — one-command onboarding.
-// PLAN.md (Operational defaults): root `pnpm bootstrap` = mise -> install -> supabase start.
+// PHILOSOPHY.md (Operational defaults): root `pnpm bootstrap` = mise -> install -> supabase start.
 // Brings up EVERY product's local Supabase stack (offset ports => they coexist).
 import { readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -600,14 +600,14 @@ supabase status   # run inside each product dir, or check the printed URLs
 ```
 
 **Why**
-PLAN.md Operational defaults: "root `pnpm bootstrap` (mise → install → supabase start) for
+PHILOSOPHY.md Operational defaults: "root `pnpm bootstrap` (mise → install → supabase start) for
 one-command onboarding." Because each product's `supabase/config.toml` carries offset ports
 (Step 4), `supabase start` per product yields **simultaneously running** local stacks — the
 exact condition Verify #3 and the end-to-end "Multi-product proof" check. `mise install`
 first guarantees the toolchain is pinned before anything resolves.
 
 > ⚠️ OPEN / TO CONFIRM — whether `pnpm bootstrap` should start **all** products or just the
-> one the dev is working on. PLAN.md says "supabase start" (singular flow) for onboarding
+> one the dev is working on. PHILOSOPHY.md says "supabase start" (singular flow) for onboarding
 > but the Phase 7 verify explicitly wants **both** stacks up simultaneously. This guide
 > starts all products (loop) to satisfy the verify; a `--filter <product>` flag could
 > narrow it later.
@@ -641,7 +641,7 @@ brand assets — with **zero** `template` tokens remaining (Verify #5).
 - **Whole-word only — never partial-match.** The replacement uses `\b`-anchored regexes
   (`/\btemplate\b/`, `/\bTemplate\b/`, `/\btemplate_api\b/`). Without word boundaries you
   would corrupt any word that *contains* "template" — e.g. `templated`, `templates`,
-  `templating`, a CSS class, a comment, or a third-party identifier. PLAN.md ruling #7 is
+  `templating`, a CSS class, a comment, or a third-party identifier. PHILOSOPHY.md ruling #7 is
   explicit: **whole-word**. Test by grepping the stamped product for the *stem* and
   confirming only intended hits would have matched.
 
@@ -769,7 +769,7 @@ jq '.modes' tokens.config.json
 
 ## Commits
 
-Per PLAN.md "Each phase = one commit (or a few logical commits) on a feature branch."
+Per PHILOSOPHY.md "Each phase = one commit (or a few logical commits) on a feature branch."
 Suggested split on a `phase-7-generator` branch:
 
 1. **`feat(template): product.json + single-source brand assets & regen script`** —
@@ -795,7 +795,7 @@ Suggested split on a `phase-7-generator` branch:
   every PNG), added to the app workspace devDeps and pinned exact at install. The *size matrix*
   (`icon` 1024 / `adaptive-icon` / `splash` / `favicon`) is the contract; align it with
   whatever `app.config.ts` references (read it from Phase 2).
-- **Exact splash/icon sizes & extra densities** — PLAN.md says "all sizes" without
+- **Exact splash/icon sizes & extra densities** — PHILOSOPHY.md says "all sizes" without
   enumerating them; the matrix above is this guide's concrete set. **⚠️ OPEN / TO CONFIRM**
   against `app.config.ts` + EAS requirements.
 - **`pnpm bootstrap` scope** — start *all* products vs a `--filter`ed one. This guide starts
@@ -811,7 +811,7 @@ Suggested split on a `phase-7-generator` branch:
 - **Text-vs-binary classification** — `isText()` uses an extension allow-list. A new
   template file type outside the list would be copied verbatim (no token replacement). Keep
   `TEXT_EXT` in sync with the template's file types. **⚠️ OPEN / TO CONFIRM.**
-- **`tokens.config.json` shape** — this guide assumes `{ fileKey, modes: {...} }` (PLAN.md
+- **`tokens.config.json` shape** — this guide assumes `{ fileKey, modes: {...} }` (PHILOSOPHY.md
   Figma-bridge note; the token-pipeline config, name-distinct from Code Connect's root
   `figma.config.json`). If Phase 2 settled on the Tokens-Studio-JSON default (no `fileKey`),
   the mode-registration key may differ. **⚠️ OPEN / TO CONFIRM** against Phase 2.

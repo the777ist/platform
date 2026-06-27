@@ -1143,7 +1143,7 @@ broadcast pattern, push loop, or CI workflows here — those are Phase 8.
 
 - ⚠️ OPEN / TO CONFIRM — **exact pinned versions** of `@supabase/supabase-js`,
   `@react-native-async-storage/async-storage`, `zustand`, `expo-image-picker`, `pyjwt[crypto]`.
-  PLAN.md pins no majors; pick current stable, pin exact (`PLACEHOLDER-pin-exact` markers).
+  PHILOSOPHY.md pins no majors; pick current stable, pin exact (`PLACEHOLDER-pin-exact` markers).
 - **Resolved — avatars bucket public vs private → public** for the template demo
   (`getPublicUrl`, synchronous, common avatar pattern; per-user write safety from the `<uid>/`
   prefix policy, not bucket privacy). `signedAvatarUrl` is retained for products that flip to a

@@ -2,7 +2,7 @@
 
 ## Summary
 
-**26 claims checked** across PLAN.md (Decision Sheet "Desktop", rulings #2/#3, "Electron
+**26 claims checked** across PHILOSOPHY.md (Decision Sheet "Desktop", rulings #2/#3, "Electron
 main.ts essentials") and `docs/phase-5-desktop.md`.
 
 - ✅ Accurate / current: 20
@@ -28,7 +28,7 @@ add the v27 implicit-publish note, and resolve the four OPEN flags as documented
 ## Findings
 
 ### 1. Modern protocol API — `protocol.handle` over deprecated `registerFileProtocol`
-- **Location:** PLAN.md "Electron main.ts essentials"; phase-5 step 3, gotcha #1, DoD.
+- **Location:** PHILOSOPHY.md "Electron main.ts essentials"; phase-5 step 3, gotcha #1, DoD.
 - **Claim:** Use `protocol.handle("app", …)` (the modern API) and NOT the deprecated
   `registerFileProtocol`/`registerBufferProtocol`.
 - **Status:** ✅
@@ -44,7 +44,7 @@ add the v27 implicit-publish note, and resolve the four OPEN flags as documented
   github.com/electron/electron/issues/41986 (migration discussion).
 
 ### 2. Privileged-scheme registration timing (before `app.whenReady`)
-- **Location:** PLAN.md essentials; phase-5 step 3 + gotcha #2 ("registered privileged BEFORE
+- **Location:** PHILOSOPHY.md essentials; phase-5 step 3 + gotcha #2 ("registered privileged BEFORE
   `app.whenReady()`", at module top-level).
 - **Claim:** `protocol.registerSchemesAsPrivileged([...])` must run synchronously before the
   `ready` event; registering late silently downgrades the scheme.
@@ -60,7 +60,7 @@ add the v27 implicit-publish note, and resolve the four OPEN flags as documented
   timing notes).
 
 ### 3. Privileges object `{standard, secure, supportFetchAPI}`
-- **Location:** PLAN.md essentials; phase-5 step 3.
+- **Location:** PHILOSOPHY.md essentials; phase-5 step 3.
 - **Claim:** Register `app` with `privileges: { standard: true, secure: true,
   supportFetchAPI: true }` to get origin/CSP semantics, secure context, and `fetch`/relative
   URL resolution.
@@ -116,7 +116,7 @@ add the v27 implicit-publish note, and resolve the four OPEN flags as documented
   github.com/electron/electron/issues/49073; electronjs.org/docs/latest/api/structures/protocol-response.
 
 ### 6. `win.loadURL("app://-/")` with `-` placeholder host
-- **Location:** PLAN.md essentials; phase-5 step 3.
+- **Location:** PHILOSOPHY.md essentials; phase-5 step 3.
 - **Claim:** Load the SPA via `app://-/` (arbitrary placeholder host) rather than `file://`.
 - **Status:** ✅
 - **Finding:** Valid. With a `standard` scheme the URL needs a host component; `-` is a common
@@ -142,7 +142,7 @@ add the v27 implicit-publish note, and resolve the four OPEN flags as documented
   .../api/context-bridge; .../tutorial/tutorial-preload.
 
 ### 8. electron-updater `checkForUpdatesAndNotify()`
-- **Location:** PLAN.md essentials; phase-5 step 3 + gotcha #5.
+- **Location:** PHILOSOPHY.md essentials; phase-5 step 3 + gotcha #5.
 - **Claim:** `autoUpdater.checkForUpdatesAndNotify()` checks and shows a native notification
   when an update is ready; gate it so it is a no-op when unpackaged / no real repo.
 - **Status:** ✅
@@ -153,7 +153,7 @@ add the v27 implicit-publish note, and resolve the four OPEN flags as documented
 - **Source(s):** electron.build/auto-update; github.com/iffy/electron-updater-example.
 
 ### 9. macOS auto-update requires signing + notarization → gate publish to win/linux
-- **Location:** PLAN.md essentials; phase-5 gotcha #6; electron-builder.yml mac block.
+- **Location:** PHILOSOPHY.md essentials; phase-5 gotcha #6; electron-builder.yml mac block.
 - **Claim:** macOS auto-update needs code signing + notarization; until certs exist, gate
   publish to win/linux, leave `identity: null`, `hardenedRuntime: false`.
 - **Status:** ✅
@@ -235,7 +235,7 @@ add the v27 implicit-publish note, and resolve the four OPEN flags as documented
 - **Source(s):** electronjs.org/docs/latest/tutorial/esm; .../api/protocol.
 
 ### 14. `app://` origin must be in the FastAPI CORS allowlist
-- **Location:** PLAN.md "API hardening"; phase-5 gotcha #9.
+- **Location:** PHILOSOPHY.md "API hardening"; phase-5 gotcha #9.
 - **Claim:** The API CORS allowlist must include the desktop `app://` (or `app://-`) origin.
 - **Status:** ⚠️ (correct intent; verify the exact origin string)
 - **Finding:** Conceptually correct — a custom standard scheme produces a real Origin header,
@@ -291,7 +291,7 @@ stay CJS here). Recommendation: **CJS now**; revisit only if the repo standardiz
 Source: electronjs.org/docs/latest/tutorial/esm.
 
 ### C. Desktop bridge API surface
-**Answer:** PLAN.md specifies none, so this is a design choice, not a doc-fact. The guide's
+**Answer:** PHILOSOPHY.md specifies none, so this is a design choice, not a doc-fact. The guide's
 minimal `{ platform: "desktop", getVersion() }` over `contextBridge` is correct and
 security-compliant (works under `sandbox: true`). Keep it minimal; only add an
 `ipcMain.handle("app:get-version", …)` if/when UI consumes `getVersion`. No web doc dictates a

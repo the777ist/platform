@@ -2,7 +2,7 @@
 
 ## Summary
 
-**Checked: 22 claims** across PLAN.md + Phase 2 / 4 / 5 / 8 guides.
+**Checked: 22 claims** across PHILOSOPHY.md + Phase 2 / 4 / 5 / 8 guides.
 Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/risky · ❓ 2 unconfirmed.**
 
 **Headline:** The core platform pins are **correct and current** — Expo SDK 56 exists (released **May 21, 2026**), ships **React Native 0.85 + React 19.2**, with the **New Architecture mandatory** (no opt-out, inherited from SDK 55) and **Hermes v1 the default engine**. `web.output: "single"`, EAS Update channels, the Expo Push API endpoint/payload, and the `@sentry/react-native` (not `sentry-expo`) ruling all check out. The most material problems are: (1) the locked **NativeWind v4 ↔ SDK 56 compatibility is NOT confirmed by any official source** — the only official pairing on record is NativeWind v4/v5 ↔ **SDK 54**, and the maintainer has stated releases are no longer pegged to SDK versions, so the Phase 2 "settle this, fallback SDK 55" gate is doing real work and the fallback target is itself questionable; (2) the app's EAS Update OTA path is **under-configured** — `app.config.ts` sets only `extra.eas.projectId` but OTA requires `updates.url` + `runtimeVersion`; (3) SDK 56's **expo/fetch-as-global-fetch** default and the **`@sentry/react-native/expo` config-plugin rename** are new surfaces the guides don't account for.
@@ -14,7 +14,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 ## Findings
 
 ### 1. Expo SDK 56 exists and ships RN 0.85 / React 19.2
-- **Location:** PLAN.md Decision Sheet "Frontend"; Key ruling #2; Phase 2 step (h) note "Target SDK 56 / RN 0.85".
+- **Location:** PHILOSOPHY.md Decision Sheet "Frontend"; Key ruling #2; Phase 2 step (h) note "Target SDK 56 / RN 0.85".
 - **Claim:** "Expo SDK 56 (RN 0.85)".
 - **Status:** ✅
 - **Finding:** Confirmed. SDK 56 released **2026-05-21**, ships **React Native 0.85** and **React 19.2** (beta carried RN 0.85.2 / React 19.2.3). RN 0.85 itself released 2026-04-07.
@@ -22,11 +22,11 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://expo.dev/blog/expo-router-v56-decoupling-from-react-navigation , https://reactnative.dev/blog , https://medium.com/@onix_react/release-react-native-0-85-677b3007b041
 
 ### 2. New Architecture is default/required in SDK 56
-- **Location:** DOMAIN question; implicit in PLAN.md frontend stack.
+- **Location:** DOMAIN question; implicit in PHILOSOPHY.md frontend stack.
 - **Claim:** (to confirm) Is the New Architecture default/required?
 - **Status:** ✅
 - **Finding:** **Mandatory.** From SDK 55 onward the New Architecture is always enabled and cannot be disabled; SDK 56 continues this. RN 0.85 is the first release with no Bridge fallback / interop layer. There is no legacy-arch escape hatch in SDK 56 — if a dependency is New-Arch-incompatible, the only fallback is SDK ≤54 (not SDK 55, which is also New-Arch-only). This matters for the Phase 2 "fallback = SDK 55" line (see Finding 8).
-- **Recommended change:** Note in PLAN/Phase 2 that the New Arch is non-optional on both SDK 56 and SDK 55, so any New-Arch-blocking dep forces SDK 54, not 55.
+- **Recommended change:** Note in PHILOSOPHY/Phase 2 that the New Arch is non-optional on both SDK 56 and SDK 55, so any New-Arch-blocking dep forces SDK 54, not 55.
 - **Source(s):** https://docs.expo.dev/guides/new-architecture/ , https://www.ninetwothree.co/blog/react-native-0-85-bridge-removal
 
 ### 3. Hermes v1 is the default engine (new in SDK 56)
@@ -70,7 +70,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/router/reference/typed-routes/
 
 ### 8. NativeWind v4 ↔ SDK 56 compatibility — UNCONFIRMED (the locked headline risk)
-- **Location:** PLAN.md "Frontend" (NativeWind v4; v5 pre-release — do NOT use); Phase 2 headline gotcha "Settles NativeWind v4 ↔ SDK 56 compat; fallback = SDK 55".
+- **Location:** PHILOSOPHY.md "Frontend" (NativeWind v4; v5 pre-release — do NOT use); Phase 2 headline gotcha "Settles NativeWind v4 ↔ SDK 56 compat; fallback = SDK 55".
 - **Claim:** "NativeWind v4 (v5 is pre-release — do NOT use)" + "fallback = SDK 55".
 - **Status:** ❌ (the "v4 works on SDK 56" assumption is unverified; fallback target is also questionable)
 - **Finding:** Two sub-claims:
@@ -80,7 +80,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://github.com/nativewind/nativewind/discussions/1604 , https://www.nativewind.dev/v5/getting-started/installation , https://github.com/nativewind/nativewind/discussions/1617
 
 ### 9. react-native-web — version not pinned/verified; supported but New-Arch caveat
-- **Location:** Phase 2 app `package.json` (`"react-native-web": "*"`); PLAN.md frontend "react-native-web".
+- **Location:** Phase 2 app `package.json` (`"react-native-web": "*"`); PHILOSOPHY.md frontend "react-native-web".
 - **Claim:** react-native-web is used for web (and Storybook via `@storybook/react-native-web-vite`).
 - **Status:** ❓
 - **Finding:** react-native-web ships transitively with SDK 56 and is the basis of Expo web — using it is correct. However: (i) the **exact version is not pinned** (`"*"`) and I could not confirm the precise version SDK 56 bundles from official sources (changelog pages 403 to automated fetch); install via `expo install react-native-web` so the SDK picks the matched version rather than `"*"`. (ii) Note SDK 56 also ships stable **Expo UI** universal components (web still experimental) — not used by the plan (plan uses RN primitives + NativeWind), so no conflict, just context.
@@ -88,7 +88,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/ , https://alternativeto.net/news/2026/5/expo-sdk-56-brings-stable-expo-ui-faster-builds-and-react-native-0-85/
 
 ### 10. EAS Update — channels & `eas update --channel` are current
-- **Location:** PLAN.md "Releases"; Phase 8 `eas-update.yml` (`eas update --channel staging|production`).
+- **Location:** PHILOSOPHY.md "Releases"; Phase 8 `eas-update.yml` (`eas update --channel staging|production`).
 - **Claim:** build profiles + update channels; `eas update --channel staging/production`; OTA for JS-only, store builds for native changes.
 - **Status:** ✅
 - **Finding:** Confirmed current. Each build profile maps to a channel; `eas update:configure` sets the `channel` on preview/production profiles; `eas update --channel <name> --auto` publishes to that channel/branch. The OTA-vs-store-build policy (JS-only → OTA; native dep change → new store build) is the correct, documented model. `--non-interactive --auto` flags are valid.
@@ -112,7 +112,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/eas-update/getting-started/ , https://medium.com/simform-engineering/from-confusion-to-clarity-a-simple-guide-to-expo-config-keys-4f3d6ed50201
 
 ### 13. expo-notifications — push token API current; Expo Go limitation correct
-- **Location:** Phase 8 `core/notifications.ts` (`getExpoPushTokenAsync`, `getPermissionsAsync`, `requestPermissionsAsync`, `Device.isDevice`); PLAN.md "Push notifications"; Phase 8 gotcha "Expo Go can't receive push tokens".
+- **Location:** Phase 8 `core/notifications.ts` (`getExpoPushTokenAsync`, `getPermissionsAsync`, `requestPermissionsAsync`, `Device.isDevice`); PHILOSOPHY.md "Push notifications"; Phase 8 gotcha "Expo Go can't receive push tokens".
 - **Claim:** register via expo-notifications; `getExpoPushTokenAsync()` needs a dev build + real device; Expo Go can't receive tokens.
 - **Status:** ✅
 - **Finding:** Correct and current. The permission + `getExpoPushTokenAsync()` API surface is unchanged. **Expo Go dropped push-notification support on Android starting SDK 53** (deprecated SDK 52) — a development build is required; the common failure mode is `getExpoPushTokenAsync()` hanging/erroring in Expo Go. The plan's gotcha (dev build + real device, `Device.isDevice` guard, CI verifies server-side with mocked httpx) is exactly right.
@@ -128,7 +128,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/push-notifications/sending-notifications/ , https://docs.expo.dev/push-notifications/faq/
 
 ### 15. Sentry: `@sentry/react-native` (not `sentry-expo`) — correct, but config-plugin path changed
-- **Location:** PLAN.md "Cross-cutting" (`@sentry/react-native` — NOT deprecated `sentry-expo`); Phase 8 `core/sentry.ts`.
+- **Location:** PHILOSOPHY.md "Cross-cutting" (`@sentry/react-native` — NOT deprecated `sentry-expo`); Phase 8 `core/sentry.ts`.
 - **Claim:** use `@sentry/react-native`; `sentry-expo` is deprecated.
 - **Status:** ✅ (claim) / ⚠️ (incomplete on plugin + SDK 56 support)
 - **Finding:** `sentry-expo` is indeed **deprecated since Expo SDK 50 (Jan 2024)** and merged into `@sentry/react-native` — claim correct. Two caveats the guides miss: (1) the Expo **config plugin moved** — it is now `@sentry/react-native/expo` (not a separate `sentry-expo` plugin); a product needing source maps/native wiring must add that plugin in `app.config.ts`. (2) **SDK 56 / RN 0.85 + Hermes v1 support** in `@sentry/react-native` was tracked in issue #6212 (closed via PR #6216, ~May 2026) but the guides don't pin a minimum `@sentry/react-native` version — pin to whatever release first lists SDK 56/RN 0.85 support and verify network breadcrumbs under expo/fetch (Finding 4).
@@ -144,7 +144,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://github.com/nativewind/nativewind/discussions/1604 , https://medium.com/@onix_react/whats-new-in-expo-sdk-56-63f704fc8426
 
 ### 17. EAS Build in a pnpm monorepo — `.npmrc` + `packageManager` workaround
-- **Location:** Phase 8 `eas-build.yml` gotcha; PLAN.md eas-build note.
+- **Location:** Phase 8 `eas-build.yml` gotcha; PHILOSOPHY.md eas-build note.
 - **Claim:** eas-cli misdetects PM in a pnpm workspace unless committed `.npmrc` (`node-linker=hoisted`) + root `packageManager: pnpm@10.x`.
 - **Status:** ✅ (plausible/consistent; standard guidance)
 - **Finding:** Consistent with documented EAS + pnpm monorepo guidance — committing `.npmrc` and setting `packageManager` is the standard way to make EAS resolve the workspace/package manager correctly. The `node-linker=hoisted` choice also aligns with Expo's pnpm guidance (isolated/symlinked node_modules has historically tripped metro/Expo).

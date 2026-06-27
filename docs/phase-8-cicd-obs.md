@@ -22,7 +22,7 @@ surface** (README + CLAUDE.md + `.claude/commands/` at root, `packages/ui`, and 
 > visual regression); scheduled task runs via `fly machine run` (push registration needs a
 > dev build — Expo Go can't receive push tokens; verified later on real devices).
 
-> **Naming/placeholder reminder (from PLAN.md header):** package scope `@platform/*`; bundle
+> **Naming/placeholder reminder (from PHILOSOPHY.md header):** package scope `@platform/*`; bundle
 > ids `com.example.*`; infra `<org>-<product>-<env>` with org placeholder `example`; product
 > token `template`; clearly-marked placeholders are `example`, `com.example.*`,
 > `TODO-EAS-PROJECT-ID`, the releases-repo owner. Every repo/org value in the YAML below is a
@@ -318,7 +318,7 @@ pnpm --filter @platform/core add @sentry/react-native
 turbo run typecheck --filter=*template-api --filter=@platform/core
 ```
 
-**Why** — PLAN.md Observability: "Sentry + structlog JSON logs + request_id middleware; the
+**Why** — PHILOSOPHY.md Observability: "Sentry + structlog JSON logs + request_id middleware; the
 API-client wrapper sends a generated X-Request-Id per request; Sentry events tagged with it
 on both sides → client→API→logs traceability." `@sentry/react-native` is the locked SDK
 (`sentry-expo` is deprecated; pin a release listing Expo SDK 56 / RN 0.85 support). On Expo,
@@ -478,7 +478,7 @@ cd products/_template/api && uv run alembic upgrade head && uv run pytest tests/
 turbo run openapi --filter=*template-api   # regenerate openapi.json (push endpoint now in contract)
 ```
 
-**Why** — PLAN.md: "Push notifications: full loop templated — token registration in the app
+**Why** — PHILOSOPHY.md: "Push notifications: full loop templated — token registration in the app
 (expo-notifications), `/v1/push-tokens` endpoint + table (per user+device), `send_push()`
 service calling Expo's Push API via httpx." The new migration must include **RLS deny-all**
 on `push_token` (DB convention: every table RLS deny-all; the API's privileged role bypasses
@@ -549,7 +549,7 @@ class ItemService(BaseService):
 ```
 > Router methods that call these become `async def` and `await` the service — the broadcast
 > is fire-and-don't-block-correctness; failures are logged, not fatal (catch in the service
-> or let it raise per product policy). ⚠️ OPEN / TO CONFIRM: PLAN.md does not pin whether a
+> or let it raise per product policy). ⚠️ OPEN / TO CONFIRM: PHILOSOPHY.md does not pin whether a
 > broadcast failure should fail the mutation — default here is "log + swallow" so a Realtime
 > outage never breaks writes; confirm per product.
 
@@ -601,7 +601,7 @@ turbo run typecheck --filter=@platform/core --filter=*template-api
 turbo run test --filter=*template-api      # service tests can mock broadcast httpx transport
 ```
 
-**Why** — PLAN.md Realtime (canonical, locked): "broadcast-only — tables stay RLS-locked;
+**Why** — PHILOSOPHY.md Realtime (canonical, locked): "broadcast-only — tables stay RLS-locked;
 after mutations FastAPI broadcasts invalidation events on per-product channels (service-role
 HTTP call); clients refetch through the API. `packages/core` ships the subscribe-and-invalidate
 helper. No Postgres-Changes subscriptions, no RLS holes, schema stays private." The channel is
@@ -656,7 +656,7 @@ if __name__ == "__main__":
     main()
 ```
 > Requires an `updated_at` column on `PushToken` (add to the UUIDv7 base or the model). ⚠️
-> OPEN / TO CONFIRM: PLAN.md says "prune stale push tokens" but does not define "stale" —
+> OPEN / TO CONFIRM: PHILOSOPHY.md says "prune stale push tokens" but does not define "stale" —
 > 90 days by last-update is a documented default; confirm per product.
 
 **Commands** (run against the staging Fly app — `<org>` placeholder):
@@ -681,7 +681,7 @@ fly machine run \
 > isolated machines) or **Supercronic** per Fly's task-scheduling blueprint — `--schedule`
 > alone won't do it. The one-off Verify run (no `--schedule`) is a correct one-shot.
 
-**Why** — PLAN.md Background/scheduled jobs: "Fly scheduled machines running a lightweight
+**Why** — PHILOSOPHY.md Background/scheduled jobs: "Fly scheduled machines running a lightweight
 `tasks` module in the api (no queue infra); template ships one example (prune stale push
 tokens)." The task module reuses the API's `engine` + structlog config so logs are JSON and
 land in the same place. `--schedule` is Fly's native (keyword-based, fuzzy) scheduler — exact
@@ -765,7 +765,7 @@ export default async function globalSetup() {
   execSync("turbo run export:web --filter=*template-app", { stdio: "inherit" });
 }
 ```
-> ⚠️ OPEN / TO CONFIRM: PLAN.md says E2E runs "against exported dist + api + supabase local"
+> ⚠️ OPEN / TO CONFIRM: PHILOSOPHY.md says E2E runs "against exported dist + api + supabase local"
 > but does not pin the exact process-management glue (background API + teardown). The
 > skeleton above starts Supabase + exports dist; the API server should be launched as a
 > backgrounded process here (or via a second Playwright `webServer` entry) and torn down in a
@@ -835,7 +835,7 @@ pnpm --filter @platform/<product>-app exec playwright test
 maestro test products/_template/app/.maestro/login.yaml
 ```
 
-**Why** — PLAN.md Testing strategy: web E2E (signup → login → items CRUD → realtime) and
+**Why** — PHILOSOPHY.md Testing strategy: web E2E (signup → login → items CRUD → realtime) and
 visual regression (Playwright screenshots of the static Storybook build, each story ×
 {light,dark}, committed baselines) both run **nightly** in `e2e-nightly.yml` (+
 `workflow_dispatch`). Maestro is **local-only initially** (CI via EAS Workflows deferred).
@@ -907,7 +907,7 @@ jobs:
 **Commands** — `git push origin <branch>` → Actions runs it. Locally:
 `pnpm turbo run lint typecheck test build openapi --affected`.
 
-**Why** — PLAN.md Workflows: "ci.yml — mise-action → pnpm frozen install → uv sync (affected
+**Why** — PHILOSOPHY.md Workflows: "ci.yml — mise-action → pnpm frozen install → uv sync (affected
 apis) → `turbo run lint typecheck test build openapi --affected` → drift check." The drift
 check is the contract guard — a stale `openapi.json` or generated client makes `git diff
 --exit-code` non-zero and fails CI.
@@ -965,7 +965,7 @@ jobs:
 **Commands** — staging is automatic on merge to `main`. Production:
 `git tag template-api-v1.2.0 && git push origin template-api-v1.2.0`.
 
-**Why** — PLAN.md: "deploy-api.yml — paths-filter on `products/*/api/** + packages/**` →
+**Why** — PHILOSOPHY.md: "deploy-api.yml — paths-filter on `products/*/api/** + packages/**` →
 matrix `flyctl deploy -c fly.staging.toml`; tags → prod." Trunk-based: `main` → staging,
 `<product>-api-v*` tag → that product's production.
 
@@ -1017,7 +1017,7 @@ jobs:
 **Commands** — manual: Actions → "EAS Build" → run with `product`+`profile`. Store build:
 `git tag template-app-v1.0.0 && git push origin template-app-v1.0.0`.
 
-**Why** — PLAN.md: "eas-build.yml — dispatch/tag; needs `EXPO_TOKEN`, committed `.npmrc`,
+**Why** — PHILOSOPHY.md: "eas-build.yml — dispatch/tag; needs `EXPO_TOKEN`, committed `.npmrc`,
 `packageManager` field in root package.json (eas-cli workspace detection workaround). Store
 builds only for native changes."
 
@@ -1077,7 +1077,7 @@ jobs:
 **Commands** — staging OTA is automatic on merge to `main`. Production OTA:
 `git tag template-ota-v1.0.1 && git push origin template-ota-v1.0.1`.
 
-**Why** — PLAN.md: "eas-update.yml — OTA: on main push affecting a product's app → `eas
+**Why** — PHILOSOPHY.md: "eas-update.yml — OTA: on main push affecting a product's app → `eas
 update --channel staging`; tag `<product>-ota-v*` → `--channel production`." Channels are
 EXACTLY `staging` / `production`. Mobile = OTA for JS-only changes; native changes go through
 `eas-build.yml`.
@@ -1128,7 +1128,7 @@ jobs:
 
 **Commands** — Actions → "E2E Nightly" → **Run workflow** (`workflow_dispatch`).
 
-**Why** — PLAN.md: "e2e-nightly.yml — Playwright E2E + Storybook visual regression
+**Why** — PHILOSOPHY.md: "e2e-nightly.yml — Playwright E2E + Storybook visual regression
 (schedule)" and Testing strategy marks both **nightly + `workflow_dispatch`**.
 
 #### `electron-release.yml`
@@ -1184,7 +1184,7 @@ jobs:
 
 **Commands** — `git tag template-desktop-v1.0.0 && git push origin template-desktop-v1.0.0`.
 
-**Why** — PLAN.md: "electron-release.yml — 3-OS matrix, `electron-builder --publish always`,
+**Why** — PHILOSOPHY.md: "electron-release.yml — 3-OS matrix, `electron-builder --publish always`,
 tag must match `desktop/package.json` version." Each product's desktop publishes to its own
 `<org>/<product>-desktop-releases` repo (Key ruling #3 — avoids the electron-updater
 "latest release of the repo" collision).
@@ -1203,7 +1203,7 @@ tag must match `desktop/package.json` version." Each product's desktop publishes
 
 ### (g) Docs & agent surface — root + packages/ui + product
 
-> PLAN.md "Docs & agent surface": README + CLAUDE.md + `.claude/commands/` at THREE levels.
+> PHILOSOPHY.md "Docs & agent surface": README + CLAUDE.md + `.claude/commands/` at THREE levels.
 > Product-level docs are authored once in `_template` and **token-rewritten by the generator**
 > (`new-product.mjs` step 3 covers product README/CLAUDE.md/`.claude/commands/*`; ports and
 > infra names come from `product.json`).
@@ -1247,7 +1247,7 @@ Root `.claude/commands/` inventory (each a thin runnable recipe): `new-product.m
 `bootstrap-design-system.md` (the handover procedure: reconcile → tokens → components → verify).
 
 > `/add-component`, `/sync-tokens`, `/bootstrap-design-system` operate on shared `packages/ui`
-> (no product arg); the others take a product arg (PLAN.md Docs & agent surface).
+> (no product arg); the others take a product arg (PHILOSOPHY.md Docs & agent surface).
 
 Root `README.md` = human quickstart: `mise install && pnpm install && pnpm bootstrap`; where
 components live; `pnpm --filter @platform/ui storybook`; `pnpm new-product <name>`; points at
@@ -1336,7 +1336,7 @@ ls packages/ui/CLAUDE.md packages/ui/FIGMA.md packages/ui/.claude/commands/
 ls products/_template/CLAUDE.md products/_template/README.md products/_template/.claude/commands/
 ```
 
-**Why** — PLAN.md Docs & agent surface (the long bullet + ruling): three-level docs, the
+**Why** — PHILOSOPHY.md Docs & agent surface (the long bullet + ruling): three-level docs, the
 add-a-component recipe in `packages/ui/CLAUDE.md`, the add-an-endpoint recipe in the nested
 api CLAUDE.md, FIGMA.md as the designer doc, root commands take a product arg except
 `/add-component` `/sync-tokens` `/bootstrap-design-system`, product commands are
@@ -1366,7 +1366,7 @@ product-scoped and load from the session's project root.
   `Device.isDevice` guards this). The full push loop is therefore **verified later on real
   devices**; CI verifies the server side (`send_push()` with a mocked httpx transport).
 - **Sentry SDK is `@sentry/react-native`, NOT `sentry-expo`.** `sentry-expo` is deprecated;
-  PLAN.md locks `@sentry/react-native`. Using the wrong package is a silent footgun.
+  PHILOSOPHY.md locks `@sentry/react-native`. Using the wrong package is a silent footgun.
 - **eas-cli workspace detection workaround.** In a pnpm workspace, `eas build`/`eas update`
   misdetect the package manager unless BOTH the committed hoisted node-linker
   (`nodeLinker: hoisted` in `pnpm-workspace.yaml` — pnpm 11's home for it; the old `.npmrc`
@@ -1383,7 +1383,7 @@ product-scoped and load from the session's project root.
   env.MAC_CSC_LINK != ''` (win/linux always publish; macOS publishes only when the cert
   secret is set) and falls back to an unsigned `--mac --publish never` build-only step when
   certs are absent. Alternatively drop `macos-latest` from the matrix. Auto-update on macOS
-  requires signing AND notarization (PLAN.md Electron essentials).
+  requires signing AND notarization (PHILOSOPHY.md Electron essentials).
 - **Request-id middleware ordering.** Register `RequestIdMiddleware` LAST (`add_middleware`
   adds outermost-last) so it wraps the security middleware and error handlers — otherwise
   error responses won't carry the `X-Request-Id` header and error logs lose the id.
@@ -1452,7 +1452,7 @@ Maps 1:1 to the Phase 8 Verify row.
 
 ## Commits
 
-Logical commits on the `phase-8-cicd` branch (PLAN.md: each phase = one or a few logical
+Logical commits on the `phase-8-cicd` branch (PHILOSOPHY.md: each phase = one or a few logical
 commits):
 
 1. `feat(obs): request_id middleware + structlog JSON + Sentry both sides + X-Request-Id` —
@@ -1475,11 +1475,11 @@ commits):
 - ⚠️ **OPEN / TO CONFIRM — broadcast failure policy:** whether a Supabase broadcast failure
   should fail the mutation. Default here: log + swallow (writes never blocked by a Realtime
   outage). Confirm per product.
-- ⚠️ **OPEN / TO CONFIRM — "stale" push-token definition:** PLAN.md says "prune stale push
+- ⚠️ **OPEN / TO CONFIRM — "stale" push-token definition:** PHILOSOPHY.md says "prune stale push
   tokens" without a threshold. Default: 90 days by `updated_at`. Needs an `updated_at` column
   on the token (base model or the table).
 - ⚠️ **OPEN / TO CONFIRM — E2E process orchestration:** the exact background-API start +
-  teardown glue in `global-setup.ts`/`globalTeardown` is not pinned by PLAN.md.
+  teardown glue in `global-setup.ts`/`globalTeardown` is not pinned by PHILOSOPHY.md.
 - **RESOLVED — `--affected` base ref in CI:** with `fetch-depth: 0` Turbo auto-detects the
   base (PR base ref / previous push commit); `ci.yml` also sets `TURBO_SCM_BASE`/`TURBO_SCM_HEAD`
   explicitly to be robust against squash-merge histories. Revisit only if CI mis-scopes.
@@ -1491,5 +1491,5 @@ commits):
   `if: runner.os != 'macOS' || env.MAC_CSC_LINK != ''` (win/linux always publish; macOS only
   when certs exist) and runs an unsigned `--publish never` build-only step otherwise. mac
   auto-update stays inert until the app is signed AND notarized.
-- **Deferred (PLAN.md):** Maestro CI via EAS Workflows (local-only for now); Chromatic
+- **Deferred (PHILOSOPHY.md):** Maestro CI via EAS Workflows (local-only for now); Chromatic
   (declined — self-hosted Playwright VR); ADR-vs-ARCHITECTURE.md decision-record format.

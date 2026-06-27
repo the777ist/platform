@@ -2,7 +2,7 @@
 
 ## Summary
 
-**18 claims checked** across PLAN.md (Decision Sheet "Contracts", "Typegen" config block,
+**18 claims checked** across PHILOSOPHY.md (Decision Sheet "Contracts", "Typegen" config block,
 `packages/core` tree, Phase 4 row) and the three guides (phase-4-typegen, phase-2-design-system,
 phase-6-auth).
 
@@ -16,7 +16,7 @@ overwhelmingly current — **with one real, repeated error**: `@hey-api/client-f
 longer a package you install**. It was **deprecated on npm and bundled directly into
 `@hey-api/openapi-ts` as of v0.73.0** (current openapi-ts is **0.98.2**, still pre-1.0). The
 string `@hey-api/client-fetch` survives **only as a plugin identifier** inside the `plugins`
-array — which the guides actually use correctly — but PLAN.md and Phase 4 also tell you to add
+array — which the guides actually use correctly — but PHILOSOPHY.md and Phase 4 also tell you to add
 `@hey-api/client-fetch` to `dependencies` and pin it exact, which installs a deprecated,
 redundant package. TanStack Query is still **v5** (no React v6), Zustand is still **v5**, and the
 persistence packages all exist and are current. The Phase 4 guess of the generated hook name
@@ -32,7 +32,7 @@ pin to refresh at install time.
 
 ### 1. `@hey-api/client-fetch` listed as an installable dependency
 
-- **Location:** PLAN.md line 286–287 ("Typegen" block: "`@hey-api/openapi-ts` pinned exact +
+- **Location:** PHILOSOPHY.md line 286–287 ("Typegen" block: "`@hey-api/openapi-ts` pinned exact +
   `@hey-api/client-fetch` + TanStack Query plugin"); line 36 Decision Sheet; phase-4-typegen.md
   Step 3 `package.json` (`"@hey-api/client-fetch": "0.x.y"` in `dependencies`), DoD line 64–65,
   Open-questions line 777–778, Gotchas line 668.
@@ -51,7 +51,7 @@ pin to refresh at install time.
   **fine**; only the `package.json` dependency and the "pin it exact" instructions are wrong.
 - **Recommended change:** Remove `"@hey-api/client-fetch"` from the api-client `package.json`
   `dependencies`. Keep `@hey-api/openapi-ts` as the only hey-api dependency (devDep, pinned
-  exact). Reword PLAN.md's Typegen block and the Phase 4 DoD/Gotchas/Open-questions to: "the
+  exact). Reword PHILOSOPHY.md's Typegen block and the Phase 4 DoD/Gotchas/Open-questions to: "the
   Fetch client is bundled in `@hey-api/openapi-ts` (≥0.73.0); reference it via the
   `@hey-api/client-fetch` **plugin** in `openapi-ts.config.ts` — do not install a separate
   client package." Pin only `@hey-api/openapi-ts` exact.
@@ -61,7 +61,7 @@ pin to refresh at install time.
 
 ### 2. `@hey-api/openapi-ts` is pre-1.0 and must be pinned exact
 
-- **Location:** PLAN.md line 36, 286; phase-4-typegen.md DoD line 64, Gotchas line 668.
+- **Location:** PHILOSOPHY.md line 36, 286; phase-4-typegen.md DoD line 64, Gotchas line 668.
 - **Claim:** `@hey-api/openapi-ts` is still pre-1.0; pin exact (no `^`/`~`).
 - **Status:** ✅
 - **Finding:** Correct. Current latest is **0.98.2** (2026-era; a `next` channel exists at
@@ -75,7 +75,7 @@ pin to refresh at install time.
 
 ### 3. TanStack Query plugin name + that it generates `queryOptions`/`infiniteQueryOptions`
 
-- **Location:** PLAN.md line 36, 288–289; phase-4-typegen.md Step 4 (`{ name: "@tanstack/react-query" }`),
+- **Location:** PHILOSOPHY.md line 36, 288–289; phase-4-typegen.md Step 4 (`{ name: "@tanstack/react-query" }`),
   DoD line 65 ("`queryOptions`, `infiniteQueryOptions`").
 - **Claim:** The TanStack Query plugin (`@tanstack/react-query`) generates `queryOptions` and
   `infiniteQueryOptions` wrappers.
@@ -93,7 +93,7 @@ pin to refresh at install time.
 
 ### 4. Is the TanStack Query plugin "GA"?
 
-- **Location:** Review brief asks "Is the TanStack Query plugin GA?"; PLAN.md treats it as a
+- **Location:** Review brief asks "Is the TanStack Query plugin GA?"; PHILOSOPHY.md treats it as a
   production tool.
 - **Claim (implied):** The plugin is production-ready / stable.
 - **Status:** ⚠️
@@ -103,7 +103,7 @@ pin to refresh at install time.
   per the README), and is the official recommendation — but it inherits the pre-1.0 stability
   caveat. Calling it "GA" overstates; "stable, recommended, but pre-1.0 (pin exact)" is accurate.
 - **Recommended change:** Where any doc implies GA, phrase as "officially recommended, pre-1.0 —
-  pin exact." (PLAN.md already says "pinned exact, pre-1.0", so this is mainly a framing note.)
+  pin exact." (PHILOSOPHY.md already says "pinned exact, pre-1.0", so this is mainly a framing note.)
 - **Source(s):** GitHub `packages/openapi-ts/README.md` ("initial development"); heyapi.dev
   TanStack Query plugin page.
 
@@ -128,7 +128,7 @@ pin to refresh at install time.
 ### 6. `client.setConfig({ baseUrl })` to set the base URL at startup
 
 - **Location:** phase-4-typegen.md Step 8 (`client.setConfig({ baseUrl: env.EXPO_PUBLIC_API_URL })`);
-  PLAN.md line 290 ("App sets client baseUrl from `EXPO_PUBLIC_API_URL` at startup").
+  PHILOSOPHY.md line 290 ("App sets client baseUrl from `EXPO_PUBLIC_API_URL` at startup").
 - **Claim:** The bundled fetch client exposes `client.setConfig({ baseUrl })`.
 - **Status:** ✅
 - **Finding:** Confirmed in the bundled client source: `setConfig` exists and `Config` carries an
@@ -171,7 +171,7 @@ pin to refresh at install time.
 
 ### 9. TanStack Query is "current major v5"; `useInfiniteQuery` API
 
-- **Location:** PLAN.md line 29, 52 ("`useInfiniteQuery`-ready"); phase-4-typegen.md Step 9
+- **Location:** PHILOSOPHY.md line 29, 52 ("`useInfiniteQuery`-ready"); phase-4-typegen.md Step 9
   (`useInfiniteQuery`, `isPending`, `data.pages.flatMap`, `fetchNextPage`, `hasNextPage`).
 - **Claim:** TanStack Query v5 is current; `useInfiniteQuery` with `isPending`, `data.pages`,
   `fetchNextPage`, `hasNextPage` is the right API.
@@ -190,7 +190,7 @@ pin to refresh at install time.
 ### 10. Persistence packages: `@tanstack/react-query-persist-client`,
 `@tanstack/query-async-storage-persister`, `@tanstack/query-sync-storage-persister`
 
-- **Location:** PLAN.md line 31 (query client "with cache persistence — AsyncStorage native /
+- **Location:** PHILOSOPHY.md line 31 (query client "with cache persistence — AsyncStorage native /
   localStorage web"); phase-2-design-system.md step (g) `package.json` + `persist.web.ts`
   (`createSyncStoragePersister` from `@tanstack/query-sync-storage-persister`) +
   `persist.native.ts` (`createAsyncStoragePersister` from
@@ -226,7 +226,7 @@ pin to refresh at install time.
 
 ### 12. Zustand is current major; `create` + `persist` patterns
 
-- **Location:** PLAN.md line 29, 176 (session store = zustand), Decision Sheet; phase-2 step (h)
+- **Location:** PHILOSOPHY.md line 29, 176 (session store = zustand), Decision Sheet; phase-2 step (h)
   `use-theme.ts` (`import { create } from "zustand"`); phase-6 `auth.ts`
   (`import { create } from "zustand"`, store + `getState()`).
 - **Claim:** Zustand (current major) with `create(...)` store factory is correct; persist
@@ -255,7 +255,7 @@ pin to refresh at install time.
 
 ### 14. "TanStack Query plugin beats openapi-typescript + openapi-fetch (no hand-written glue)"
 
-- **Location:** PLAN.md line 288–289; phase-4-typegen.md Step 4 "Why".
+- **Location:** PHILOSOPHY.md line 288–289; phase-4-typegen.md Step 4 "Why".
 - **Claim:** The hey-api TanStack plugin generates `queryOptions`/infinite hooks, removing the
   hand-written glue that `openapi-typescript` + `openapi-fetch` requires.
 - **Status:** ✅
@@ -268,7 +268,7 @@ pin to refresh at install time.
 
 ### 15. "Commit generated output + CI drift check" pattern
 
-- **Location:** PLAN.md line 36 ("generated client committed per product"), 289–290 (drift command);
+- **Location:** PHILOSOPHY.md line 36 ("generated client committed per product"), 289–290 (drift command);
   phase-4-typegen.md DoD, Gotchas "Drift check", Step 5/6 `outputs: ["src/**"]`.
 - **Claim:** Commit the generated `src/` per product and guard it with
   `turbo run openapi build ... && git diff --exit-code`.
@@ -301,7 +301,7 @@ pin to refresh at install time.
 
 ### 17. Node.js runtime requirement for the codegen
 
-- **Location:** PLAN.md mise pin "Node 22"; (implicit — codegen runs under the repo's Node).
+- **Location:** PHILOSOPHY.md mise pin "Node 22"; (implicit — codegen runs under the repo's Node).
 - **Claim (implicit):** Node 22 is adequate to run `@hey-api/openapi-ts`.
 - **Status:** ✅
 - **Finding:** Matches exactly — the current openapi-ts README states it "runs in any Node.js 22+
@@ -313,7 +313,7 @@ pin to refresh at install time.
 ### 18. Cursor DTO field names (`items`, `next_cursor`) and cursor query param
 
 - **Location:** phase-4-typegen.md Prerequisites line 44–48, Step 9 (`page.items`,
-  `next_cursor`), Open-questions line 783–784; PLAN.md line 52 ("cursor pagination
+  `next_cursor`), Open-questions line 783–784; PHILOSOPHY.md line 52 ("cursor pagination
   (`useInfiniteQuery`-ready)").
 - **Claim:** The cursor response is `{ items: Item[], next_cursor: string | null }`.
 - **Status:** ❓

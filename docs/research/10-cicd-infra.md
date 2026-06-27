@@ -13,7 +13,7 @@
 
 **The one systematic weakness is stale GitHub Action major versions.** Every pinned third-party action in the workflows is one major behind current (June 2026): `actions/checkout@v4` → **v6**, `jdx/mise-action@v2` → **v4**, `dorny/paths-filter@v3` → **v4**, `expo/expo-github-action@v8` (still current — the only one that's right). v4 of both mise-action and paths-filter were Node-24 runtime bumps (Node 20 deprecated on GitHub Actions), so the stale pins are not merely cosmetic — they reference EOL runner versions. None of this *breaks* the architecture; it's a version-refresh pass.
 
-**Verdict:** Architecturally sound and faithful to PLAN.md. Approve with a version-bump sweep on all pinned actions, plus two "still-works-but-no-longer-required" notes (Vercel now auto-skips unaffected monorepo builds so `turbo-ignore` is optional; and a Sentry Metro-config detail the guides omit). The Fly scheduled-machine and Sentry-package choices — the things this review was asked to confirm hardest — are both correct.
+**Verdict:** Architecturally sound and faithful to PHILOSOPHY.md. Approve with a version-bump sweep on all pinned actions, plus two "still-works-but-no-longer-required" notes (Vercel now auto-skips unaffected monorepo builds so `turbo-ignore` is optional; and a Sentry Metro-config detail the guides omit). The Fly scheduled-machine and Sentry-package choices — the things this review was asked to confirm hardest — are both correct.
 
 ---
 
@@ -28,7 +28,7 @@
 - **Source(s):** https://github.com/actions/checkout ; https://raw.githubusercontent.com/jdx/mise-action/main/README.md
 
 ### 2. `jdx/mise-action@v2`
-- **Location:** `docs/phase-8-cicd-obs.md` — `ci.yml`, `eas-build.yml`, `eas-update.yml`, `e2e-nightly.yml`, `electron-release.yml`; also "Workflows" bullet in PLAN.md ("mise-action").
+- **Location:** `docs/phase-8-cicd-obs.md` — `ci.yml`, `eas-build.yml`, `eas-update.yml`, `e2e-nightly.yml`, `electron-release.yml`; also "Workflows" bullet in PHILOSOPHY.md ("mise-action").
 - **Claim:** `jdx/mise-action@v2` installs Node 22 / pnpm 10 / Python 3.13 / uv from `mise.toml`.
 - **Status:** ⚠️ Outdated (works, but two majors behind).
 - **Finding:** Latest is **v4 (v4.1.0)**. v4 bumped the action runtime from Node 20 → Node 24 (GitHub deprecated Node 20 for Actions) and added automatic locked installs when a `mise.lock` is present. The README recommends `@v4`. The *behavior* the plan relies on (reads tool versions from `mise.toml`) is unchanged, so v2 still functions.
@@ -36,7 +36,7 @@
 - **Source(s):** https://github.com/jdx/mise-action ; https://github.com/jdx/mise-action/releases ; https://raw.githubusercontent.com/jdx/mise-action/main/README.md
 
 ### 3. `dorny/paths-filter@v3`
-- **Location:** `docs/phase-8-cicd-obs.md` — `deploy-api.yml`, `eas-update.yml` `changes` jobs; PLAN.md "Workflows" bullet ("paths-filter").
+- **Location:** `docs/phase-8-cicd-obs.md` — `deploy-api.yml`, `eas-update.yml` `changes` jobs; PHILOSOPHY.md "Workflows" bullet ("paths-filter").
 - **Claim:** `dorny/paths-filter@v3` is current.
 - **Status:** ⚠️ Outdated (works, but a major behind).
 - **Finding:** Current major is **`dorny/paths-filter@v4`** ("New major release v4 after update to Node 24 [Breaking change]"). The `filters:` YAML and the `steps.filter.outputs.changes` output (consumed by the matrix via `fromJSON`) are unchanged in v4, so the plan's usage is forward-compatible.
@@ -52,15 +52,15 @@
 - **Source(s):** https://github.com/expo/expo-github-action ; https://raw.githubusercontent.com/expo/expo-github-action/main/README.md ; https://docs.expo.dev/eas-update/github-actions/
 
 ### 5. EAS-cli pnpm-workspace detection workaround (`.npmrc` `node-linker=hoisted` + root `packageManager` field)
-- **Location:** `docs/phase-8-cicd-obs.md` — `eas-build.yml` note + "Gotchas"; PLAN.md "Workflows" bullet.
+- **Location:** `docs/phase-8-cicd-obs.md` — `eas-build.yml` note + "Gotchas"; PHILOSOPHY.md "Workflows" bullet.
 - **Claim:** `eas build`/`eas update` misdetect the package manager in a pnpm workspace unless BOTH the committed `.npmrc` (`node-linker=hoisted`) AND a `"packageManager": "pnpm@10.x"` field in the **root** `package.json` are present.
 - **Status:** ✅ Correct (real, current issue) — ⚠️ one caveat.
-- **Finding:** The failure mode is real and current: open eas-cli issues document EAS misdetecting a pnpm workspace as yarn "despite the package.json having a `packageManager` field," and EAS Build failing to detect the lock file / local monorepo packages in pnpm + Turborepo setups. The `packageManager` field + hoisted linker is the accepted mitigation. **Caveat:** in pnpm 10, the canonical home for `node-linker` is shifting to a `nodeLinker:` key in `pnpm-workspace.yaml`; `node-linker=hoisted` in `.npmrc` is still honored, but PLAN.md Key ruling #6 explicitly anchors on `.npmrc` ("still the documented happy path"), so this is internally consistent — just flag that pnpm 10 also accepts the `pnpm-workspace.yaml` form.
+- **Finding:** The failure mode is real and current: open eas-cli issues document EAS misdetecting a pnpm workspace as yarn "despite the package.json having a `packageManager` field," and EAS Build failing to detect the lock file / local monorepo packages in pnpm + Turborepo setups. The `packageManager` field + hoisted linker is the accepted mitigation. **Caveat:** in pnpm 10, the canonical home for `node-linker` is shifting to a `nodeLinker:` key in `pnpm-workspace.yaml`; `node-linker=hoisted` in `.npmrc` is still honored, but PHILOSOPHY.md Key ruling #6 explicitly anchors on `.npmrc` ("still the documented happy path"), so this is internally consistent — just flag that pnpm 10 also accepts the `pnpm-workspace.yaml` form.
 - **Recommended change:** Keep the `.npmrc` approach (consistent with ruling #6). Add a one-line note that pnpm 10 also supports `nodeLinker` in `pnpm-workspace.yaml` if a future migration is wanted. Verify the actual EAS detection on a real build, as the underlying eas-cli bug surface keeps shifting.
 - **Source(s):** https://github.com/expo/eas-cli/issues/2978 ; https://github.com/expo/eas-cli/issues/3247 ; https://docs.expo.dev/guides/monorepos/ ; https://pnpm.io/settings
 
 ### 6. Fly scheduled machines as the cron primitive (`fly machine run --schedule`)
-- **Location:** PLAN.md "Background/scheduled jobs" bullet + ruling, directory tree (`tasks.py`); `docs/phase-8-cicd-obs.md` step (d) + DoD + Verify; `docs/phase-3-api.md` Step 18.
+- **Location:** PHILOSOPHY.md "Background/scheduled jobs" bullet + ruling, directory tree (`tasks.py`); `docs/phase-8-cicd-obs.md` step (d) + DoD + Verify; `docs/phase-3-api.md` Step 18.
 - **Claim:** "Fly scheduled machines running a lightweight `tasks` module (no queue infra)"; `fly machine run --schedule daily … python -m template_api.tasks prune-push-tokens` is the right primitive in June 2026.
 - **Status:** ✅ Correct (with a precision caveat).
 - **Finding:** Confirmed against official Fly docs. `fly machine run --schedule` sets the Machine's `config.schedule` and starts the Machine on a **fuzzy hourly / daily / weekly / monthly** cycle — exactly the "no queue infra, run a finite job then exit" model the plan wants. The plan's `--schedule daily` example uses a **valid keyword**. **Caveat:** `--schedule` accepts *only* those four interval keywords — it does **not** accept cron expressions, and scheduling is "fuzzy/approximate" (not guaranteed at an exact minute). For prune-stale-push-tokens, daily-ish is fine. If a product ever needs precise cron (e.g. "0 4 * * *"), Fly's own task-scheduling blueprint points to **Cron Manager** (per-job isolated machines) or **Supercronic**, not `--schedule`. The plan's "heavier products can add a worker later" already leaves room for this.
@@ -68,7 +68,7 @@
 - **Source(s):** https://fly.io/docs/machines/flyctl/fly-machine-run/ ; https://fly.io/docs/flyctl/machine-run/ ; https://community.fly.io/t/new-feature-scheduled-machines/7398 ; https://fly.io/docs/blueprints/task-scheduling/
 
 ### 7. `flyctl deploy -c fly.<env>.toml` + `[deploy] release_command` for Alembic
-- **Location:** PLAN.md ruling #4, "Hosting"; `docs/phase-8-cicd-obs.md` `deploy-api.yml`; `docs/phase-3-api.md` Step 22.
+- **Location:** PHILOSOPHY.md ruling #4, "Hosting"; `docs/phase-8-cicd-obs.md` `deploy-api.yml`; `docs/phase-3-api.md` Step 22.
 - **Claim:** Deploy via `flyctl deploy -c fly.staging.toml --remote-only`; Alembic runs as `[deploy] release_command = "alembic upgrade head"`.
 - **Status:** ✅ Correct.
 - **Finding:** Both are current, idiomatic flyctl. `-c`/`--config` selects an alternate TOML, `--remote-only` builds on Fly's remote builder, and `[deploy] release_command` runs once before new machines take traffic — the standard place to run migrations. The ruling-#4 detail (migrations over direct 5432 via `DATABASE_MIGRATION_URL`, set as a Fly secret) is consistent.
@@ -84,7 +84,7 @@
 - **Source(s):** https://github.com/superfly/flyctl-actions ; https://github.com/superfly/flyctl-actions/issues/24 ; https://fly.io/docs/launch/continuous-deployment-with-github-actions/
 
 ### 9. Vercel: one project per product, root dir = `products/<name>/app`, build via turbo filter, output `dist`, `npx turbo-ignore` ignored build step
-- **Location:** PLAN.md "Hosting" + generator step 6 + ruling #1; `docs/phase-8-cicd-obs.md` step (f) "web has NO workflow" note.
+- **Location:** PHILOSOPHY.md "Hosting" + generator step 6 + ruling #1; `docs/phase-8-cicd-obs.md` step (f) "web has NO workflow" note.
 - **Claim:** Per-product Vercel project; build via turbo filter; output `dist`; `npx turbo-ignore` as the ignored build step; no `web-deploy.yml`.
 - **Status:** ⚠️ Correct but `turbo-ignore` is no longer *required* (now optional).
 - **Finding:** The architecture (one project/product, root dir at the app, Vercel git integration instead of a workflow, `expo export --platform web` → `dist/`) is sound and current. `npx turbo-ignore` is **still supported and not deprecated** (README documents it, defaults to comparing against the last successful deployment on the branch; `--fallback=HEAD^` fixes the first-commit-of-a-branch "always deploys" gotcha). **However**, Vercel now ships an **"Automatically skip unnecessary deployments in monorepos"** project setting (Turborepo-powered) that skips unchanged projects with **no** manual ignored-build-step config. So the manual `turbo-ignore` step is now an optional/legacy approach rather than the required one.
@@ -92,7 +92,7 @@
 - **Source(s):** https://vercel.com/changelog/automatically-skip-unnecessary-deployments-in-monorepos ; https://vercel.com/changelog/intelligent-ignored-builds-using-turborepo ; https://raw.githubusercontent.com/vercel/turborepo/main/packages/turbo-ignore/README.md ; https://vercel.com/docs/monorepos/turborepo
 
 ### 10. Sentry RN package: `@sentry/react-native` current, `sentry-expo` deprecated
-- **Location:** PLAN.md "Cross-cutting" + Key rulings; `docs/phase-8-cicd-obs.md` step (a) `core/sentry.ts` + "Why" + Gotchas; root CLAUDE.md gotcha.
+- **Location:** PHILOSOPHY.md "Cross-cutting" + Key rulings; `docs/phase-8-cicd-obs.md` step (a) `core/sentry.ts` + "Why" + Gotchas; root CLAUDE.md gotcha.
 - **Claim:** Sentry = `@sentry/react-native`, NOT the deprecated `sentry-expo`.
 - **Status:** ✅ Correct (this is the headline confirmation).
 - **Finding:** Confirmed against Expo + Sentry official docs. `sentry-expo` was **deprecated at Expo SDK 50 (18 Jan 2024)** and merged into `@sentry/react-native`; the migration guide says to replace all `sentry-expo` imports with `@sentry/react-native` and install via `npx expo install @sentry/react-native`. Both `@sentry/react-native` and `@sentry/react-native/expo` work as the Expo config plugin. The plan's `import * as Sentry from "@sentry/react-native"` and `Sentry.init({ dsn, environment, tracesSampleRate })` are correct.
@@ -108,7 +108,7 @@
 - **Source(s):** https://docs.expo.dev/guides/using-sentry/ ; https://docs.sentry.io/platforms/react-native/manual-setup/expo/ ; https://docs.sentry.io/platforms/react-native/manual-setup/metro/
 
 ### 12. Python Sentry init: `sentry-sdk[fastapi]`
-- **Location:** PLAN.md config-essentials Python deps; `docs/phase-8-cicd-obs.md` step (a) `api/.../sentry.py`; `docs/phase-3-api.md` deps.
+- **Location:** PHILOSOPHY.md config-essentials Python deps; `docs/phase-8-cicd-obs.md` step (a) `api/.../sentry.py`; `docs/phase-3-api.md` deps.
 - **Claim:** `sentry-sdk[fastapi]`; init with `FastApiIntegration()` + `StarletteIntegration()`.
 - **Status:** ✅ Correct (one redundancy note).
 - **Finding:** `sentry-sdk[fastapi]` is the correct extra. The Sentry Python SDK auto-enables the FastAPI + Starlette integrations when FastAPI is present, so explicitly listing both integrations is harmless and supported (FastAPI integration depends on the Starlette one). `traces_sample_rate=0.1` + `send_default_pii=False` are reasonable defaults.
@@ -156,7 +156,7 @@
 - **Source(s):** https://pnpm.io/cli/install
 
 ### 18. `turbo run … --affected` in CI
-- **Location:** `docs/phase-8-cicd-obs.md` — `ci.yml`; PLAN.md "Quality"/"Workflows".
+- **Location:** `docs/phase-8-cicd-obs.md` — `ci.yml`; PHILOSOPHY.md "Quality"/"Workflows".
 - **Claim:** `pnpm turbo run lint typecheck test build openapi --affected` with `fetch-depth: 0`.
 - **Status:** ✅ Correct (OPEN base-ref item resolved below).
 - **Finding:** `turbo run --affected` is current Turborepo 2.x. `fetch-depth: 0` is correctly required so Turbo can compute the base diff. The phase-8 OPEN item about base-ref detection is real and resolvable (see "Resolved OPEN" §). The `uv sync` loop over `products/*/api` is a coarse "all APIs" sync rather than truly affected-only — the guide already flags this as acceptable ("a stricter affected filter can be layered later"), which is fair.
@@ -164,7 +164,7 @@
 - **Source(s):** https://turbo.build/repo/docs/reference/run ; https://turbo.build/repo/docs/crafting-your-repository/constructing-ci
 
 ### 19. `electron-builder --publish always` + GitHub Releases provider + per-product releases repo
-- **Location:** `docs/phase-8-cicd-obs.md` — `electron-release.yml`; PLAN.md ruling #3 + "Desktop".
+- **Location:** `docs/phase-8-cicd-obs.md` — `electron-release.yml`; PHILOSOPHY.md ruling #3 + "Desktop".
 - **Claim:** 3-OS matrix, `electron-builder --publish always`, per-product `<org>/<product>-desktop-releases` repo to dodge the electron-updater "latest release of the repo" collision; `GH_TOKEN` for publishing.
 - **Status:** ✅ Correct.
 - **Finding:** `--publish always`, the GitHub provider, and `GH_TOKEN` env for publishing are all current electron-builder. The multi-product collision reasoning (electron-updater GitHub provider resolves the repo's latest release, so multiple products in one repo collide → separate releases repos) is accurate. `electron-updater` + `autoUpdater.checkForUpdatesAndNotify()` are correct.
@@ -172,7 +172,7 @@
 - **Source(s):** https://www.electron.build/configuration/publish ; https://www.electron.build/auto-update
 
 ### 20. macOS code-signing/notarization gate (`CSC_LINK`/`CSC_KEY_PASSWORD`)
-- **Location:** `docs/phase-8-cicd-obs.md` — `electron-release.yml` env + Gotchas; PLAN.md Electron essentials.
+- **Location:** `docs/phase-8-cicd-obs.md` — `electron-release.yml` env + Gotchas; PHILOSOPHY.md Electron essentials.
 - **Claim:** macOS auto-update needs signing/notarization; gate mac publish until certs exist (`CSC_LINK`/`CSC_KEY_PASSWORD` placeholders; drop `macos-latest` or build unsigned in the interim).
 - **Status:** ✅ Correct (OPEN item resolved below).
 - **Finding:** Accurate. electron-builder reads `CSC_LINK` (cert) + `CSC_KEY_PASSWORD` from env; macOS Squirrel.Mac auto-update requires a signed (and notarized) app — unsigned macOS auto-update will not work. The gating strategy is sound.
@@ -184,7 +184,7 @@
 - **Claim:** POST messages to `https://exp.host/--/api/v2/push/send`.
 - **Status:** ✅ Correct.
 - **Finding:** That is the current Expo Push API send endpoint, and the message shape `{ to, title, body }` is correct. `getExpoPushTokenAsync()` requiring a real device + dev build (Expo Go can't receive a token) is also accurate — the `Device.isDevice` guard is right.
-- **Recommended change:** None. (Optional production hardening, not required by PLAN.md: chunk to ≤100 messages/request and read the receipts endpoint — out of scope for the template.)
+- **Recommended change:** None. (Optional production hardening, not required by PHILOSOPHY.md: chunk to ≤100 messages/request and read the receipts endpoint — out of scope for the template.)
 - **Source(s):** https://docs.expo.dev/push-notifications/sending-notifications/
 
 ### 22. Supabase Realtime HTTP broadcast endpoint (service-role)
@@ -196,7 +196,7 @@
 - **Source(s):** https://supabase.com/docs/guides/realtime/broadcast (verify on live project)
 
 ### 23. Tag-trigger globs (`"*-api-v*"`, `"*-app-v*"`, `"*-ota-v*"`, `"*-desktop-v*"`) + tag→product parsing
-- **Location:** `docs/phase-8-cicd-obs.md` — all tag-triggered workflows; PLAN.md "Releases".
+- **Location:** `docs/phase-8-cicd-obs.md` — all tag-triggered workflows; PHILOSOPHY.md "Releases".
 - **Claim:** Push tags matching `<product>-<surface>-v*` trigger production; `<product>` is parsed from the tag (`PARSE-FROM-TAG` placeholder).
 - **Status:** ✅ Correct (OPEN parsing item resolved below).
 - **Finding:** `on.push.tags` glob patterns are valid GitHub Actions tag filters. The `if [[ "${GITHUB_REF}" == refs/tags/* ]]` staging/prod branch is correct. The unresolved `PARSE-FROM-TAG` is a real gap but trivially closeable (see OPEN resolution).
