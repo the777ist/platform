@@ -98,11 +98,15 @@ verification gate. With Claude Code, the `/implement` command drives a phase end
 /implement 6     # Supabase auth, route guards, storage
 /implement 7     # the `new-product` generator
 /implement 8     # CI/CD, observability, realtime, push
+/implement 9     # finalize: strip build scaffolding (destructive; after 1-8 verified)
 ```
 
 (Or build manually straight from `docs/phase-N-*.md`.) After Phase 7 you have a working
 `products/_template` starter — auth screens, an API-backed list (items CRUD), settings with a
-theme/dark toggle, and tab navigation.
+theme/dark toggle, and tab navigation. **Phase 9** is the graduation step: once 1–8 are built
+and verified, it deletes the build scaffolding (the `/implement` command + `docs/phase-*.md`)
+and rewrites these build-oriented docs into their built-state form — leaving only the runtime
+surface (`CLAUDE.md`, `scripts/`, the slash commands, `PHILOSOPHY.md`).
 
 ---
 
@@ -214,27 +218,6 @@ its first argument** and writes its artifact under that product's own docs tree
 These commands are distinct from the thin `pnpm`/`turbo` wrappers — they encode the project's
 invariants as executable flows. (Not to be confused with `/implement`, the *build-time* command
 that constructs the monorepo's eight phases.)
-
----
-
-## Post-setup cleanup (once the template is built)
-
-The Phases 1–8 material is **build-time scaffolding** — nothing in daily development references
-it. The everyday loop runs entirely off the `CLAUDE.md` files, the slash commands, and
-`scripts/`. Once all phases are built and verified, these are safe to delete:
-
-- **`.claude/commands/implement.md`** — the `/implement` command (you don't re-implement phases).
-- **`docs/phase-*.md`** — the per-phase build guides (their durable conventions now live in the
-  generated `CLAUDE.md` files).
-- **`docs/research/`** — *optional*: the stack-choice fact-check + source URLs. Keep it only if
-  you want the audit trail.
-
-**Keep:** `PHILOSOPHY.md` (the architecture/decision record), the generated `CLAUDE.md` files,
-the other `.claude/commands/*`, `packages/ui/FIGMA.md`, and `scripts/`.
-
-If you delete `docs/`, also trim the two callouts in `PHILOSOPHY.md` that link into it (the
-phase-guide list and the `docs/research/` provenance line) so no links dangle. Daily
-development is unaffected — it never touches any of the deleted files.
 
 ---
 
