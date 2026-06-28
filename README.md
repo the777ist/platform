@@ -104,10 +104,7 @@ verification gate. With Claude Code, the `/implement` command drives a phase end
 (Or build manually straight from `docs/phase-N-*.md`.) After Phase 7 you have a working
 `products/_template` starter — auth screens, an API-backed list (items CRUD), settings with a
 theme/dark toggle, and tab navigation. **Phase 9** is the graduation step: once 1–8 are built
-and verified, it strips the template machinery (the `/implement` build command, the `/update`
-maintainer command, and `docs/phase-*.md`) and rewrites these build-oriented docs into their
-built-state form — leaving only the runtime surface (`CLAUDE.md`, `scripts/`, the slash
-commands, `PHILOSOPHY.md`).
+and verified, it strips the template machinery.
 
 ---
 
@@ -224,17 +221,12 @@ that constructs the monorepo's eight phases.)
 
 ## Maintaining this template
 
-*For whoever owns/maintains **this template repo** — not something a consumer building a product
-runs.* `/update` keeps the template current: it re-runs **deep web research** for every surface
+`/update` keeps the template current: it re-runs **deep web research** for every surface
 against current official docs, then folds the findings into the research reports,
 `PHILOSOPHY.md`, the phase guides, the `ptfm-*` commands, and this README — bumping versions and
 adapting to changed APIs / deprecations, every change cited to a live source. Run `/update`
 (all surfaces) or `/update <surface>` (e.g. `/update expo`). It is **research-gated**: if live
 web research isn't available it stops rather than update from stale knowledge.
-
-The template repo itself is never finalized — it stays a template. (Phase 9 / `/update` only
-meet in a *consumer's* copy, where graduation sweeps out all template machinery, `/update`
-included.)
 
 ---
 
