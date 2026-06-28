@@ -1,120 +1,120 @@
 ---
-description: Refresh the ENTIRE template to the latest — re-run deep web research for every surface/phase against current official docs, then fold the findings into the research reports, PHILOSOPHY.md, every phase guide & playbook, the ptfm commands, and the README. Research is compulsory; if web research is unavailable, STOP.
-argument-hint: "[surface|phase | 'all'] [extra instructions]"
+description: Refresh a build phase (or the whole template) to the latest — re-run deep web research against current official docs for that phase's stack, then fold findings into the phase guide, the research reports, PHILOSOPHY.md, the ptfm commands, and the README. Maps to phases EXACTLY like /implement. Research is compulsory; if web research is unavailable, STOP.
+argument-hint: "[phase e.g. 3 | all] [extra instructions]"
 ---
 
-You are the **updater** for this monorepo template. Your job: bring the **entire** template up
-to date with current reality — newest stable versions, changed APIs, deprecations, breaking
-changes, and shifted best practices — by doing **deep web research against official sources**,
-then reconciling every finding into the repo's docs. Go surface by surface, one at a time, and
-**do not stop until the whole repo is current**.
+You are the **maintainer's updater** for this monorepo template. Where `/implement <N>` *builds*
+phase N, `/update <N>` *refreshes* phase N against current reality — newest stable versions,
+changed APIs, deprecations, breaking changes, shifted best practices — by doing **deep web
+research against official sources**, then reconciling every finding back into the repo's docs.
+**`/update <N>` targets the exact same phase as `/implement <N>` (`docs/phase-<N>-*.md`).**
 
-Engage **maximum reasoning / extended thinking** throughout — this is a high-stakes, wide-blast
-update; correctness and consistency matter more than speed.
+Engage **maximum reasoning / extended thinking** — wide blast radius; correctness + consistency
+matter more than speed.
 
 ## ⛔ HARD GATE — web research is COMPULSORY
 
-Before anything else, confirm you can actually fetch **current** web content:
+Before anything else, confirm you can fetch **current** web content:
 - A working web-search + web-fetch capability (e.g. WebSearch + WebFetch), or the
   `deep-research` skill.
 - Verify it live: fetch one official source (e.g. the Expo or FastAPI releases page) and
-  confirm you got a real, current response.
+  confirm a real, current response.
 
 **If you cannot do live web research, STOP immediately and report that the update cannot run.**
-Do NOT update versions or "facts" from training knowledge alone — stale pins are exactly what
-this command exists to prevent. No research → no update. This is non-negotiable.
+Never update versions or "facts" from training knowledge alone — stale pins are exactly what
+this command exists to prevent. No research → no update. Non-negotiable.
 
 ## Arguments
 
-Raw args: `$ARGUMENTS`. Optional leading **surface/phase selector** (a surface key like
-`expo`, `supabase`, `testing`, a phase number `1`–`8`, or `all`); default = **`all`**. Any
-remaining text is extra instructions for this run. With `all` (the default), update every
-surface, sequentially, and do not stop until all are done.
+Raw args: `$ARGUMENTS`. A leading **phase selector** maps **exactly like `/implement`**:
+
+- **`/update <N>`** — `N` is `1`–`9` (or a phase keyword: `root-tooling`, `design-system`,
+  `api`, `typegen`, `desktop`, `auth`, `generator`, `cicd`, `finalize`). Resolves to the single
+  guide `docs/phase-<N>-*.md` — the **same exact phase** `/implement <N>` builds. Refresh that
+  phase only (plus propagate any *shared-version* change everywhere — see rules).
+- **No phase (or `all`)** — refresh **every phase, 1 → 9, sequentially**, and do not stop until
+  all are done and the repo is internally consistent.
+
+Any remaining text is extra instructions for this run.
+
+## What each phase covers (the stack to re-verify, and which research report backs it)
+
+| Phase | Stack to re-research against current official docs | Research report(s) |
+|---|---|---|
+| 1 root-tooling | pnpm, Turborepo, mise, Node LTS, lefthook | `01-monorepo-build` |
+| 2 design-system | Expo SDK/RN/React, NativeWind+Tailwind, react-native-reusables + `@rn-primitives`, Storybook + `react-native-web-vite`, Figma Code Connect/Variables + Style Dictionary, TanStack Query/Zustand, jest-expo/RNTL | `02-expo`, `03-styling`, `04-data`, `05-storybook`, `06-figma`, `11-testing` |
+| 3 api | FastAPI, Pydantic, SQLModel, Alembic, uv, Ruff, pyright, `uuid-utils`, slowapi, pytest | `07-backend`, `11-testing` |
+| 4 typegen | `@hey-api/openapi-ts` + the TanStack Query plugin | `04-data` |
+| 5 desktop | Electron, electron-builder, electron-updater, the Expo web export | `09-electron`, `02-expo` |
+| 6 auth | Supabase (Auth/JWKS, pooler, RLS, CLI, Storage) | `08-supabase` |
+| 7 generator | (plain-Node generator — only its pnpm/Node assumptions) | — *(currency review; no external stack)* |
+| 8 cicd | GitHub Actions, Vercel, Fly, EAS, Sentry, Playwright/Maestro | `10-cicd`, `02-expo`, `11-testing` |
+| 9 finalize | (procedure only — no external stack) | — *(consistency review only)* |
+
+Phases 7 & 9 have **no pinned external stack** — there `/update` is a currency/consistency
+review of the guide, not a version refresh.
 
 ## Canonical sources (read first, every run)
 
 - **`PHILOSOPHY.md`** — the gospel: Decision Sheet, key rulings, **locked version baseline**,
-  conventions, the "Stack provenance" note. `/update` is the **sanctioned mechanism** for
-  changing a locked version — but only with research + rationale recorded (see rules).
-- **`docs/research/*.md`** — the 11 per-surface fact-check reports (with source URLs + dates).
-  These are your starting baseline and your primary update target.
-- **`docs/phase-*.md`** — the per-phase build guides + playbooks.
-- **`README.md`** — the canonical project reference (Tech stack tables, etc.).
-- The `.claude/commands/ptfm-*.md` pipeline + `packages/ui/FIGMA.md` where they pin versions.
+  the "Stack provenance" note. `/update` is the **sanctioned mechanism** for changing a locked
+  version — but only with research + rationale recorded.
+- **`docs/phase-<N>-*.md`** — the target phase guide (+ its playbooks).
+- **`docs/research/<...>.md`** — the research report(s) backing the phase (table above). Your
+  starting baseline and a primary update target.
+- **`README.md`** (Tech-stack tables), the `.claude/commands/ptfm-*.md` pipeline, and
+  `packages/ui/FIGMA.md` — wherever a version/API is pinned or named.
 
-## The surfaces (cover ALL of these, one by one)
+## Procedure — for the target phase (repeat per phase when `all`, in order 1 → 9)
 
-Map to the existing research reports + the phase guide(s) each feeds:
+1. **Re-research, deep + current.** For every tool/version/API in the phase's scope (table),
+   fetch the **official** source (release notes, changelog, docs, registry) and determine: the
+   current stable version, any breaking change / deprecation / renamed API since the report's
+   date, and any shifted best practice. Cross-check; prefer primary sources. Capture **source
+   URL + access date** per finding. (You may delegate the searches to subagents; YOU own the
+   reconciliation.)
+2. **Diff vs. the locked choices** — PHILOSOPHY baseline + the phase guide + the research
+   report. Classify each delta: *version bump*, *API change*, *deprecation*, *new gotcha*,
+   *best-practice shift*, or *no change*.
+3. **Refresh the phase's research report(s)** — findings, versions, verdicts, source URLs, and
+   the header date.
+4. **Update `docs/phase-<N>-*.md`** — code/config skeletons, version pins, prose, gotchas,
+   playbooks.
+5. **Propagate every confirmed delta EVERYWHERE it appears** — PHILOSOPHY (Decision Sheet /
+   rulings / locked-version baseline / gotchas), the README Tech-stack tables, the `ptfm-*`
+   commands + `FIGMA.md`, and — **critically — any OTHER phase guide that shares the changed
+   version** (e.g. an Expo SDK bump on `/update 2` must also update Phases 5 & 8). Grep the old
+   pin across the whole repo so nothing dangles.
+6. **Verify consistency, then commit** — `chore(update): phase <N> — <old→new headline>` with
+   the key source URLs in the body.
 
-| Surface (research report) | Primarily feeds |
-|---|---|
-| `01-monorepo-build` (pnpm, Turborepo, mise, Node) | Phase 1 |
-| `02-expo-rn-eas` (Expo SDK, RN, React, EAS) | Phases 2 / 5 / 8 |
-| `03-styling-ui` (NativeWind, Tailwind, rn-reusables, @rn-primitives) | Phase 2 |
-| `04-data-state-typegen` (TanStack Query, Zustand, hey-api) | Phases 2 / 4 |
-| `05-storybook-vr` (Storybook, react-native-web-vite) | Phase 2 |
-| `06-figma` (Code Connect, Variables API, Style Dictionary) | Phase 2 |
-| `07-backend-python` (FastAPI, Pydantic, SQLModel, Alembic, Ruff, uv, pyright) | Phase 3 |
-| `08-supabase` (Auth/JWKS, pooler, RLS, CLI) | Phase 6 |
-| `09-electron` (Electron, builder, updater) | Phase 5 |
-| `10-cicd-infra` (GitHub Actions, Vercel, Fly, EAS) | Phase 8 |
-| `11-testing` (jest-expo, RNTL, pytest, Playwright, Maestro) | Phases 2 / 3 / 8 |
-
-## Procedure — per surface (repeat for every surface, in order)
-
-1. **Re-research, deep + current.** For every tool/version/API the surface covers, fetch the
-   **official** source (release notes, changelog, docs, the package registry) and determine:
-   the current stable version, any breaking changes / deprecations / renamed APIs since the
-   report's last date, and any shifted best practice. Cross-check claims; prefer primary
-   sources. Capture **source URL + access date** for every finding. (You may delegate the
-   per-surface searches to subagents, but YOU own the reconciliation and consistency.)
-2. **Diff vs. the locked choices.** Compare findings against `PHILOSOPHY.md`'s locked versions /
-   rulings and the surface's research report. Classify each delta: *version bump*, *API change*,
-   *deprecation*, *new gotcha*, *best-practice shift*, or *no change*.
-3. **Refresh `docs/research/<surface>.md`.** Update findings, version numbers, verdicts, and the
-   source URLs + date. Keep the report's structure; update its header date.
-4. **Fold corrections everywhere they live.** Propagate each confirmed delta into: the relevant
-   **phase guide(s)** (code/config skeletons, version pins, prose, gotchas, playbooks), the
-   **`PHILOSOPHY.md`** Decision Sheet / rulings / locked-version baseline / gotchas, the
-   **README** Tech stack tables, the **ptfm-\*** commands and `packages/ui/FIGMA.md` where they
-   pin a version or name an API, and any `CLAUDE.md` once those exist. Update EVERY occurrence —
-   grep for the old version/API across the repo so nothing dangles.
-5. **Verify consistency.** No contradictory versions across files; no dangling refs; cross-links
-   intact; repo-relative paths only; never leak the host checkout/clone directory name into
-   files. Run a grep sweep for
-   the surface's old pins to confirm full propagation.
-6. **Commit** this surface: `chore(update): refresh <surface> — <old→new headline>` with the
-   key source URLs in the body.
-
-Then move to the next surface. **Do not stop until every surface in scope is done**, the README
-+ PHILOSOPHY reflect the new baseline, and the repo is internally consistent.
+When `all`: do every phase 1 → 9 in order; **do not stop** until all are done and the repo is
+internally consistent (no mixed versions, no dangling refs).
 
 ## ABSOLUTE, NON-NEGOTIABLE RULES
 
 - **No research, no change.** Every version bump / API change / new gotcha MUST be backed by a
-  **live official source** captured with a URL + access date. Never bump a pin from memory. If a
-  fact can't be verified against a current source, leave it and flag it — don't guess.
-- **Web research is mandatory (the hard gate above).** If the capability is missing or broken,
-  STOP the whole command — do not "update" from training knowledge.
-- **Record every locked-decision change.** Changing a locked version is a deliberate decision:
-  log old → new + one-line rationale + source in the research report AND update PHILOSOPHY's
-  baseline. The whole point of `/update` is to make these changes *with evidence*.
-- **Propagate completely.** A version/API that changes must change in ALL of: research report,
-  phase guide(s), PHILOSOPHY, README, ptfm commands, FIGMA.md — wherever it appears. Grep to
-  prove it; a half-updated pin is a bug.
+  **live official source** captured with a URL + access date. Never bump a pin from memory; if
+  a fact can't be verified against a current source, leave it and flag it.
+- **Web research is mandatory** (the hard gate). Missing/broken capability → STOP the command.
+- **Record every locked-decision change** — old → new + one-line rationale + source, in the
+  research report AND PHILOSOPHY's baseline. `/update` makes these changes *with evidence*.
+- **Propagate completely.** A single `/update <N>` still fixes a shared version in EVERY file it
+  appears (other phase guides, PHILOSOPHY, README, ptfm commands, FIGMA.md). Grep to prove it; a
+  half-updated pin is a bug.
 - **Preserve the architecture unless research forces a change.** Refresh versions/APIs/best
-  practices freely. But if research shows a *locked architectural choice* is dead (a framework
-  fully deprecated with no in-paradigm successor), **STOP and surface that to the user** with the
-  evidence — do not silently swap a pillar of the stack.
-- **Maximum reasoning.** Think hard; verify; don't pattern-match. Prefer primary sources over
-  blog posts; confirm breaking changes against the changelog, not a summary.
-- **Do not stop until done.** With `all` (default), every surface is updated, committed, and the
-  repo is consistent before you finish. Partial updates that leave mixed versions are failures.
-- Repo-relative paths only; never the old clone-dir name; keep `PHILOSOPHY.md` the gospel.
+  practices freely; but if research shows a *locked architectural pillar* is dead (a framework
+  fully deprecated with no in-paradigm successor), **STOP and surface it to the user** with the
+  evidence — never silently swap a pillar.
+- **Maximum reasoning.** Verify against changelogs, not summaries; primary sources over blogs.
+- **Do not stop until done.** For `all`, every phase is refreshed, committed, and consistent
+  before you finish. Mixed-version partial states are failures.
+- Repo-relative paths only; never leak the host checkout/clone directory name; keep
+  `PHILOSOPHY.md` the gospel.
 
 ## Report (at the end)
 
-A per-surface summary: each confirmed delta as `old → new` with its source URL + date, the files
-touched, anything left unverified (with why), and any architectural change you stopped to surface.
-State plainly that every change is backed by a live source — or that the run was aborted at the
-hard gate because web research was unavailable.
+Per phase: each confirmed delta as `old → new` with its source URL + date, the files touched
+(incl. cross-phase propagation), anything left unverified (with why), and any architectural
+change you stopped to surface. State plainly that every change is backed by a live source — or
+that the run aborted at the hard gate because web research was unavailable.
