@@ -24,6 +24,57 @@ step-by-step build instructions live in **[`docs/`](docs/)** (`phase-1` … `pha
 
 ---
 
+## Tech stack
+
+> Versions are **locked** — treat them as fixed and don't upgrade without a deliberate
+> decision (rationale + per-choice sources in [`PHILOSOPHY.md`](PHILOSOPHY.md) and
+> [`docs/research/`](docs/research/)).
+
+**Frontend** — one React Native codebase → iOS · Android · web · desktop
+
+| Layer | Choice |
+|---|---|
+| Framework / runtime | **Expo SDK 56** · React Native 0.85 · React 19.2 |
+| Navigation | Expo Router |
+| Web | react-native-web (Expo web export) |
+| Desktop | **Electron 42** wrapping the web build (electron-builder / -updater) |
+| Styling | **NativeWind v4** on Tailwind CSS v3 — semantic tokens, light/dark + brand modes |
+| Components | `@platform/ui` — owned react-native-reusables primitives (`@rn-primitives/*`) |
+| Data / state | **TanStack Query v5** (server) · **Zustand v5** (local) |
+
+**Backend** — one FastAPI service per product
+
+| Layer | Choice |
+|---|---|
+| Framework | **FastAPI** · Pydantic v2 (strict) |
+| ORM / migrations | SQLModel · Alembic |
+| Tooling | Python 3.13 · uv · Ruff · pyright (strict) |
+| Data / auth | **Supabase** — Postgres · Auth (JWT/JWKS) · Realtime · Storage |
+| IDs / limits | UUIDv7 (`uuid-utils`) · slowapi rate limiting |
+
+**Contracts, design & testing**
+
+| Concern | Choice |
+|---|---|
+| API contract | OpenAPI → **`@hey-api/openapi-ts`** typed client + TanStack hooks (committed, never hand-edited) |
+| Errors | RFC 9457 problem+json |
+| Design system | **Storybook 9** (`react-native-web-vite`) · Figma Code Connect + Variables · Style Dictionary v5 |
+| JS tests | **jest-expo + React Native Testing Library** |
+| API tests | **pytest** (real Postgres) |
+| E2E / visual | Playwright (web, nightly) · Maestro (mobile, local) · Storybook VR |
+
+**Monorepo, CI/CD & hosting**
+
+| Concern | Choice |
+|---|---|
+| Monorepo | **pnpm 11** workspaces · **Turborepo** · **mise** (Node 24 / pnpm 11 / Python 3.13 / uv) |
+| Git hooks | lefthook |
+| CI | GitHub Actions (affected-only) |
+| Hosting | **Vercel** (web) · **Fly.io** (API) · **EAS** (mobile) · GitHub Releases (desktop) |
+| Observability | Sentry · structlog |
+
+---
+
 ## Prerequisites
 
 - **[mise](https://mise.jdx.dev/)** — pins the toolchain: **Node 24 LTS · pnpm 11 · Python
@@ -127,14 +178,6 @@ docs/                   # phase-by-phase build guides (phase-1 … phase-8) + re
 Fixed recipes (enforced, exposed as slash commands): **`/add-component`** (cli-add → story →
 Code Connect map → export → VR baseline) and **`/add-feature`**
 (`model → service → schema → router → openapi → typegen → hook → screen`).
-
----
-
-## Locked stack (don't "upgrade" these without a decision)
-
-pnpm 11 · Node 24 · Python 3.13 · **Expo SDK 56** (RN 0.85) · **NativeWind v4** on Tailwind v3
-· Storybook 9 · TanStack Query v5 · Zustand v5 · **Electron 42** · **FastAPI** (Pydantic v2) ·
-**Supabase** (Postgres + Auth + Realtime + Storage) · Turborepo · Vercel · Fly.io.
 
 ---
 
