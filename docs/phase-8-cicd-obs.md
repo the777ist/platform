@@ -1249,9 +1249,36 @@ Root `.claude/commands/` inventory (each a thin runnable recipe): `new-product.m
 > `/add-component`, `/sync-tokens`, `/bootstrap-design-system` operate on shared `packages/ui`
 > (no product arg); the others take a product arg (PHILOSOPHY.md Docs & agent surface).
 
+**The `ptfm-*` agentic development pipeline (also root `.claude/commands/`).** Alongside the
+thin wrappers above, the root command surface includes the opinionated lifecycle pipeline that
+is the **primary way products are built**: `ptfm-product` → `ptfm-architect` → `ptfm-plan` →
+`ptfm-implement` → `ptfm-audit` → `ptfm-simplify` → `ptfm-commonify` → `ptfm-review` →
+`ptfm-test-ui`. Each takes the **product name as its first arg** and writes its artifact to that
+product's own docs tree: `products/<product>/docs/{product,architecture,plans,implementation,
+reviews}/` (created on first write — no pre-seeding; the *product* already exists via
+`new-product`). These commands encode PHILOSOPHY.md's invariants as executable flows; they are
+already authored at `.claude/commands/ptfm-*.md` and **must NOT be deleted by the post-setup
+cleanup** (they are runtime, not build scaffolding).
+
+**Step — wire the agentic tooling (do this as part of the agent-surface build).** For the
+`ptfm-*` pipeline to work, the implementing agent must:
+1. Keep the `ptfm-*.md` command files in `.claude/commands/` (they ship with the repo).
+2. Document the **operational stack** (the MCP integrations the pipeline drives) in the root
+   `README.md` and root `CLAUDE.md`: **Linear** (`mcp__Linear__*`), **Notion**
+   (`mcp__Notion__*`), **Figma** (`mcp__Figma__*`), **Supabase** (`mcp__Supabase__*`,
+   read-only introspection — migrations go via Alembic), **Playwright** (`mcp__playwright__*`),
+   **GitHub** (`mcp__github__*`) — and that a developer must connect them in Claude Code before
+   running the pipeline.
+3. State in each product's `CLAUDE.md` that the per-product `docs/{product,architecture,plans,
+   implementation,reviews}/` tree is where the pipeline's artifacts live, and that the pipeline
+   is the canonical build workflow for that product.
+
 Root `README.md` = human quickstart: `mise install && pnpm install && pnpm bootstrap`; where
 components live; `pnpm --filter @platform/ui storybook`; `pnpm new-product <name>`; points at
-`CLAUDE.md` for authoritative recipes (does not duplicate them).
+`CLAUDE.md` for authoritative recipes (does not duplicate them). Retain a short **post-setup
+cleanup** note: the build scaffolding (`.claude/commands/implement.md` + `docs/phase-*.md`,
+optionally `docs/research/`) is safe to delete once the template is built — it has no runtime
+role; keep `PHILOSOPHY.md` + the `CLAUDE.md` surface + `scripts/`.
 
 #### packages/ui
 

@@ -24,6 +24,51 @@ step-by-step build instructions live in **[`docs/`](docs/)** (`phase-1` … `pha
 
 ---
 
+## Tech stack
+
+**Frontend** — one React Native codebase → iOS · Android · web · desktop
+
+| Layer | Choice |
+|---|---|
+| Framework / runtime | **Expo SDK 56** · React Native 0.85 · React 19.2 |
+| Navigation | Expo Router |
+| Web | react-native-web (Expo web export) |
+| Desktop | **Electron 42** wrapping the web build (electron-builder / -updater) |
+| Styling | **NativeWind v4** on Tailwind CSS v3 — semantic tokens, light/dark + brand modes |
+| Components | `@platform/ui` — owned react-native-reusables primitives (`@rn-primitives/*`) |
+| Data / state | **TanStack Query v5** (server) · **Zustand v5** (local) |
+
+**Backend** — one FastAPI service per product
+
+| Layer | Choice |
+|---|---|
+| Framework | **FastAPI** · Pydantic v2 (strict) |
+| ORM / migrations | SQLModel · Alembic |
+| Tooling | Python 3.13 · uv · Ruff · pyright (strict) |
+| Data / auth | **Supabase** — Postgres · Auth (JWT/JWKS) · Realtime · Storage |
+| IDs / limits | UUIDv7 (`uuid-utils`) · slowapi rate limiting |
+
+**Design & testing**
+
+| Concern | Choice |
+|---|---|
+| Design system | **Storybook 9** (`react-native-web-vite`) · Figma Code Connect + Variables · Style Dictionary v5 |
+| JS tests | **jest-expo + React Native Testing Library** |
+| API tests | **pytest** (real Postgres) |
+| E2E / visual | Playwright (web, nightly) · Maestro (mobile, local) · Storybook VR |
+
+**Monorepo, CI/CD & hosting**
+
+| Concern | Choice |
+|---|---|
+| Monorepo | **pnpm 11** workspaces · **Turborepo** · **mise** (Node 24 / pnpm 11 / Python 3.13 / uv) |
+| Git hooks | lefthook |
+| CI | GitHub Actions (affected-only) |
+| Hosting | **Vercel** (web) · **Fly.io** (API) · **EAS** (mobile) · GitHub Releases (desktop) |
+| Observability | Sentry · structlog |
+
+---
+
 ## Prerequisites
 
 - **[mise](https://mise.jdx.dev/)** — pins the toolchain: **Node 24 LTS · pnpm 11 · Python
@@ -130,11 +175,66 @@ Code Connect map → export → VR baseline) and **`/add-feature`**
 
 ---
 
-## Locked stack (don't "upgrade" these without a decision)
+## Operational stack (agentic-workflow integrations)
 
-pnpm 11 · Node 24 · Python 3.13 · **Expo SDK 56** (RN 0.85) · **NativeWind v4** on Tailwind v3
-· Storybook 9 · TanStack Query v5 · Zustand v5 · **Electron 42** · **FastAPI** (Pydantic v2) ·
-**Supabase** (Postgres + Auth + Realtime + Storage) · Turborepo · Vercel · Fly.io.
+Product development here is **agentic** — driven by the `ptfm-*` slash-command pipeline (below).
+That pipeline integrates external services over MCP; connect these in Claude Code before running
+it:
+
+| Service | Role in the workflow | MCP family |
+|---|---|---|
+| **Linear** | Issue tracking — tickets, per-phase sub-issues, parent epics | `mcp__Linear__*` |
+| **Notion** | Product briefs, user research, decision records | `mcp__Notion__*` |
+| **Figma** | Design source — frames, Code Connect, token modes | `mcp__Figma__*` |
+| **Supabase** | Database/auth — read-only schema introspection | `mcp__Supabase__*` |
+| **Playwright** | Live web verification / E2E | `mcp__playwright__*` |
+| **GitHub** | Repos, PRs, CI | `mcp__github__*` |
+
+Deploy surfaces: **Fly.io** (API) · **Vercel** (web) · **EAS** (mobile) · **GitHub Releases**
+(desktop).
+
+### Development workflow — the `ptfm-*` pipeline
+
+Products are built via a namespaced agentic pipeline. Every command takes the **product name as
+its first argument** and writes its artifact under that product's own docs tree
+(`products/<product>/docs/{product,architecture,plans,implementation,reviews}/`):
+
+```
+/ptfm-product → /ptfm-architect → /ptfm-plan → /ptfm-implement → /ptfm-audit
+              → /ptfm-simplify → /ptfm-commonify → /ptfm-review → /ptfm-test-ui
+```
+
+- **`product` + `architect`** are optional (new product surfaces / multi-phase features); small
+  features and bug fixes enter at **`plan`**.
+- **`plan → implement → audit`** is the core spine; the rest is the post-implementation quality
+  cascade. `review` and `test-ui` run last so they assess the final shipped shape.
+- When the optional head runs, each artifact binds the next (product brief → architecture →
+  per-phase plan).
+
+These commands are distinct from the thin `pnpm`/`turbo` wrappers — they encode the project's
+invariants as executable flows. (Not to be confused with `/implement`, the *build-time* command
+that constructs the monorepo's eight phases.)
+
+---
+
+## Post-setup cleanup (once the template is built)
+
+The Phases 1–8 material is **build-time scaffolding** — nothing in daily development references
+it. The everyday loop runs entirely off the `CLAUDE.md` files, the slash commands, and
+`scripts/`. Once all phases are built and verified, these are safe to delete:
+
+- **`.claude/commands/implement.md`** — the `/implement` command (you don't re-implement phases).
+- **`docs/phase-*.md`** — the per-phase build guides (their durable conventions now live in the
+  generated `CLAUDE.md` files).
+- **`docs/research/`** — *optional*: the stack-choice fact-check + source URLs. Keep it only if
+  you want the audit trail.
+
+**Keep:** `PHILOSOPHY.md` (the architecture/decision record), the generated `CLAUDE.md` files,
+the other `.claude/commands/*`, `packages/ui/FIGMA.md`, and `scripts/`.
+
+If you delete `docs/`, also trim the two callouts in `PHILOSOPHY.md` that link into it (the
+phase-guide list and the `docs/research/` provenance line) so no links dangle. Daily
+development is unaffected — it never touches any of the deleted files.
 
 ---
 
