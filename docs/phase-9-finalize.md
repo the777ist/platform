@@ -60,9 +60,11 @@ prerequisites → create & run a product → layout → conventions → workflow
 
 ### Step 4 — Delete the build-time commands
 
-`rm .claude/commands/implement.md .claude/commands/update.md` — the build-phase command and the
-research-driven template-refresh command have no runtime role (and `/update` operates on the
-research reports + phase guides this phase deletes).
+`rm .claude/commands/implement.md .claude/commands/update.md` — `/implement` (the build-phase
+command) and `/update` (the template **maintainer's** research-refresh command) are template
+machinery; a finished product repo carries neither. Finalize runs only in a *consumer's* copy
+of the template, so sweeping both out is correct — the maintained template repo itself is never
+finalized.
 
 ### Step 5 — Delete the phase guides
 
