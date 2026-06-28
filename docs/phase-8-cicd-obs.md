@@ -1275,10 +1275,10 @@ cleanup** (they are runtime, not build scaffolding).
 
 Root `README.md` = human quickstart: `mise install && pnpm install && pnpm bootstrap`; where
 components live; `pnpm --filter @platform/ui storybook`; `pnpm new-product <name>`; points at
-`CLAUDE.md` for authoritative recipes (does not duplicate them). Retain a short **post-setup
-cleanup** note: the build scaffolding (`.claude/commands/implement.md` + `docs/phase-*.md`,
-optionally `docs/research/`) is safe to delete once the template is built — it has no runtime
-role; keep `PHILOSOPHY.md` + the `CLAUDE.md` surface + `scripts/`.
+`CLAUDE.md` for authoritative recipes (does not duplicate them). The README at this stage is
+still build-oriented (Status / Stage 1); **Phase 9 (`/implement 9`) rewrites it into its
+built-state form** and strips the build scaffolding — do not hand-write a manual "post-setup
+cleanup" section here, that step is automated by Phase 9.
 
 #### packages/ui
 

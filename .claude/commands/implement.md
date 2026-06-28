@@ -15,11 +15,13 @@ Parse them as an optional leading **phase selector** followed by optional **extr
 instructions**:
 
 - A phase selector may look like `3`, `phase-3`, `3-api`, or a name/keyword (`auth`,
-  `desktop`, `typegen`, `generator`, `design-system`, `cicd`). Map it to the matching
-  `docs/phase-<N>-*.md`.
-- If **no phase** is given: phases are sequential (1 → 8). Inspect the actual repo state and
+  `desktop`, `typegen`, `generator`, `design-system`, `cicd`, `finalize`). Map it to the
+  matching `docs/phase-<N>-*.md`.
+- If **no phase** is given: phases are sequential (1 → 9). Inspect the actual repo state and
   pick the **lowest phase not yet complete**. State which phase you chose and the evidence
-  (what already exists / what's missing) in one line before starting.
+  (what already exists / what's missing) in one line before starting. **Phase 9 is
+  destructive** (it strips the build scaffolding) — never auto-select it; only run it on an
+  explicit `/implement 9` (or `finalize`) once 1–8 are verified, and confirm before deleting.
 - Any remaining text is **user instructions** for this run. Honor them — but they do **NOT**
   override the locked decisions in `PHILOSOPHY.md`. If a user instruction conflicts with the
   locked plan, STOP and ask via `AskUserQuestion` rather than silently picking one.
