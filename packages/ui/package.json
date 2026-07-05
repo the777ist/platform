@@ -29,6 +29,7 @@
     "react-native": "*"
   },
   "devDependencies": {
+    "@figma/code-connect": "1.4.8",
     "@platform/config": "workspace:*",
     "@storybook/react-native-web-vite": "9.1.20",
     "@types/react": "~19.2.0",

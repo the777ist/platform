@@ -1,0 +1,13 @@
+{
+  "fileKey": "TODO-FIGMA-FILE-KEY",
+  "source": "tokens-studio",
+  "tokensFile": "packages/ui/figma/tokens.json",
+  "modes": {
+    "template": "TODO-MODE-ID-TEMPLATE",
+    "demo": "TODO-MODE-ID-DEMO"
+  },
+  "outputs": {
+    "themeTs": "packages/ui/src/lib/theme.ts",
+    "globalCss": "packages/ui/src/global.css"
+  }
+}
