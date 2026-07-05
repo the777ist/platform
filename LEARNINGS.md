@@ -259,3 +259,88 @@ Observed on npm, 2026-07-05 — no action taken (locked versions respected), rec
 - **Fix applied:** `jest --passWithNoTests` in core + app scripts; `.turbo/` gitignored.
 - **Template change needed:** guide steps (g)/(h) skeletons should use `--passWithNoTests`
   until each workspace grows tests; Phase-1 `.gitignore` skeleton should include `.turbo/`.
+
+---
+
+## Phase 3 — FastAPI backend (`docs/phase-3-api.md`) — run 2026-07-05
+
+### 1. slowapi's SlowAPIMiddleware is silently BROKEN on current FastAPI — default limits never fire
+
+- **Symptom:** Verify 4 failed — 120 requests to `/v1/hello` returned 120×200, no 429.
+- **Root cause:** `SlowAPIMiddleware` resolves the endpoint via `route.matches(scope)`;
+  FastAPI 0.139 wraps routers in new `_IncludedRouter` internals where `matches()` returns
+  `Match.NONE` for EVERY route (even `/healthz`) → `_should_exempt` exempts every request.
+- **Fix applied:** thin `RateLimitMiddleware` in `security.py` calling
+  `limiter._check_request_limit(request, None, True)` directly, plus `key_style="url"` on the
+  Limiter (the check then keys on the request path and needs no endpoint function); 429
+  rendered as problem+json inline. Verified: exactly 100×200 → 429s, problem+json body.
+- **Template change needed:** replace the `SlowAPIMiddleware` skeleton in guide Steps 10/16;
+  keep the ⚠️ that slowapi is alpha and re-verify against FastAPI on every `/update`.
+
+### 2. `sa_column=Column(...)` in the shared SQLModel mixin breaks on the SECOND table
+
+- **Symptom:** first pytest run: `Column object 'created_at' already assigned to Table 'item'`.
+- **Root cause:** a concrete `Column` object binds to exactly ONE Table; the guide's
+  `UUIDModel` skeleton shares the same Column instances across all inheriting models.
+- **Fix applied:** mixin-safe `sa_type=DateTime(timezone=True)` + `sa_column_kwargs=
+{"server_default": func.now(), ...}` — a fresh Column per subclass.
+- **Template change needed:** fix the Step-6 `base.py` skeleton.
+
+### 3. `template_api.main` reads Settings at IMPORT time — tests need env before any import
+
+- **Symptom:** conftest import failed: Settings missing `database_url` — `main.py` builds
+  `app = create_app()` at module level (uvicorn entrypoint) and `install_security()` reads
+  Settings immediately.
+- **Fix applied:** `tests/__init__.py` exports `DATABASE_URL`/`DATABASE_MIGRATION_URL`
+  defaults (runs before conftest's imports since tests is a package).
+- **Template change needed:** add to the Step-23 conftest skeleton (or note it in Step 16).
+
+### 4. starlette 1.3 + httpx 0.28: TestClient types collapse to Unknown under pyright strict
+
+- **Symptom:** ~40 pyright errors in tests — every `TestClient.get/post` "partially unknown".
+- **Root cause:** starlette 1.3 deprecates plain `httpx` in `starlette.testclient`
+  ("install httpx2 instead") and its annotations reference `httpx._types` aliases that
+  httpx 0.28 removed.
+- **Fix applied:** `httpx2` added to the dev group (starlette prefers it:
+  `import httpx2 as httpx`); runtime `httpx` stays (send_push per PHILOSOPHY).
+- **Template change needed:** add `httpx2` to the Step-1 dev-deps skeleton.
+
+### 5. Guide skeletons violate the guide's own lint/type config
+
+- ruff **B008**: `svc: ItemService = Depends()` / `session: Session = Depends(...)` defaults
+  → converted to `Annotated[X, Depends()]` (FastAPI-recommended form).
+- ruff **UP046** (0.15): `class Page(BaseModel, Generic[T])` → PEP 695 `class Page[T](BaseModel)`.
+- pyright strict: decorated inner handlers flag `reportUnusedFunction` (targeted ignores);
+  `__tablename__` literal vs `declared_attr` (ignore); bare `Item.id` in
+  `order_by`/comparisons types as UUID → wrap with SQLModel's `col()`;
+  `session.execute()` is _deprecated by SQLModel_ in favor of the very `exec()` that can't
+  type `delete()` (fastapi/sqlmodel#909) → deliberate `reportDeprecated` ignore +
+  `cast(CursorResult[Any], ...)` for `.rowcount`.
+- **Template change needed:** fold all of the above into the Step 5/7/12–16 skeletons.
+
+### 6. `export_openapi.py` path depth: guide's own ⚠️ was right — `parents[3]` is wrong
+
+- `src/template_api/export_openapi.py` → `parents[2]` is `api/`; `parents[3]` would be
+  `products/_template/`. Used `parents[2]`; Phase 4's `../api/openapi.json` read holds.
+- **Template change needed:** fix Step 17 and drop the ⚠️.
+
+### 7. lefthook ruff hooks: `$(dirname {staged_files} | head -1)/..` derives the WRONG project root
+
+- **Symptom:** first `.py` commit failed both ruff hooks — for staged files under
+  `src/template_api/`, the expression points uv at `src/`.
+- **Fix applied:** walk UP from the first staged file to the nearest `pyproject.toml`
+  (works at any depth; still first-project-wins for multi-project commits, same as before).
+- **Template change needed:** fix the `lefthook.yml` skeleton in Phase 1 Step 9.
+
+### 8. Alembic: `version_path_separator` is deprecated
+
+- `alembic.ini` now wants `path_separator = os` (deprecation warning on every run with the
+  guide's key). Fix applied; update the Step-19 skeleton.
+
+### 9. Version drift snapshot (2026-07-05, for `/update`) — pinned current per the guide's markers
+
+- fastapi **0.139.0** (guide skeleton said 0.124.4 "current 2025-12"), sqlmodel **0.0.39**
+  (guide 0.0.27), slowapi **0.1.10**, uuid-utils **0.16.2**, pytest **9.1.1**,
+  ruff **0.15.20**, pytest-asyncio 1.4.0 (matched), uvicorn 0.50.0, alembic 1.18.5.
+- **polyfactory is now 3.x** (3.3.0; guide said "current 2.x line") — the
+  `ModelFactory[DTO]` usage works unchanged on 3.x.
