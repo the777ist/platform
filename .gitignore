@@ -40,3 +40,6 @@ release/
 .env.local
 .env.*.local
 # (Intentionally NOT ignored: .env.development, .env.staging, .env.production — committed.)
+
+# Turborepo local cache/daemon state
+.turbo/

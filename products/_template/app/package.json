@@ -8,7 +8,7 @@
     "export:web": "expo export --platform web",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest --passWithNoTests"
   },
   "dependencies": {
     "@expo/metro-runtime": "~56.0.16",
