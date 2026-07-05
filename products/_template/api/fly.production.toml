@@ -1,0 +1,25 @@
+app = "example-template-api-prod"
+primary_region = "iad"
+
+[build]
+dockerfile = "Dockerfile"
+
+[deploy]
+# Alembic runs as the Fly release command, over DATABASE_MIGRATION_URL (5432). Ruling #4.
+release_command = "alembic upgrade head"
+
+[env]
+ENVIRONMENT = "production"
+
+[http_service]
+internal_port = 8000
+force_https = true
+auto_stop_machines = "stop"
+auto_start_machines = true
+min_machines_running = 1
+
+[[http_service.checks]]
+method = "GET"
+path = "/healthz"
+interval = "15s"
+timeout = "2s"
