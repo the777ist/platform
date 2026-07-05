@@ -21,7 +21,9 @@
             "type": "string"
           }
         },
-        "required": ["status"],
+        "required": [
+          "status"
+        ],
         "title": "Health",
         "type": "object"
       },
@@ -32,7 +34,9 @@
             "type": "string"
           }
         },
-        "required": ["message"],
+        "required": [
+          "message"
+        ],
         "title": "Hello",
         "type": "object"
       },
@@ -54,7 +58,9 @@
             "type": "string"
           }
         },
-        "required": ["title"],
+        "required": [
+          "title"
+        ],
         "title": "ItemCreate",
         "type": "object"
       },
@@ -152,7 +158,9 @@
             "type": "string"
           }
         },
-        "required": ["id"],
+        "required": [
+          "id"
+        ],
         "title": "MeRead",
         "type": "object"
       },
@@ -177,7 +185,9 @@
             "title": "Next Cursor"
           }
         },
-        "required": ["items"],
+        "required": [
+          "items"
+        ],
         "title": "Page[ItemRead]",
         "type": "object"
       },
@@ -220,7 +230,10 @@
             "type": "string"
           }
         },
-        "required": ["title", "status"],
+        "required": [
+          "title",
+          "status"
+        ],
         "title": "Problem",
         "type": "object"
       },
@@ -235,7 +248,10 @@
             "type": "string"
           }
         },
-        "required": ["device_id", "expo_token"],
+        "required": [
+          "device_id",
+          "expo_token"
+        ],
         "title": "PushTokenCreate",
         "type": "object"
       },
@@ -255,7 +271,11 @@
             "type": "string"
           }
         },
-        "required": ["id", "device_id", "expo_token"],
+        "required": [
+          "id",
+          "device_id",
+          "expo_token"
+        ],
         "title": "PushTokenRead",
         "type": "object"
       },
@@ -291,7 +311,11 @@
             "type": "string"
           }
         },
-        "required": ["loc", "msg", "type"],
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
         "title": "ValidationError",
         "type": "object"
       }
@@ -319,7 +343,9 @@
           }
         },
         "summary": "Healthz",
-        "tags": ["health"]
+        "tags": [
+          "health"
+        ]
       }
     },
     "/v1/hello": {
@@ -338,7 +364,9 @@
           }
         },
         "summary": "Hello",
-        "tags": ["hello"]
+        "tags": [
+          "hello"
+        ]
       }
     },
     "/v1/items": {
@@ -415,7 +443,9 @@
           }
         },
         "summary": "List Items",
-        "tags": ["items"]
+        "tags": [
+          "items"
+        ]
       },
       "post": {
         "operationId": "create_item_v1_items_post",
@@ -472,7 +502,9 @@
           }
         },
         "summary": "Create Item",
-        "tags": ["items"]
+        "tags": [
+          "items"
+        ]
       }
     },
     "/v1/items/{item_id}": {
@@ -526,7 +558,9 @@
           }
         },
         "summary": "Delete Item",
-        "tags": ["items"]
+        "tags": [
+          "items"
+        ]
       },
       "get": {
         "operationId": "get_item_v1_items__item_id__get",
@@ -585,7 +619,9 @@
           }
         },
         "summary": "Get Item",
-        "tags": ["items"]
+        "tags": [
+          "items"
+        ]
       },
       "patch": {
         "operationId": "update_item_v1_items__item_id__patch",
@@ -654,7 +690,9 @@
           }
         },
         "summary": "Update Item",
-        "tags": ["items"]
+        "tags": [
+          "items"
+        ]
       }
     },
     "/v1/me": {
@@ -673,7 +711,9 @@
           }
         },
         "summary": "Me",
-        "tags": ["me"]
+        "tags": [
+          "me"
+        ]
       }
     },
     "/v1/push-tokens": {
@@ -712,7 +752,9 @@
           }
         },
         "summary": "Register Token",
-        "tags": ["push"]
+        "tags": [
+          "push"
+        ]
       }
     }
   }

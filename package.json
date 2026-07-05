@@ -6,6 +6,7 @@
     "node": ">=22.13",
     "pnpm": ">=11"
   },
+  "prettier": "@platform/config/prettier",
   "scripts": {
     "prepare": "lefthook install",
     "bootstrap": "node scripts/bootstrap.mjs",
