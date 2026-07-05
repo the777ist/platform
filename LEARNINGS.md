@@ -878,7 +878,21 @@ package.json` (guide skeleton has no author field; harmless for --dir and irrele
   note the config.toml key collision in the whole-word gotcha; Phase 6 guide — drop the
   `template` OTP keys in the init-then-delta step.
 
-### 9. Smaller confirmations & environment notes
+### 9. Deep-audit probe: the hyphenated-name + portIndex-chaining paths WORK (previously untested)
+
+- **What:** the demo stamp only exercises a single-word name and portIndex 1. The audit
+  stamped a throwaway `audit-probe` product and verified the harder paths end-to-end:
+  `nextPortIndex` read demo's product.json → **portIndex 2** (API 8020, Supabase block
+  54521, edge inspector 8103); kebab→snake module dir `src/audit_probe_api/`;
+  pyproject + rewritten uv.lock agree on `audit-probe-api` and **`uv run` actually syncs
+  and executes** the module (openapi export ran); Pascal variant `AuditProbe`
+  (electron productName, pyproject description); `TODO-MODE-ID-AUDIT-PROBE` mode
+  registered; zero token leaks. Probe then fully removed (dir + tokens.config.json +
+  pnpm-lock.yaml reverted; tree clean).
+- **Template change needed:** none — recorded so the guide's verification section can
+  optionally add a hyphenated-name probe.
+
+### 10. Smaller confirmations & environment notes
 
 - **`expo install expo-splash-screen` "fails" by design with a TS config** — it installs
   the package, then exits 1 because it "Cannot automatically write to dynamic config at:
