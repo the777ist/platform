@@ -8,9 +8,8 @@ artifact the CI drift check compares.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
-
-from template_api.main import app
 
 # openapi.json lives at the api workspace root: products/_template/api/openapi.json
 # __file__ = .../api/src/template_api/export_openapi.py  -> parents[2] = .../api
@@ -18,6 +17,14 @@ OUTPUT = Path(__file__).resolve().parents[2] / "openapi.json"
 
 
 def main() -> None:
+    # Schema export is HERMETIC — no DB, no .env needed. main.py builds the app at
+    # import time and Settings requires the DB URLs, so provide inert placeholders when
+    # unset (the engine uses NullPool and never connects until a request). The import
+    # lives inside main() so the placeholders exist first (tests/__init__.py pattern).
+    os.environ.setdefault("DATABASE_URL", "postgresql+psycopg://localhost/openapi-export")
+    os.environ.setdefault("DATABASE_MIGRATION_URL", "postgresql+psycopg://localhost/openapi-export")
+    from template_api.main import app
+
     schema = app.openapi()
     # sort_keys=True => byte-stable diffs; trailing newline => clean git diff.
     OUTPUT.write_text(

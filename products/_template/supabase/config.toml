@@ -1,9 +1,9 @@
 # Local-only Supabase stack for the `template` product.
 # Materialized by `supabase init` (CLI config reference:
 # https://supabase.com/docs/guides/local-development/cli/config), then adjusted:
-# project_id + auth URLs + analytics off. Ports are base values for portIndex 0 —
-# the generator offsets every `port` by +100·portIndex (Key ruling #7) so products'
-# local stacks coexist.
+# project_id + auth URLs + analytics off. Ports derive from product.json's portIndex
+# (Supabase block = 54321 + 100·portIndex, applied by the generator when stamping —
+# Key ruling #7) so products' local stacks coexist.
 # project_id derives from the PRODUCT name (example-<product>), NOT the monorepo name.
 project_id = "example-template"
 
@@ -273,8 +273,8 @@ otp_expiry = 3600
 enable_signup = false
 # If enabled, users need to confirm their phone number before signing in.
 enable_confirmations = false
-# Template for sending OTP to users
-template = "Your code is {{ `{{ .Code }}` }}"
+# (CLI default `template` key for the OTP message removed: SMS signup is disabled, and the
+# literal key name collides with the product token — see the whole-word-replace rule.)
 # Controls the minimum amount of time that must pass before sending another sms otp.
 max_frequency = "5s"
 
@@ -322,7 +322,7 @@ verify_enabled = false
 enroll_enabled = false
 verify_enabled = false
 otp_length = 6
-template = "Your code is {{ `{{ .Code }}` }}"
+# (CLI default `template` key for the OTP message removed — same reason as [auth.sms].)
 max_frequency = "5s"
 
 # Configure MFA via WebAuthn
