@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.routing import APIRoute
 
 from .errors import register_exception_handlers
 from .middleware import install_request_id
@@ -11,8 +12,17 @@ class Health(StrictDTO):
     status: str
 
 
+def _operation_id(route: APIRoute) -> str:
+    # operationIds drive every generated-client symbol name (hey-api: `list_items` ->
+    # listItems / listItemsInfiniteOptions). FastAPI's default ids
+    # (`list_items_v1_items_get`) would leak path noise into every hook name, so use the
+    # route (function) name — FastAPI's documented pattern for generated clients.
+    # Constraint: route function names must stay unique across ALL routers.
+    return route.name
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title="template_api", version="0.0.0")
+    app = FastAPI(title="template_api", version="0.0.0", generate_unique_id_function=_operation_id)
 
     # Target onion (outermost -> innermost): request_id -> security headers/CORS -> rate
     # limit -> routes. Starlette's add_middleware is LIFO (the LAST added wraps everything),

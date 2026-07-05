@@ -192,7 +192,7 @@
         "type": "object"
       },
       "Problem": {
-        "description": "RFC 9457 problem+json body \u2014 declared so it types into the OpenAPI schema.",
+        "description": "RFC 9457 problem+json body — declared so it types into the OpenAPI schema.",
         "properties": {
           "detail": {
             "anyOf": [
@@ -329,7 +329,7 @@
   "paths": {
     "/healthz": {
       "get": {
-        "operationId": "healthz_healthz_get",
+        "operationId": "healthz",
         "responses": {
           "200": {
             "content": {
@@ -350,7 +350,7 @@
     },
     "/v1/hello": {
       "get": {
-        "operationId": "hello_v1_hello_get",
+        "operationId": "hello",
         "responses": {
           "200": {
             "content": {
@@ -371,7 +371,7 @@
     },
     "/v1/items": {
       "get": {
-        "operationId": "list_items_v1_items_get",
+        "operationId": "list_items",
         "parameters": [
           {
             "in": "query",
@@ -448,7 +448,7 @@
         ]
       },
       "post": {
-        "operationId": "create_item_v1_items_post",
+        "operationId": "create_item",
         "requestBody": {
           "content": {
             "application/json": {
@@ -509,7 +509,7 @@
     },
     "/v1/items/{item_id}": {
       "delete": {
-        "operationId": "delete_item_v1_items__item_id__delete",
+        "operationId": "delete_item",
         "parameters": [
           {
             "in": "path",
@@ -563,7 +563,7 @@
         ]
       },
       "get": {
-        "operationId": "get_item_v1_items__item_id__get",
+        "operationId": "get_item",
         "parameters": [
           {
             "in": "path",
@@ -624,7 +624,7 @@
         ]
       },
       "patch": {
-        "operationId": "update_item_v1_items__item_id__patch",
+        "operationId": "update_item",
         "parameters": [
           {
             "in": "path",
@@ -697,7 +697,7 @@
     },
     "/v1/me": {
       "get": {
-        "operationId": "me_v1_me_get",
+        "operationId": "me",
         "responses": {
           "200": {
             "content": {
@@ -718,7 +718,7 @@
     },
     "/v1/push-tokens": {
       "post": {
-        "operationId": "register_token_v1_push_tokens_post",
+        "operationId": "register_token",
         "requestBody": {
           "content": {
             "application/json": {
