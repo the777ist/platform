@@ -1,10 +1,12 @@
 import "../global.css";
 import { Stack } from "expo-router";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { makeQueryClient, persister } from "@platform/core";
+import { configureApiClient, makeQueryClient, persister } from "@platform/core";
 import { ThemeProvider } from "@platform/ui/theme-provider";
 import { useThemeStore } from "../features/settings/use-theme";
 
+// Point the generated hey-api client at EXPO_PUBLIC_API_URL before any query can run.
+configureApiClient();
 const queryClient = makeQueryClient();
 
 export default function RootLayout() {
