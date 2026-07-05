@@ -20,15 +20,20 @@ pre-commit:
       stage_fixed: true
     ruff-check:
       glob: "*.py"
-      # Scoped to staged .py only. Each product api carries uv + ruff in its own venv (Phase 3);
-      # `uv run` resolves the right environment from the file's project. No-op until an api exists.
+      # Scoped to staged .py only. Each product api carries uv + ruff in its own venv (Phase 3).
+      # Project root = walk UP from the first staged file to the nearest pyproject.toml
+      # (a bare `dirname | head -1`/.. only worked for files exactly one level deep).
       run: |
-        uv run --project "$(dirname {staged_files} | head -1)/.." ruff check --fix {staged_files}
+        f=$(echo "{staged_files}" | cut -d' ' -f1); d=$(dirname "$f")
+        while [ "$d" != "." ] && [ ! -f "$d/pyproject.toml" ]; do d=$(dirname "$d"); done
+        uv run --project "$d" ruff check --fix {staged_files}
       stage_fixed: true
     ruff-format:
       glob: "*.py"
       run: |
-        uv run --project "$(dirname {staged_files} | head -1)/.." ruff format {staged_files}
+        f=$(echo "{staged_files}" | cut -d' ' -f1); d=$(dirname "$f")
+        while [ "$d" != "." ] && [ ! -f "$d/pyproject.toml" ]; do d=$(dirname "$d"); done
+        uv run --project "$d" ruff format {staged_files}
       stage_fixed: true
 
 # pre-push: the AFFECTED gate (PHILOSOPHY: "turbo run typecheck test build --affected" +, for
