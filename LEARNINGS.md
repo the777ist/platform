@@ -464,3 +464,72 @@ Observed on npm, 2026-07-05 — no action taken (locked versions respected), rec
   6 config files resolvable, strict base OK, env boundary OK (per-env tracked), pre-commit +
   pre-push firing on every commit/push this session, hooks auto-installed via prepare only,
   `pnpm bootstrap` → "✅ bootstrap complete".
+
+---
+
+## Phase 4 (`/implement 4` — typegen & API-backed home) — run 2026-07-05
+
+### 1. operationId mismatch between Phase 3's output and Phase 4's expected hook names
+
+- **Symptom:** the guide's Step 9 consumes `listItemsInfiniteOptions` "off FastAPI
+  operationId `list_items`" — but Phase 3 never set operationIds, so the committed contract
+  carried FastAPI defaults (`list_items_v1_items_get`), which would have generated
+  `listItemsV1ItemsGetInfiniteOptions` (path noise in every client symbol, forever).
+- **Root cause:** Phase 3's `main.py` skeleton lacks `generate_unique_id_function` — the
+  FastAPI-documented pattern for generated clients. Phase 4's "confirmed" hook name silently
+  assumes it.
+- **Fix applied:** `FastAPI(..., generate_unique_id_function=_operation_id)` returning
+  `route.name` (constraint: route function names unique across ALL routers) + regenerated
+  `openapi.json`. Also aligned `export_openapi.py` to the Phase 4 skeleton
+  (`ensure_ascii=False`, utf-8, absolute import, docstring).
+- **Template change needed:** put `generate_unique_id_function` in the Phase 3 `main.py`
+  skeleton; Phase 4 then needs no caveat.
+
+### 2. hey-api 0.99.0 (refreshed pin from the guide's 0.98.2): two config deltas
+
+- `output.format: "prettier"` is **deprecated** in 0.99 → `output.postProcess: ["prettier"]`.
+- The generated barrel does **NOT** export the shared `client` or the TanStack options by
+  default — Step 8's `import { client } from "@platform/template-api-client"` fails as
+  written. Fix: `exportFromIndex: true` on BOTH the `@hey-api/client-fetch` and
+  `@tanstack/react-query` plugin entries.
+- **Template change needed:** fold both into the guide's Step 4 config skeleton.
+
+### 3. Generated `infiniteQueryOptions` emits NO `initialPageParam`/`getNextPageParam` — and null crashes it
+
+- The guide anticipated the absence ("supply it here off next_cursor") — confirmed real on
+  0.99.0: the generated queryFn maps `pageParam` → `query.cursor` but pagination boundaries
+  are the consumer's job.
+- **Trap:** the generated queryFn branches on `typeof pageParam === "object"` — and
+  `typeof null === "object"`, so `initialPageParam: null` crashes at runtime. Used `""`
+  (the api's `decode_cursor` treats empty as first page); `getNextPageParam` returns
+  `next_cursor ?? null` (null = stop).
+- **Template change needed:** guide Step 9 should pin `initialPageParam: ""` + the null trap.
+
+### 4. Verify #3 ("web renders API data") is unreachable as written — items are auth-guarded, auth lands in Phase 6
+
+- **Symptom:** `/v1/items` requires a Bearer token (Phase 3, correct); the Phase 4 app has
+  no login. The naive verification shows the error state, not items.
+- **Fix applied (verification-only, nothing committed):** minted an HS256 dev token against
+  the api's `.env` fallback secret (sub = seed owner), ran a local header-injecting proxy
+  :8001→:8000, pointed the app at it via gitignored `app/.env.local`. Full pipeline verified
+  honestly: list + cursor page 2 on scroll, empty state (ownerless token), error state
+  (api down), and instant cached paint on reload with the api unreachable.
+- **Template change needed:** Phase 4 guide should document this dev-token verification path
+  (or reorder auth before typegen).
+
+### 5. Smaller confirmations & fixes
+
+- **No pnpm catalog exists** (guide's ⚠️ REVIEW): pinned exact inline — `@tanstack/react-query`
+  5.101.2 everywhere, `@hey-api/openapi-ts` 0.99.0 exact.
+- **Phase 2 gap:** `_layout.tsx` imported `@tanstack/react-query-persist-client` without the
+  app declaring it (worked via hoisting); the app also lacked `@tanstack/react-query`
+  itself. Both now declared in `app/package.json`.
+- **`env.ts` field naming:** guide Step 8 reads `env.EXPO_PUBLIC_API_URL`; Phase 2's actual
+  export is `env.apiUrl` — adapted (env.ts is referenced-not-rewritten per the guide).
+- **Root turbo.json needed zero changes** — Phase 3 already landed the `openapi` task with
+  the mandated Python inputs globs. Resolved the guide's ⚠️ OPEN by standardizing
+  `api-client#build` on the package-level `turbo.json` ONLY (PHILOSOPHY's own wording).
+- **Windows transient:** openapi-ts's output clean (`rmSync` on `src/`) can hit a spurious
+  EPERM if anything holds a handle on the dir; retry succeeds.
+- **api-client tsconfig:** guide omits it but the `typecheck` script needs one — added
+  extending `@platform/config/tsconfig/expo` (same as core). Template change: add to Step 3.
