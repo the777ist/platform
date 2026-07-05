@@ -14,12 +14,16 @@ class Health(StrictDTO):
 def create_app() -> FastAPI:
     app = FastAPI(title="template_api", version="0.0.0")
 
-    # Order: request_id (outermost) -> security/CORS/headers -> rate limit.
-    install_request_id(app)
-    install_security(app)
+    # Target onion (outermost -> innermost): request_id -> security headers/CORS -> rate
+    # limit -> routes. Starlette's add_middleware is LIFO (the LAST added wraps everything),
+    # so the ADD order below is the REVERSE of the onion — rate limit first, request_id
+    # last. This way a 429 short-circuited by the limiter still passes back out through
+    # CORS + security headers + request_id, and CORS preflights get an X-Request-Id too.
     app.state.limiter = build_limiter()
     # NOT slowapi's SlowAPIMiddleware — broken on current FastAPI (see RateLimitMiddleware).
     app.add_middleware(RateLimitMiddleware)
+    install_security(app)
+    install_request_id(app)
 
     register_exception_handlers(app)
 
