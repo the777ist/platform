@@ -12,4 +12,7 @@ export const env = {
     "EXPO_PUBLIC_SUPABASE_ANON_KEY",
     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
   ),
+  // Optional observability config — absent locally/in CI is fine (Sentry no-ops).
+  SENTRY_DSN: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  ENV: process.env.EXPO_PUBLIC_ENV ?? "development",
 } as const;

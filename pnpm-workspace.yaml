@@ -25,6 +25,7 @@ allowBuilds:
   lefthook: true # postinstall places the lefthook binary (needed for `pnpm prepare` hook install)
   electron: true # postinstall downloads the Electron binary (desktop shell)
   electron-winstaller: true # electron-builder dep; postinstall fetches its Squirrel tooling
+  "@sentry/cli": true # postinstall fetches the sentry-cli binary (source-map upload at build time)
 
 # --- workspace globs ---
 packages:

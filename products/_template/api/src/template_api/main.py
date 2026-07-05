@@ -2,10 +2,13 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
 from .errors import register_exception_handlers
+from .logging import configure_logging
 from .middleware import install_request_id
 from .routers import hello, items, me, push
 from .schemas.common import StrictDTO
 from .security import RateLimitMiddleware, build_limiter, install_security
+from .sentry import init_sentry
+from .settings import get_settings
 
 
 class Health(StrictDTO):
@@ -22,6 +25,11 @@ def _operation_id(route: APIRoute) -> str:
 
 
 def create_app() -> FastAPI:
+    # Observability first (PHILOSOPHY Observability): JSON logs + Sentry are live
+    # before any middleware/route can emit. Both are idempotent/no-op-safe (tests
+    # call create_app() repeatedly; Sentry no-ops without a DSN).
+    configure_logging(level=get_settings().log_level)
+    init_sentry()
     app = FastAPI(title="template_api", version="0.0.0", generate_unique_id_function=_operation_id)
 
     # Target onion (outermost -> innermost): request_id -> security headers/CORS -> rate

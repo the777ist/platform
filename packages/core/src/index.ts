@@ -1,4 +1,5 @@
-export { configureApiClient } from "./api";
+export { configureApiClient, type GeneratedApiClient } from "./api";
+export { captureRequestId, initSentry } from "./sentry";
 export { makeQueryClient, persister } from "./query";
 export { env } from "./env";
 export { getSupabase, supabase } from "./supabase";
