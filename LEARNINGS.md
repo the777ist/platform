@@ -533,3 +533,78 @@ Observed on npm, 2026-07-05 — no action taken (locked versions respected), rec
   EPERM if anything holds a handle on the dir; retry succeeds.
 - **api-client tsconfig:** guide omits it but the `typecheck` script needs one — added
   extending `@platform/config/tsconfig/expo` (same as core). Template change: add to Step 3.
+
+---
+
+## Phase 5 (`/implement 5` — Electron desktop) — run 2026-07-05
+
+### 1. electron-builder's pnpm node-module collector dies with EMFILE on this workspace — patched to fall through to traversal
+
+- **Symptom:** `electron-builder --dir` → "Node module collector process exited with code
+  4294963230"; underlying: `pnpm list --prod --json --depth Infinity` (the collector's exact
+  command) fails with **EMFILE: too many open files** walking every hoisted package.json in
+  the workspace root store (Windows; reproducible on pnpm 11.9.0 AND latest 11.10.0).
+- **Root cause:** two stacked defects. (a) pnpm's `list` exhausts FDs on very large hoisted
+  node_modules; (b) app-builder-lib's collector loop — whose own docstring says a failed
+  collection should fall through to the `PM.TRAVERSAL` approach — lets a collector
+  **exception** escape the loop instead.
+- **Fix applied:** bumped electron-builder **26.15.3 → 26.15.6** (patch-bump sanctioned by the
+  guide's commit-4 language; 26.15.6 also ships the directly-relevant "bundle a workspace
+  sub-package's production dependencies when the PM resolves to the workspace root" fix) +
+  committed **`pnpm patch`** (`patches/app-builder-lib@26.15.6.patch`, wired via
+  `patchedDependencies`) wrapping the collection call in try/catch → warn + continue. The
+  TRAVERSAL collector then resolves the tree correctly: verified `app.asar` contains compiled
+  main+preload, the SPA renderer, AND `node_modules/electron-updater` + deps (342 files).
+- **Template change needed:** guide step 1 should pin **26.15.6** and ship the patch (or
+  reference the upstream issue for removal once fixed).
+
+### 2. pnpm `allowBuilds` needs `electron` + `electron-winstaller` — and the entry must predate first install
+
+- The guide's `pnpm install` step misses that pnpm 11 blocks postinstall scripts: `electron`
+  (binary download) and `electron-winstaller` (7-Zip fetch; electron-builder dep) both need
+  `allowBuilds` entries. Also: adding the entry AFTER the package was first installed does
+  not retro-run the script — `pnpm rebuild electron` (or a fresh install) is required; the
+  symptom is `electron.exe` missing under `node_modules/electron/dist`.
+- **Template change needed:** guide step 1 should add both allowBuilds lines + the rebuild note.
+
+### 3. Phase 1 `.gitignore` bug: inline comment made the `renderer/` pattern a no-op
+
+- `renderer/            # electron copies…` is ONE literal pattern in gitignore syntax
+  (inline comments are not a thing) — so `renderer/` was never ignored; masked until Phase 5
+  first created one, then ~200 copied files appeared to git AND prettier (`format:check`
+  failed on the copied bundle). Fixed by moving the comment to its own line.
+- **Template change needed:** Phase 1 guide `.gitignore` skeleton must not use inline comments.
+
+### 4. Phase 2 gap: `.env.staging` / `.env.production` never created — and export-env semantics
+
+- The gospel tree mandates all three committed per-env files; only `.env.development`
+  existed. Consequence discovered here: `expo export` runs with **NODE_ENV=production**, so
+  with no `.env.production` the bundle silently baked `env.ts`'s hard-coded localhost
+  fallback. Created both files with clearly-marked placeholders (fly naming
+  `example-template-api-stg|prod.fly.dev`, TODO supabase values).
+- **Corollary for the desktop dev loop:** a plain `turbo run build --filter=*desktop` now
+  bakes the production placeholder URL — for local full-stack desktop testing, override with
+  gitignored `app/.env.local` (+ see #5). Real values are selected per platform (Vercel/EAS
+  env) later; exact ownership of these files should move into the Phase 2 guide.
+- **Metro cache gotcha:** EXPO_PUBLIC_* env changes do NOT bust Metro's transform cache —
+  re-export with `expo export --clear` (turbo `--force` is not enough; the cache is Metro's).
+
+### 5. Verify #1/#3 need the Phase-4 auth caveat again
+
+- Items populate in the desktop window only through the dev-token path (`/v1/items` is
+  auth-guarded until Phase 6): gitignored `.env.local` → header-injecting proxy. Verified
+  that way (list renders in the window + in the packed exe via persisted cache). The guide's
+  "if the API is up, the items list populates" carries the same unstated dependency as
+  Phase 4's Verify #3.
+
+### 6. Confirmations (guide facts verified true)
+
+- **CORS origin (gotcha #9) exact:** in-window probe → `location.origin === "app://-"`,
+  cross-origin fetch to the API returns readable 200 with Phase 3's default allowlist entry.
+- **typescript 5.9.3** pin matches the repo's resolved version (⚠️ REVIEW cleared).
+- Privileged-scheme registration before ready: `window.isSecureContext === true` under
+  `app://-/`; SPA fallback proven by full-document load of `app://-/settings`; dark toggle
+  re-themes with byte-identical token values to web (`rgb(9,9,11)` / `rgb(250,250,250)`);
+  updater double-gate silent in packed exe (no repo configured, no dialog, no crash).
+- Windows quirk (verification harness, not template): killing `electron .` via the pnpm/.bin
+  shim leaves electron.exe orphans holding the CDP port — kill the exe, not the shim.
