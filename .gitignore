@@ -43,3 +43,6 @@ release/
 
 # Turborepo local cache/daemon state
 .turbo/
+
+# Playwright MCP scratch artifacts
+.playwright-mcp/

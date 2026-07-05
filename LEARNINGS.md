@@ -344,3 +344,69 @@ Observed on npm, 2026-07-05 — no action taken (locked versions respected), rec
   ruff **0.15.20**, pytest-asyncio 1.4.0 (matched), uvicorn 0.50.0, alembic 1.18.5.
 - **polyfactory is now 3.x** (3.3.0; guide said "current 2.x line") — the
   `ModelFactory[DTO]` usage works unchanged on 3.x.
+
+---
+
+## Phase 2+3 deep audit (`/implement 2-and-3` verification pass) — run 2026-07-05
+
+### 1. Static Storybook build was BROKEN at runtime — build success ≠ stories render
+
+- **Symptom:** `storybook build` exits 0, `index.json` valid, CSS carries tokens — but
+  loading any story in the STATIC build died with `ReferenceError: exports is not defined`.
+  Dev mode was fine (Vite's dep optimizer converts CJS on the fly), which is why Phase 2's
+  original verification missed it.
+- **Root cause:** nativewind eagerly re-exports `verifyInstallation` from its pure-CJS
+  doctor chain (`nativewind/dist/doctor.js` → `react-native-css-interop/dist/doctor*.js`);
+  the RNW framework's transform pipeline leaves those files unconverted in the production
+  rollup pass. `build.commonjsOptions.transformMixedEsModules` does NOT fix it.
+- **Fix applied:** targeted Vite plugin in `.storybook/main.ts` (`fix-css-interop-doctor-cjs`)
+  that ESM-wraps exactly those files (exports object + hoisted require→import shim + aliased
+  export bindings). Verified: stories render in static build AND dev.
+- **Template change needed:** ship the plugin in the guide's `main.ts` skeleton; add a
+  verification step that LOADS a story from `storybook-static` (not just builds it) — this is
+  also what the Phase 8 VR runner would have tripped over.
+
+### 2. Brand toolbar could NOT re-theme components — overrides must be a NativeWind vars() overlay
+
+- **Symptom:** with `brand:demo`, `--primary` on `:root` showed the demo purple but the
+  Button still rendered the default navy.
+- **Root cause:** css-interop resolves semantic tokens through its own `vars()` CONTEXT (the
+  ThemeProvider's style), not the CSS cascade — the guide's `root.style.setProperty`
+  decorator never reaches component styles. (The theme toolbar only worked because it goes
+  through `colorScheme` + the provider's `vars()`.)
+- **Fix applied:** decorator wraps stories in a `<View style={vars(BRAND_VARS[brand])}>`
+  overlay — the exact mechanism a product uses to rebrand (Key ruling #8/#11). Verified live:
+  brand:demo → button `rgb(124,59,237)` = hsl(262 83% 58%).
+- **Template change needed:** fix the guide's `preview.tsx` skeleton (keep the DOM
+  class/property sync only as a plain-CSS convenience).
+
+### 3. Storybook `globals` URL separator is `;`, not `,`
+
+- `iframe.html?...&globals=theme:dark,brand:demo` silently applies NEITHER; the working form
+  is `globals=theme:dark;brand:demo` (single globals also work). The Phase 2 guide's VR note
+  and Phase 8's planned sweep use the comma form — fix both.
+
+### 4. `main.py` middleware add-order inverted the guide's intended onion (Starlette is LIFO)
+
+- **Symptom:** 429 responses carried NO X-Request-Id, NO security headers (and no CORS
+  header for browser clients); CORS preflights had no X-Request-Id.
+- **Root cause:** the guide's skeleton adds request_id FIRST — under Starlette's LIFO
+  `add_middleware` that makes it INNERMOST, so responses short-circuited by outer layers
+  (rate limiter, CORS preflight) bypass it. The guide's comment states the right intent
+  ("request_id outermost") with the wrong code order.
+- **Fix applied:** add order reversed (rate limit → security → request_id last). Verified:
+  429 now carries X-Request-Id + security headers + CORS allow-origin + problem+json;
+  preflight carries X-Request-Id.
+- **Template change needed:** fix the Step-16 skeleton + its comment to explain LIFO.
+
+### 5. Verification items the original runs skipped — now closed
+
+- **`/add-component` end-to-end (Phase 2 Verification):** executed for `badge` — owned
+  primitive + 4 per-variant stories + Code Connect map (5 maps parse) + `index.ts` export;
+  static build now carries 22 stories.
+- **Interactive theming (Phase 2 DoD 5/11):** verified in a real browser — Storybook
+  light/dark/brand matrix and the app's Settings dark toggle on the exported SPA
+  (wrapper `rgb(255,255,255)` ↔ `rgb(9,9,11)`, primary re-themes). Expo Go on a physical
+  device remains the only unverified surface.
+- **`tasks.py` (Phase 3 Step 18):** `prune-stale-tokens` runs ("pruned 0 stale push
+  tokens"); bare invocation prints usage and exits 2.
