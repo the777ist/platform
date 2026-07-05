@@ -15,8 +15,8 @@ separate web or desktop app** — it's one frontend codebase plus a Python backe
 This repository currently holds the **architecture and the per-phase build guides**, not the
 built template. Setting up therefore has two stages:
 
-1. **Build the template once** (Phases 1–8) — see *Stage 1*.
-2. **Stamp a product** with `pnpm new-product <name>` — see *Stage 2*. This is the everyday
+1. **Build the template once** (Phases 1–8) — see _Stage 1_.
+2. **Stamp a product** with `pnpm new-product <name>` — see _Stage 2_. This is the everyday
    flow once the template exists.
 
 The authoritative architecture and decisions live in **[`PHILOSOPHY.md`](PHILOSOPHY.md)**; the literal,
@@ -28,44 +28,44 @@ step-by-step build instructions live in **[`docs/`](docs/)** (`phase-1` … `pha
 
 **Frontend** — one React Native codebase → iOS · Android · web · desktop
 
-| Layer | Choice |
-|---|---|
-| Framework / runtime | **Expo SDK 56** · React Native 0.85 · React 19.2 |
-| Navigation | Expo Router |
-| Web | react-native-web (Expo web export) |
-| Desktop | **Electron 42** wrapping the web build (electron-builder / -updater) |
-| Styling | **NativeWind v4** on Tailwind CSS v3 — semantic tokens, light/dark + brand modes |
-| Components | `@platform/ui` — owned react-native-reusables primitives (`@rn-primitives/*`) |
-| Data / state | **TanStack Query v5** (server) · **Zustand v5** (local) |
+| Layer               | Choice                                                                           |
+| ------------------- | -------------------------------------------------------------------------------- |
+| Framework / runtime | **Expo SDK 56** · React Native 0.85 · React 19.2                                 |
+| Navigation          | Expo Router                                                                      |
+| Web                 | react-native-web (Expo web export)                                               |
+| Desktop             | **Electron 42** wrapping the web build (electron-builder / -updater)             |
+| Styling             | **NativeWind v4** on Tailwind CSS v3 — semantic tokens, light/dark + brand modes |
+| Components          | `@platform/ui` — owned react-native-reusables primitives (`@rn-primitives/*`)    |
+| Data / state        | **TanStack Query v5** (server) · **Zustand v5** (local)                          |
 
 **Backend** — one FastAPI service per product
 
-| Layer | Choice |
-|---|---|
-| Framework | **FastAPI** · Pydantic v2 (strict) |
-| ORM / migrations | SQLModel · Alembic |
-| Tooling | Python 3.13 · uv · Ruff · pyright (strict) |
-| Data / auth | **Supabase** — Postgres · Auth (JWT/JWKS) · Realtime · Storage |
-| IDs / limits | UUIDv7 (`uuid-utils`) · slowapi rate limiting |
+| Layer            | Choice                                                         |
+| ---------------- | -------------------------------------------------------------- |
+| Framework        | **FastAPI** · Pydantic v2 (strict)                             |
+| ORM / migrations | SQLModel · Alembic                                             |
+| Tooling          | Python 3.13 · uv · Ruff · pyright (strict)                     |
+| Data / auth      | **Supabase** — Postgres · Auth (JWT/JWKS) · Realtime · Storage |
+| IDs / limits     | UUIDv7 (`uuid-utils`) · slowapi rate limiting                  |
 
 **Design & testing**
 
-| Concern | Choice |
-|---|---|
+| Concern       | Choice                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------ |
 | Design system | **Storybook 9** (`react-native-web-vite`) · Figma Code Connect + Variables · Style Dictionary v5 |
-| JS tests | **jest-expo + React Native Testing Library** |
-| API tests | **pytest** (real Postgres) |
-| E2E / visual | Playwright (web, nightly) · Maestro (mobile, local) · Storybook VR |
+| JS tests      | **jest-expo + React Native Testing Library**                                                     |
+| API tests     | **pytest** (real Postgres)                                                                       |
+| E2E / visual  | Playwright (web, nightly) · Maestro (mobile, local) · Storybook VR                               |
 
 **Monorepo, CI/CD & hosting**
 
-| Concern | Choice |
-|---|---|
-| Monorepo | **pnpm 11** workspaces · **Turborepo** · **mise** (Node 24 / pnpm 11 / Python 3.13 / uv) |
-| Git hooks | lefthook |
-| CI | GitHub Actions (affected-only) |
-| Hosting | **Vercel** (web) · **Fly.io** (API) · **EAS** (mobile) · GitHub Releases (desktop) |
-| Observability | Sentry · structlog |
+| Concern       | Choice                                                                                   |
+| ------------- | ---------------------------------------------------------------------------------------- |
+| Monorepo      | **pnpm 11** workspaces · **Turborepo** · **mise** (Node 24 / pnpm 11 / Python 3.13 / uv) |
+| Git hooks     | lefthook                                                                                 |
+| CI            | GitHub Actions (affected-only)                                                           |
+| Hosting       | **Vercel** (web) · **Fly.io** (API) · **EAS** (mobile) · GitHub Releases (desktop)       |
+| Observability | Sentry · structlog                                                                       |
 
 ---
 
@@ -79,7 +79,7 @@ step-by-step build instructions live in **[`docs/`](docs/)** (`phase-1` … `pha
 - **Agentic workflow (optional but recommended):** the `/implement` build and the `ptfm-*`
   pipeline drive MCP servers — connect **Supabase, GitHub, Figma, Linear, Notion, Playwright**
   in Claude Code before running them (see the **Operational stack** section below).
-- The git repo name is irrelevant — nothing derives from it (app/infra ids come from *product*
+- The git repo name is irrelevant — nothing derives from it (app/infra ids come from _product_
   names).
 
 ---
@@ -163,8 +163,8 @@ docs/                   # phase-by-phase build guides (phase-1 … phase-8) + re
 
 ## Conventions that bite (read before writing code)
 
-- **Components are *owned*, not dependencies** — `@platform/ui` is copied-in source you edit.
-- **Semantic tokens only** (`bg-primary`, never hex). Brand = a token *mode*, never a forked
+- **Components are _owned_, not dependencies** — `@platform/ui` is copied-in source you edit.
+- **Semantic tokens only** (`bg-primary`, never hex). Brand = a token _mode_, never a forked
   component.
 - **API is strictly layered**: `schemas/` (Pydantic DTOs) → `routers/` (thin) → `services/`
   (logic + data access) → `models/` (SQLModel). DTOs are never the ORM models.
@@ -187,14 +187,14 @@ Product development here is **agentic** — driven by the `ptfm-*` slash-command
 That pipeline integrates external services over MCP; connect these in Claude Code before running
 it:
 
-| Service | Role in the workflow | MCP family |
-|---|---|---|
-| **Linear** | Issue tracking — tickets, per-phase sub-issues, parent epics | `mcp__Linear__*` |
-| **Notion** | Product briefs, user research, decision records | `mcp__Notion__*` |
-| **Figma** | Design source — frames, Code Connect, token modes | `mcp__Figma__*` |
-| **Supabase** | Database/auth — read-only schema introspection | `mcp__Supabase__*` |
-| **Playwright** | Live web verification / E2E | `mcp__playwright__*` |
-| **GitHub** | Repos, PRs, CI | `mcp__github__*` |
+| Service        | Role in the workflow                                         | MCP family           |
+| -------------- | ------------------------------------------------------------ | -------------------- |
+| **Linear**     | Issue tracking — tickets, per-phase sub-issues, parent epics | `mcp__Linear__*`     |
+| **Notion**     | Product briefs, user research, decision records              | `mcp__Notion__*`     |
+| **Figma**      | Design source — frames, Code Connect, token modes            | `mcp__Figma__*`      |
+| **Supabase**   | Database/auth — read-only schema introspection               | `mcp__Supabase__*`   |
+| **Playwright** | Live web verification / E2E                                  | `mcp__playwright__*` |
+| **GitHub**     | Repos, PRs, CI                                               | `mcp__github__*`     |
 
 Deploy surfaces: **Fly.io** (API) · **Vercel** (web) · **EAS** (mobile) · **GitHub Releases**
 (desktop).
@@ -218,7 +218,7 @@ its first argument** and writes its artifact under that product's own docs tree
   per-phase plan).
 
 These commands are distinct from the thin `pnpm`/`turbo` wrappers — they encode the project's
-invariants as executable flows. (Not to be confused with `/implement`, the *build-time* command
+invariants as executable flows. (Not to be confused with `/implement`, the _build-time_ command
 that constructs the monorepo's eight phases.)
 
 ---
@@ -237,10 +237,10 @@ than update from stale knowledge.
 
 ## Where to read more
 
-| Doc | What it is |
-|---|---|
-| [`PHILOSOPHY.md`](PHILOSOPHY.md) | Architecture, locked decisions, conventions, repo spec |
-| [`docs/phase-*.md`](docs/) | Literal step-by-step build guides (one per phase) |
-| [`docs/research/`](docs/research/) | The fact-check behind every stack choice, with sources |
-| [`packages/ui/FIGMA.md`](packages/ui/FIGMA.md) | Design-system / token contract (also the designer handover doc) |
-| `CLAUDE.md` (root / `packages/ui` / per-product) | The authoritative add-a-thing recipes — *built during implementation* |
+| Doc                                              | What it is                                                            |
+| ------------------------------------------------ | --------------------------------------------------------------------- |
+| [`PHILOSOPHY.md`](PHILOSOPHY.md)                 | Architecture, locked decisions, conventions, repo spec                |
+| [`docs/phase-*.md`](docs/)                       | Literal step-by-step build guides (one per phase)                     |
+| [`docs/research/`](docs/research/)               | The fact-check behind every stack choice, with sources                |
+| [`packages/ui/FIGMA.md`](packages/ui/FIGMA.md)   | Design-system / token contract (also the designer handover doc)       |
+| `CLAUDE.md` (root / `packages/ui` / per-product) | The authoritative add-a-thing recipes — _built during implementation_ |

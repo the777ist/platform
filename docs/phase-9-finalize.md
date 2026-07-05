@@ -2,7 +2,7 @@
 
 > Authoritative spec: [`PHILOSOPHY.md`](../PHILOSOPHY.md). This guide expands the Phase 9 row
 > into a literal checklist. **This is the only phase that DELETES rather than builds** — it
-> transforms the repo from *template-under-construction* into a *built template*. It is
+> transforms the repo from _template-under-construction_ into a _built template_. It is
 > destructive and recoverable only via git history; guard hard and confirm before running.
 
 **Goal:** Once Phases 1–8 are built and verified, remove the build-time scaffolding (the
@@ -41,9 +41,10 @@ explicit confirmation.** Do not proceed on inference.
 ### Step 2 — Trim `PHILOSOPHY.md`
 
 Remove the references that will dangle once the guides are gone:
+
 - The **execution-guides callout** (the `Phase 1 … Phase 9` link list).
 - The **phases table** (`| # | Build | Verify |`) — or replace it with a single line:
-  *"Built from the per-phase guides (removed at finalize; see git history)."*
+  _"Built from the per-phase guides (removed at finalize; see git history)."_
 
 Keep everything else in `PHILOSOPHY.md` intact — it remains the architecture/decision gospel.
 Keep the `docs/research/` provenance line **only if** `docs/research/` is kept (Step 5).
@@ -62,7 +63,7 @@ prerequisites → create & run a product → layout → conventions → workflow
 
 `rm .claude/commands/implement.md .claude/commands/update.md` — `/implement` (the build-phase
 command) and `/update` (the template **maintainer's** research-refresh command) are template
-machinery; a finished product repo carries neither. Finalize runs only in a *consumer's* copy
+machinery; a finished product repo carries neither. Finalize runs only in a _consumer's_ copy
 of the template, so sweeping both out is correct — the maintained template repo itself is never
 finalized.
 

@@ -32,6 +32,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
 ## Findings
 
 ### 1. jest-expo as the single JS runner for SDK 56 / RN 0.85
+
 - **Location:** PHILOSOPHY.md "Quality" bullet + Testing strategy row 1; Phase 2 step (i)
   (`preset: "jest-expo"`); Phase 2 Gotchas (NativeWind v4 ↔ SDK 56).
 - **Claim:** "single Jest runner (jest-expo preset) + RNTL for ALL JS tests"; viable on
@@ -52,6 +53,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
   reactnative.dev/blog/2026/04/07/react-native-0.85.
 
 ### 2. RNTL example test uses the synchronous API — broken under RNTL v14
+
 - **Location:** Phase 2 step (i), `packages/ui/src/components/ui/__tests__/button.test.tsx`.
 - **Claim:** `render(<Button>…</Button>)` then `fireEvent.press(screen.getByText("Tap"))`
   synchronously, with `expect(...).toHaveBeenCalledTimes(1)`.
@@ -83,6 +85,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
   npmjs.com/package/@testing-library/react-native; callstack.com/blog/react-native-testing-library-2-0.
 
 ### 3. `@testing-library/jest-native` is deprecated; matchers are built in
+
 - **Location:** Phase 2 step (i): `jest.setup.ts` does
   `import "@testing-library/react-native/extend-expect";`; devDeps list names
   `@testing-library/jest-native` (with an "or the built-in `extend-expect`" hedge).
@@ -104,13 +107,13 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
   github.com/testing-library/jest-native; npmjs.com/package/@testing-library/react-native/v/12.4.4.
 
 ### 4. RNTL version compatibility with SDK 56 stack
+
 - **Location:** Phase 2 step (i) devDeps (`@testing-library/react-native`,
   `react-test-renderer` "pinned to the React version").
 - **Claim:** RNTL + react-test-renderer pinned to React.
 - **Status:** ⚠️
 - **Finding:** RNTL **v14** dropped `react-test-renderer` as a peer in favor of React 19's
-  built-in test rendering path, and `react-test-renderer` itself is **deprecated** as of React
-  19. Pinning `react-test-renderer` may be unnecessary (and installing it on React 19 can
+  built-in test rendering path, and `react-test-renderer` itself is **deprecated** as of React 19. Pinning `react-test-renderer` may be unnecessary (and installing it on React 19 can
   cause version-conflict noise). Verify whether RNTL v14 still needs it at install time; the
   guide's blanket "pin react-test-renderer to the React version" is stale advice from the
   v12/v13 era.
@@ -121,6 +124,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
   github.com/callstack/react-native-testing-library/releases (v14 dropped RN 18 / renderer changes).
 
 ### 5. Frontend tests mock at the generated-client boundary
+
 - **Location:** PHILOSOPHY.md mocking conventions ("frontend tests mock at the generated-client
   boundary (never fetch)").
 - **Claim:** Mock the hey-api generated client, not `fetch`.
@@ -132,6 +136,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
 - **Source(s):** (architecture convention; no external doc needed.)
 
 ### 6. pytest + httpx "against real Postgres" — actually uses sync `TestClient`
+
 - **Location:** Testing strategy row 3 header ("pytest + httpx against real Postgres");
   Phase 3 Step 23/24 `conftest.py` + `test_items.py` use
   `from fastapi.testclient import TestClient`.
@@ -161,6 +166,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
   discussions/3114 & issues/3111; pypi.org/project/pytest-asyncio (1.4.0); pypi.org/project/httpx (0.28.x).
 
 ### 7. Per-test transaction rollback fixture — non-isolating under SQLAlchemy 2.0
+
 - **Location:** Phase 3 Step 23 `conftest.py` `session` fixture (connection + outer
   `trans = connection.begin()`, `Session(bind=connection)`, `trans.rollback()` at teardown);
   services call `self.session.commit()` (Step 7 `ItemService`).
@@ -198,6 +204,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
   github.com/tiangolo/sqlmodel/discussions/940.
 
 ### 8. polyfactory for Pydantic v2 / SQLModel factories
+
 - **Location:** Testing strategy + Phase 3 Step 23 `factories.py`
   (`from polyfactory.factories.pydantic_factory import ModelFactory`,
   `class ItemCreateFactory(ModelFactory[ItemCreate]): __model__ = ItemCreate`).
@@ -218,6 +225,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
   polyfactory.litestar.dev/latest/reference/factories/pydantic_factory.html.
 
 ### 9. send_push() unit test with httpx MockTransport
+
 - **Location:** PHILOSOPHY mocking conventions; Phase 8 step (b) `test_push.py`
   (`httpx.MockTransport(handler)`, inject `http=` AsyncClient).
 - **Claim:** Mock external HTTP (Expo Push) via httpx mock transport.
@@ -233,13 +241,14 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
 - **Source(s):** python-httpx.org (MockTransport); fastapi.tiangolo.com/advanced/async-tests.
 
 ### 10. Playwright web E2E against exported SPA dist
+
 - **Location:** Testing strategy row "Web E2E"; Phase 8 step (e) `playwright.config.ts`
   (`webServer: npx serve dist -l 8081`).
 - **Claim:** Playwright drives the exported `dist/` SPA + local API + Supabase.
 - **Status:** ✅
 - **Finding:** Current and idiomatic. `@playwright/test`'s `webServer` + `defineConfig` API is
   stable; serving the `expo export --platform web` SPA and driving it with `devices["Desktop
-  Chrome"]` is correct. `playwright install --with-deps chromium` in CI is right. The
+Chrome"]` is correct. `playwright install --with-deps chromium` in CI is right. The
   `global-setup.ts` process-orchestration gap is already flagged as OPEN in the guide
   (resolved below).
 - **Recommended change:** Pin `@playwright/test` and run `playwright install` matching that
@@ -247,6 +256,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
 - **Source(s):** playwright.dev/docs/test-snapshots; playwright.dev/docs/release-notes.
 
 ### 11. Playwright `toHaveScreenshot` Storybook visual regression
+
 - **Location:** Design system workbench bullet; Testing strategy "Visual regression"; Phase 8
   step (e) `visual-regression.spec.ts` (iterate `storybook-static/index.json`, visit
   `iframe.html?id=<story>&globals=theme:<theme>`, `toHaveScreenshot(...)`).
@@ -268,6 +278,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
   (Playwright + Storybook VR); markus.oberlehner.net (free Storybook+Playwright VR).
 
 ### 12. Maestro mobile E2E flow YAML — `appId` with a bundle id
+
 - **Location:** Testing strategy "Mobile E2E"; Phase 8 step (e) `.maestro/login.yaml`
   (`appId: com.example.template`, `launchApp`, `tapOn`, `inputText`, `assertVisible`).
 - **Claim:** Maestro local-only flow.
@@ -284,6 +295,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
   maestro.dev.
 
 ### 13. Desktop E2E — Playwright `_electron` only if shell logic grows
+
 - **Location:** Testing strategy "Desktop" row; Key ruling #2/Phase 5 (launch smoke).
 - **Claim:** No separate desktop E2E now; Playwright `_electron` reserved for later.
 - **Status:** ✅
@@ -298,6 +310,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
   github.com/spaceagetv/electron-playwright-helpers.
 
 ### 14. CI Postgres service container for integration tests
+
 - **Location:** Testing strategy row 3 ("postgres service container in CI"); Phase 8
   `ci.yml`/`e2e-nightly.yml` `services.postgres: image: postgres:16`.
 - **Claim:** Real Postgres via a GH Actions service container.
@@ -318,6 +331,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
   (standard); (Supabase PG version — confirm in-project).
 
 ### 15. Contract drift check (regen openapi + client → git diff)
+
 - **Location:** Testing strategy "Contract" row; Phase 8 `ci.yml` drift step.
 - **Claim:** `git diff --exit-code` on regenerated `openapi.json` + client catches drift.
 - **Status:** ✅
@@ -329,6 +343,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
 - **Source(s):** (architecture; covered by Phase 3/4 guides.)
 
 ### 16. `pytest` / strict-typing config currency
+
 - **Location:** Phase 3 `pyproject.toml` (`[tool.pytest.ini_options]`, pytest + pytest-asyncio
   devDeps).
 - **Claim:** pytest current; pytest-asyncio for async tests.
@@ -344,6 +359,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
   pytest-asyncio.readthedocs.io changelog.
 
 ### 17. transformIgnorePatterns allowlist for jest-expo
+
 - **Location:** Phase 2 step (i) `jest.config.js` `transformIgnorePatterns`.
 - **Claim:** The regex allowlists RN/Expo/`@rn-primitives`/`nativewind`/
   `react-native-css-interop`/cva/`@platform/*` for transformation.
@@ -362,6 +378,7 @@ the two ⚠️ matcher/transport notes before the harness is authored, then it i
   execution); docs.expo.dev/develop/unit-testing.
 
 ### 18. RNTL `screen` + `getByText`/`getByLabel`/`getByRole` query usage in E2E and unit
+
 - **Location:** Phase 2 unit test (`screen.getByText`); Phase 8 Playwright specs
   (`getByLabel`, `getByRole`) — note: Playwright queries, not RNTL.
 - **Claim:** Use semantic queries.

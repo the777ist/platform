@@ -20,16 +20,10 @@ const textVariants = cva("text-base text-foreground", {
   defaultVariants: { variant: "default", size: "base" },
 });
 
-export type TextProps = React.ComponentProps<typeof RNText> &
-  VariantProps<typeof textVariants>;
+export type TextProps = React.ComponentProps<typeof RNText> & VariantProps<typeof textVariants>;
 
 export function Text({ className, variant, size, ...props }: TextProps) {
-  return (
-    <RNText
-      className={cn(textVariants({ variant, size }), className)}
-      {...props}
-    />
-  );
+  return <RNText className={cn(textVariants({ variant, size }), className)} {...props} />;
 }
 
 export { textVariants };

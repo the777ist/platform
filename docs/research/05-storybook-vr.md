@@ -17,7 +17,7 @@ the RN-web-via-Vite path is officially supported and recommended, and the Playwr
 The one material drift is **version**: the plan/guide are written against **Storybook 8**
 implicitly (and the guide cites no major), but as of June 2026 the current `latest` is
 **Storybook 10** (10.4.4), with 9.1.20 and 8.6.18 also maintained. The more impactful
-*correctness* issues are in the Phase-2 setup mechanics: the documented NativeWind path uses
+_correctness_ issues are in the Phase-2 setup mechanics: the documented NativeWind path uses
 **`pluginReactOptions.jsxImportSource: "nativewind"`** in the framework `options` (the plan
 omits this), and the framework's bundled **`vite-plugin-rnw` aliases `react-native` →
 `react-native-web` automatically** (the plan's manual `resolve.alias` is redundant, not the
@@ -34,6 +34,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
 ## Findings
 
 ### 1. Framework package name `@storybook/react-native-web-vite`
+
 - **Location:** PHILOSOPHY.md Decision-sheet "Design system workbench" + line 292 ("framework
   `@storybook/react-native-web-vite`"); phase-2 step (c) `main.ts`.
 - **Claim:** A Storybook framework package named `@storybook/react-native-web-vite` exists and
@@ -51,6 +52,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   Storybook docs frameworks/react-native-web-vite.
 
 ### 2. Storybook major version — plan reads as SB8, current is SB10
+
 - **Location:** Whole plan (no major named); phase-2 step (c) install list (`storybook`,
   `@storybook/react-native-web-vite`, `@storybook/react-vite`, `vite`, …).
 - **Claim:** (implicit) the Storybook 8-era package set / API.
@@ -69,6 +71,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   peerDependencies.
 
 ### 3. NativeWind/Tailwind through Vite — missing `jsxImportSource: "nativewind"`
+
 - **Location:** PHILOSOPHY.md line 293–294 ("Vite config … runs the NativeWind/Tailwind step on
   `global.css`"); phase-2 step (c) `main.ts` `viteFinal`.
 - **Claim:** NativeWind utilities resolve in Storybook by importing `global.css` and running a
@@ -80,7 +83,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   entirely, so `className`/NativeWind utilities will **not** resolve as written. NativeWind in
   RNW-Vite Storybook is a known, fiddly integration — open Storybook issue **#32018**
   ("NativeWind Styles Not Displaying in Storybook React Native Web Vite") documents that you
-  need *all* of: `jsxImportSource: "nativewind"`, the Tailwind directives imported
+  need _all_ of: `jsxImportSource: "nativewind"`, the Tailwind directives imported
   (`global.css`), and an actual Tailwind CSS pipeline in Vite (PostCSS+autoprefixer for
   Tailwind v3, or `@tailwindcss/vite` for v4). The reference example
   (`dannyhw/vite-rnw-example`) uses NativeWind v4 + Tailwind v3 + `autoprefixer` +
@@ -101,6 +104,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   `.storybook/main.ts`; Storybook issue #32018; Storybook discussion #28399.
 
 ### 4. Manual `react-native` → `react-native-web` alias in `viteFinal`
+
 - **Location:** PHILOSOPHY.md line 293 ("Vite config aliases `react-native` → `react-native-web`");
   phase-2 step (c) `main.ts` `resolve.alias`; phase-2 Gotchas ("Without the `resolve.alias`
   … RN imports fail").
@@ -121,6 +125,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   `dannyhw/vite-rnw-example` `.storybook/main.ts`; Storybook docs / dev.to RNW-Vite article.
 
 ### 5. Type imports from `@storybook/react` (stories + preview)
+
 - **Location:** phase-2 step (c): `import type { Preview, Decorator } from "@storybook/react"`
   and `import type { Meta, StoryObj } from "@storybook/react"` in the story files.
 - **Claim:** Story/preview types come from `@storybook/react`.
@@ -138,6 +143,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   blog (CSF factories); `dannyhw/vite-rnw-example` preview.
 
 ### 6. Static build → `storybook-static/` + `index.json`
+
 - **Location:** PHILOSOPHY.md line 299–300 ("`storybook build` → `storybook-static/`; Playwright
   reads `storybook-static/index.json`"); phase-2 DoD #6; phase-8 step (e) VR spec
   (`index.entries`, filter `type === "story"`).
@@ -148,7 +154,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   `index.json` is produced in 9.x/10.x**, served at `/index.json` and written into
   `storybook-static/`. Its shape is `{ v, entries: { [id]: { id, title, name, type, … } } }`
   with `type ∈ {"story","docs"}`. The phase-8 VR loop (`Object.values(index.entries).filter(e
-  => e.type === "story")`) matches the real schema. `storybook index` can also generate just
+=> e.type === "story")`) matches the real schema. `storybook index` can also generate just
   the index faster (a nice optimization, not required).
 - **Recommended change:** None. (Optional: mention `storybook index` for faster index-only
   regeneration in CI.)
@@ -156,6 +162,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   lost-pixel issue #431 ("index.json in 9.x, stories.json removed in v8").
 
 ### 7. Playwright `toHaveScreenshot` + committed baselines, nightly
+
 - **Location:** PHILOSOPHY.md Testing-strategy VR row + line 299–300; phase-8 step (e)
   `visual-regression.spec.ts` (`toHaveScreenshot`) + `playwright.config.ts`; `e2e-nightly.yml`.
 - **Claim:** Playwright `toHaveScreenshot` against the served static build, committed
@@ -174,6 +181,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   jamesiv.es); Bug0 Playwright VR 2026.
 
 ### 8. Navigating `iframe.html?id=<story>&globals=theme:dark`
+
 - **Location:** PHILOSOPHY.md line 300; phase-8 VR spec
   (`/iframe.html?id=${story.id}&globals=theme:${theme}`).
 - **Claim:** Setting the toolbar theme global via the iframe URL using `globals=theme:dark`
@@ -193,6 +201,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   issue #11604; discussion #23328.
 
 ### 9. `globalTypes` + toolbar for theme + brand; decorator wraps in theme provider
+
 - **Location:** PHILOSOPHY.md line 293–294 ("toolbar exposes a light/dark toggle AND a brand
   switcher … two toolbar `globalTypes`"); phase-2 step (c) `preview.tsx`.
 - **Claim:** Two `globalTypes` (`theme`, `brand`) render as toolbar dropdowns; a global
@@ -201,7 +210,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
 - **Finding:** API-correct. `globalTypes` with a `toolbar` config (items/icon/title/dynamicTitle)
   is the documented way to add toolbar dropdowns; global `decorators` reading `ctx.globals`
   is standard. This is unchanged through SB8→10 (SB10 adds CSF-factory `preview.meta` as an
-  *additional* option, not a replacement). The decorator's `document.documentElement` /
+  _additional_ option, not a replacement). The decorator's `document.documentElement` /
   `setProperty` brand-override approach is valid for the web (RNW) target.
 - **Recommended change:** None required. (Forward-looking: SB10 favors typed `globalTypes`/CSF
   factories; current form remains supported.)
@@ -209,6 +218,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   discussion #18446.
 
 ### 10. `*.stories.tsx` CSF3, one story per cva variant
+
 - **Location:** PHILOSOPHY.md line 42 ("`*.stories.tsx`, one story per cva variant"); phase-2 step
   (c) `button.stories.tsx`.
 - **Claim:** CSF3 `*.stories.tsx` with a `meta` default export + per-variant named `StoryObj`
@@ -221,6 +231,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
 - **Source(s):** Storybook CSF / intro-to-storybook tutorial; SB10 blog.
 
 ### 11. Storybook dev port 6006 vs app 8081
+
 - **Location:** phase-2 step (c) `storybook dev -p 6006`; OPEN flag + Gotcha.
 - **Claim:** Storybook dev defaults to 6006; chosen to avoid the Expo 8081 clash.
 - **Status:** ✅
@@ -231,6 +242,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
 - **Source(s):** Storybook docs (default port 6006).
 
 ### 12. `react-native-web` peer/version compatibility
+
 - **Location:** phase-2 step (c) install list (`react-native-web`); RN 0.85 / SDK 56 target.
 - **Claim:** RN-web works with the framework on the SDK 56 / RN 0.85 stack.
 - **Status:** ✅
@@ -242,13 +254,14 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
 - **Source(s):** framework peerDependencies.
 
 ### 13. `@storybook/react-vite` listed as a separate install dep
+
 - **Location:** phase-2 step (c) install list includes both `@storybook/react-native-web-vite`
   and `@storybook/react-vite` + `vite` + `@vitejs/plugin-react`.
 - **Claim:** You must separately install `@storybook/react-vite`.
 - **Status:** ⚠️
 - **Finding:** Slightly redundant. `@storybook/react-native-web-vite` **depends on**
   `@storybook/react-vite`, `@storybook/react`, and `@storybook/builder-vite` (confirmed in its
-  `dependencies`), so they are pulled transitively. `vite` and `react-native-web` are *peer*
+  `dependencies`), so they are pulled transitively. `vite` and `react-native-web` are _peer_
   deps you must provide; `@vitejs/plugin-react` is bundled via the framework's React plugin
   options. Listing `@storybook/react-vite` explicitly isn't wrong, but it's not required and
   could drift out of lockstep with the framework's pinned version.
@@ -260,6 +273,7 @@ manual alias, add the Tailwind/Vite CSS step explicitly) and pin to a real, curr
   `@storybook/builder-vite`, `vite-plugin-rnw`).
 
 ### 14. Chromatic declined / self-hosted Playwright VR
+
 - **Location:** PHILOSOPHY.md line 42 ("Chromatic deliberately declined … self-hosted Playwright").
 - **Claim:** Self-hosted Playwright VR over the static build is a viable free alternative to
   Chromatic, consistent with the no-paid-SaaS stance.

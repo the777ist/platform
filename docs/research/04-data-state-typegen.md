@@ -40,8 +40,8 @@ pin to refresh at install time.
   pinned exact alongside `@hey-api/openapi-ts`.
 - **Status:** ❌
 - **Finding:** The npm package `@hey-api/client-fetch` is **deprecated**. Its current latest
-  (0.13.1, published 2025-06-12) carries the deprecation message verbatim: *"Starting with
-  v0.73.0, this package is bundled directly inside @hey-api/openapi-ts."* Current
+  (0.13.1, published 2025-06-12) carries the deprecation message verbatim: _"Starting with
+  v0.73.0, this package is bundled directly inside @hey-api/openapi-ts."_ Current
   `@hey-api/openapi-ts` is **0.98.2** (pre-1.0), well past 0.73.0, so the fetch client ships
   **inside** openapi-ts and needs **no separate install**. Installing `@hey-api/client-fetch`
   today pulls a deprecated, redundant package. Crucially, the **plugin name string**
@@ -188,6 +188,7 @@ pin to refresh at install time.
   "Infinite Queries" docs; TanStack/query release history (June 2026).
 
 ### 10. Persistence packages: `@tanstack/react-query-persist-client`,
+
 `@tanstack/query-async-storage-persister`, `@tanstack/query-sync-storage-persister`
 
 - **Location:** PHILOSOPHY.md line 31 (query client "with cache persistence — AsyncStorage native /
@@ -233,7 +234,7 @@ pin to refresh at install time.
   middleware available.
 - **Status:** ✅
 - **Finding:** Confirmed. Zustand latest is **5.0.14** (2026-05-28). `import { create } from
-  "zustand"` is the v5 entry point; `persist` is imported from `zustand/middleware`;
+"zustand"` is the v5 entry point; `persist` is imported from `zustand/middleware`;
   `useStore.getState()` (used by `getAccessToken()` in Phase 6) is valid for reading outside
   React. The plan's stores don't actually use Zustand persist (sessions persist via supabase-js
   storage; theme is in-memory) — which is fine and intentional. Nothing in the Zustand usage is

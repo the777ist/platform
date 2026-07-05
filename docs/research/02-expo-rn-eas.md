@@ -14,6 +14,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 ## Findings
 
 ### 1. Expo SDK 56 exists and ships RN 0.85 / React 19.2
+
 - **Location:** PHILOSOPHY.md Decision Sheet "Frontend"; Key ruling #2; Phase 2 step (h) note "Target SDK 56 / RN 0.85".
 - **Claim:** "Expo SDK 56 (RN 0.85)".
 - **Status:** ✅
@@ -22,6 +23,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://expo.dev/blog/expo-router-v56-decoupling-from-react-navigation , https://reactnative.dev/blog , https://medium.com/@onix_react/release-react-native-0-85-677b3007b041
 
 ### 2. New Architecture is default/required in SDK 56
+
 - **Location:** DOMAIN question; implicit in PHILOSOPHY.md frontend stack.
 - **Claim:** (to confirm) Is the New Architecture default/required?
 - **Status:** ✅
@@ -30,6 +32,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/guides/new-architecture/ , https://www.ninetwothree.co/blog/react-native-0-85-bridge-removal
 
 ### 3. Hermes v1 is the default engine (new in SDK 56)
+
 - **Location:** Not mentioned in any guide.
 - **Claim:** (gap) — guides are silent on Hermes v1.
 - **Status:** ⚠️
@@ -38,6 +41,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://abdulkadersafi.com/blog/expo-sdk-56-the-update-that-finally-makes-builds-fast , https://cuibit.com/insights/react-native-085-hermes-v1-new-architecture-upgrade-guide-2026
 
 ### 4. SDK 56 makes `expo/fetch` the global `fetch` — unaddressed
+
 - **Location:** Phase 4 (`core/api.ts` baseUrl), Phase 8 (`core/api.ts` interceptors, hey-api `@hey-api/client-fetch`).
 - **Claim:** (gap) — guides assume RN's standard fetch behavior under the hey-api client-fetch transport.
 - **Status:** ⚠️
@@ -46,6 +50,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/versions/latest/sdk/expo/ , https://medium.com/@onix_react/whats-new-in-expo-sdk-56-63f704fc8426
 
 ### 5. `web.output: "single"` (SPA) is still valid in SDK 56
+
 - **Location:** Key ruling #2; Phase 2 step (h) `app.config.ts`; Phase 5 Prerequisite #2.
 - **Claim:** "`web.output: "single"` (SPA) … with `bundler: metro`".
 - **Status:** ✅
@@ -54,6 +59,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/versions/latest/config/app/ , https://docs.expo.dev/router/reference/typed-routes/
 
 ### 6. Expo Router in SDK 56 forked from React Navigation — `@react-navigation/*` imports break
+
 - **Location:** Phase 2 step (h) route files (`import { Tabs }`/`{ Stack } from "expo-router"`); Phase 8 docs.
 - **Claim:** Expo Router file-based routing, typed routes, `Tabs`/`Stack` from `expo-router`.
 - **Status:** ✅ (with a caveat for any future `@react-navigation` use)
@@ -62,6 +68,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://expo.dev/blog/expo-router-v56-decoupling-from-react-navigation , https://docs.expo.dev/router/migrate/sdk-55-to-56/
 
 ### 7. Typed routes — supported, but `web.output: single` interaction unstated
+
 - **Location:** DOMAIN (typed routes); not pinned in guides.
 - **Claim:** (implicit) typed routes available.
 - **Status:** ✅
@@ -70,6 +77,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/router/reference/typed-routes/
 
 ### 8. NativeWind v4 ↔ SDK 56 compatibility — UNCONFIRMED (the locked headline risk)
+
 - **Location:** PHILOSOPHY.md "Frontend" (NativeWind v4; v5 pre-release — do NOT use); Phase 2 headline gotcha "Settles NativeWind v4 ↔ SDK 56 compat; fallback = SDK 55".
 - **Claim:** "NativeWind v4 (v5 is pre-release — do NOT use)" + "fallback = SDK 55".
 - **Status:** ❌ (the "v4 works on SDK 56" assumption is unverified; fallback target is also questionable)
@@ -80,6 +88,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://github.com/nativewind/nativewind/discussions/1604 , https://www.nativewind.dev/v5/getting-started/installation , https://github.com/nativewind/nativewind/discussions/1617
 
 ### 9. react-native-web — version not pinned/verified; supported but New-Arch caveat
+
 - **Location:** Phase 2 app `package.json` (`"react-native-web": "*"`); PHILOSOPHY.md frontend "react-native-web".
 - **Claim:** react-native-web is used for web (and Storybook via `@storybook/react-native-web-vite`).
 - **Status:** ❓
@@ -88,6 +97,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/ , https://alternativeto.net/news/2026/5/expo-sdk-56-brings-stable-expo-ui-faster-builds-and-react-native-0-85/
 
 ### 10. EAS Update — channels & `eas update --channel` are current
+
 - **Location:** PHILOSOPHY.md "Releases"; Phase 8 `eas-update.yml` (`eas update --channel staging|production`).
 - **Claim:** build profiles + update channels; `eas update --channel staging/production`; OTA for JS-only, store builds for native changes.
 - **Status:** ✅
@@ -96,6 +106,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/eas-update/getting-started/ , https://docs.expo.dev/eas/json/ , https://docs.expo.dev/build/updates/
 
 ### 11. EAS Update OTA requires `updates.url` + `runtimeVersion` — MISSING from app.config.ts
+
 - **Location:** Phase 2 step (h) `app.config.ts` (only `extra.eas.projectId`); Phase 8 `eas-update.yml`.
 - **Claim:** `app.config.ts` sets `scheme`, bundle ids, `extra.eas.projectId` — and OTA "just works" via `eas update`.
 - **Status:** ⚠️
@@ -104,6 +115,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/eas-update/getting-started/ , https://docs.expo.dev/versions/latest/sdk/updates/ , https://docs.expo.dev/versions/latest/config/app/
 
 ### 12. `extra.eas.projectId` placeholder pattern is correct
+
 - **Location:** Phase 2 `app.config.ts` (`extra: { eas: { projectId: "TODO-EAS-PROJECT-ID" } }`); generator checklist "`eas init` → paste projectId".
 - **Claim:** EAS project id lives at `extra.eas.projectId`, filled by `eas init`.
 - **Status:** ✅
@@ -112,6 +124,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/eas-update/getting-started/ , https://medium.com/simform-engineering/from-confusion-to-clarity-a-simple-guide-to-expo-config-keys-4f3d6ed50201
 
 ### 13. expo-notifications — push token API current; Expo Go limitation correct
+
 - **Location:** Phase 8 `core/notifications.ts` (`getExpoPushTokenAsync`, `getPermissionsAsync`, `requestPermissionsAsync`, `Device.isDevice`); PHILOSOPHY.md "Push notifications"; Phase 8 gotcha "Expo Go can't receive push tokens".
 - **Claim:** register via expo-notifications; `getExpoPushTokenAsync()` needs a dev build + real device; Expo Go can't receive tokens.
 - **Status:** ✅
@@ -120,6 +133,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/versions/latest/sdk/notifications/ , https://expo.dev/changelog/sdk-53 , https://docs.expo.dev/push-notifications/faq/
 
 ### 14. Expo Push API endpoint + payload are correct
+
 - **Location:** Phase 8 `services/push.py` (`EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"`, messages `{to, title, body}`); test asserts `ExponentPushToken`.
 - **Claim:** POST to `exp.host/--/api/v2/push/send` with `{to, title, body}` array.
 - **Status:** ✅
@@ -128,6 +142,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/push-notifications/sending-notifications/ , https://docs.expo.dev/push-notifications/faq/
 
 ### 15. Sentry: `@sentry/react-native` (not `sentry-expo`) — correct, but config-plugin path changed
+
 - **Location:** PHILOSOPHY.md "Cross-cutting" (`@sentry/react-native` — NOT deprecated `sentry-expo`); Phase 8 `core/sentry.ts`.
 - **Claim:** use `@sentry/react-native`; `sentry-expo` is deprecated.
 - **Status:** ✅ (claim) / ⚠️ (incomplete on plugin + SDK 56 support)
@@ -136,14 +151,16 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.sentry.io/platforms/react-native/migration/sentry-expo/ , https://github.com/getsentry/sentry-react-native/issues/6212 , https://github.com/getsentry/sentry-react-native/issues/5859
 
 ### 16. Metro / NativeWind web export wiring under SDK 56
+
 - **Location:** Phase 2 `metro.config.js` (`withNativeWind(config, { input: "./global.css" })`), `babel.config.js` (`babel-preset-expo` + `nativewind/babel`).
 - **Claim:** standard NativeWind metro + babel wiring; SDK 56 doesn't change metro/web export.
 - **Status:** ❓
-- **Finding:** The wiring shown is the standard **NativeWind v4** pattern and is correct *for v4*. Whether it works **unchanged on SDK 56** is the same unverified gate as Finding 8 — NativeWind v4's metro transform is the exact integration point most likely to need adjustment on RN 0.85/New Arch. SDK 56 itself did not announce a web-export/metro breaking change beyond expo/fetch (Finding 4) and the general metro version bump that rides with RN 0.85. Treat as part of the Phase 2 empirical spike.
+- **Finding:** The wiring shown is the standard **NativeWind v4** pattern and is correct _for v4_. Whether it works **unchanged on SDK 56** is the same unverified gate as Finding 8 — NativeWind v4's metro transform is the exact integration point most likely to need adjustment on RN 0.85/New Arch. SDK 56 itself did not announce a web-export/metro breaking change beyond expo/fetch (Finding 4) and the general metro version bump that rides with RN 0.85. Treat as part of the Phase 2 empirical spike.
 - **Recommended change:** Validate `withNativeWind` + `nativewind/babel` against SDK 56 during the spike; if v4 needs a patch for RN 0.85, that's the signal to consider SDK 54 (per Finding 8). Confirm `babel-preset-expo` still wants the `nativewind/babel` entry under SDK 56 (NativeWind v5 changed this; v4 keeps it).
 - **Source(s):** https://github.com/nativewind/nativewind/discussions/1604 , https://medium.com/@onix_react/whats-new-in-expo-sdk-56-63f704fc8426
 
 ### 17. EAS Build in a pnpm monorepo — `.npmrc` + `packageManager` workaround
+
 - **Location:** Phase 8 `eas-build.yml` gotcha; PHILOSOPHY.md eas-build note.
 - **Claim:** eas-cli misdetects PM in a pnpm workspace unless committed `.npmrc` (`node-linker=hoisted`) + root `packageManager: pnpm@10.x`.
 - **Status:** ✅ (plausible/consistent; standard guidance)
@@ -152,6 +169,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/guides/monorepos/ (general EAS+pnpm guidance), https://docs.expo.dev/eas/json/
 
 ### 18. expo/expo-github-action @v8 + EXPO_TOKEN
+
 - **Location:** Phase 8 `eas-build.yml` / `eas-update.yml` (`uses: expo/expo-github-action@v8`, `eas-version: latest`, `token: EXPO_TOKEN`).
 - **Claim:** CI uses expo-github-action v8 with an EXPO_TOKEN.
 - **Status:** ⚠️
@@ -160,6 +178,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://github.com/expo/expo-github-action , https://docs.expo.dev/eas-update/getting-started/
 
 ### 19. Electron / electron-builder / electron-updater versions left as placeholders
+
 - **Location:** Phase 5 `package.json` (`PLACEHOLDER-pin-exact`), Open questions.
 - **Claim:** pin current stable Electron exact; `protocol.handle` is the modern (Electron ≥25) API.
 - **Status:** ✅ (out-of-domain detail; the RN/Expo-relevant interface is sound)
@@ -168,6 +187,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/router/reference/typed-routes/ (SPA output), https://docs.expo.dev/versions/latest/config/app/
 
 ### 20. `@hey-api/openapi-ts` + client-fetch + TanStack Query plugin (pre-1.0, pinned exact)
+
 - **Location:** Phase 4 (`openapi-ts.config.ts`, `@hey-api/client-fetch`, `@tanstack/react-query` plugin).
 - **Claim:** hey-api pinned exact pre-1.0; emits SDK + TanStack `queryOptions`/`infiniteQueryOptions`.
 - **Status:** ⚠️
@@ -176,6 +196,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/versions/latest/sdk/expo/ (expo/fetch) — hey-api specifics are out-of-domain (Contracts reviewer).
 
 ### 21. `jest-expo` preset for SDK 56
+
 - **Location:** Phase 2 step (i) (`preset: "jest-expo"`, RNTL, `react-test-renderer`).
 - **Claim:** single Jest runner via jest-expo preset.
 - **Status:** ⚠️
@@ -184,6 +205,7 @@ Issue counts: **✅ 13 verified · ⚠️ 6 caveats/incomplete · ❌ 1 wrong/ri
 - **Source(s):** https://docs.expo.dev/versions/latest/config/app/ , https://reactnative.dev/blog (React 19.2 in RN 0.85)
 
 ### 22. Supabase Realtime broadcast HTTP endpoint
+
 - **Location:** Phase 8 `services/realtime.py` (`POST {SUPABASE_URL}/realtime/v1/api/broadcast`).
 - **Claim:** server broadcasts via Supabase Realtime HTTP broadcast endpoint with service-role key.
 - **Status:** ❓ (out-of-domain — flag for Supabase reviewer)

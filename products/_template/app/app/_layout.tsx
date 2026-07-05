@@ -10,10 +10,7 @@ const queryClient = makeQueryClient();
 export default function RootLayout() {
   const theme = useThemeStore((s) => s.theme);
   return (
-    <PersistQueryClientProvider
-      client={queryClient}
-      persistOptions={{ persister }}
-    >
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
       <ThemeProvider theme={theme}>
         <Stack screenOptions={{ headerShown: false }} />
       </ThemeProvider>

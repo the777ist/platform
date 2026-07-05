@@ -25,6 +25,7 @@ This is the concrete expansion of the PHILOSOPHY.md **Phase 3** row:
 > tomls, pytest (real Postgres).
 
 **Verify (restated from PHILOSOPHY.md):**
+
 1. `turbo run dev --filter=*template-api` + `curl /healthz` returns healthy.
 2. Items **CRUD + paging** round-trips.
 3. **problem+json** error bodies on failures.
@@ -198,8 +199,8 @@ asyncio_mode = "strict"          # pytest-asyncio 1.x: pin behavior; async tests
 > in Step 6. The alternative is **`uuid6`** (`from uuid6 import uuid7`). Do **NOT** use the
 > PyPI `uuid7` package / `from uuid_extensions import uuid7`: that dist's last release was
 > 2021, it is effectively unmaintained, and its `uuid7()` predates the final RFC 9562 layout.
-> (A *different* maintained package `uuid-extension` imports as `from uuid_extension import
-> uuid7` — singular — do not confuse the two.) Postgres 18 has native `uuidv7()` — if the
+> (A _different_ maintained package `uuid-extension` imports as `from uuid_extension import
+uuid7` — singular — do not confuse the two.) Postgres 18 has native `uuidv7()` — if the
 > deployment targets PG18 the DB-side default could replace the Python generator; **confirm
 > the Supabase Postgres version**.
 
@@ -241,6 +242,7 @@ per the turbo.json notes; `openapi` outputs `openapi.json` which Phase 4 consume
 ```
 
 **Commands:**
+
 ```bash
 cd products/_template/api
 echo "3.13" > .python-version
@@ -260,6 +262,7 @@ is a documented caching footgun.
 `products/_template/api/src/template_api/settings.py`.
 
 **Contents:**
+
 ```python
 from functools import lru_cache
 
@@ -320,6 +323,7 @@ documents every consumed var per the Operational defaults bullet.
 **Files:** `products/_template/api/src/template_api/db.py`.
 
 **Contents:**
+
 ```python
 from collections.abc import Generator
 
@@ -378,6 +382,7 @@ separately by `alembic/env.py` (Step 19), never by request handlers.
 **Files:** `products/_template/api/src/template_api/errors.py`.
 
 **Contents:**
+
 ```python
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -480,6 +485,7 @@ the generated client.
 **Files:** `products/_template/api/src/template_api/pagination.py`.
 
 **Contents:**
+
 ```python
 import base64
 import json
@@ -542,6 +548,7 @@ endpoint declares its own `Page[ItemRead]` response.
 `.../models/base.py`, `.../models/item.py`, `.../models/push_token.py`.
 
 **Contents** — `base.py`:
+
 ```python
 from datetime import datetime, timezone
 from uuid import UUID
@@ -570,6 +577,7 @@ class UUIDModel(SQLModel):
 ```
 
 `item.py`:
+
 ```python
 from sqlmodel import Field
 
@@ -585,6 +593,7 @@ class Item(UUIDModel, table=True):
 ```
 
 `push_token.py`:
+
 ```python
 from sqlmodel import Field, UniqueConstraint
 
@@ -601,6 +610,7 @@ class PushToken(UUIDModel, table=True):
 ```
 
 `models/__init__.py`:
+
 ```python
 from .base import UUIDModel
 from .item import Item
@@ -630,6 +640,7 @@ migration (Step 20), never by `SQLModel.metadata.create_all` in production.
 `.../services/base.py`, `.../services/item_service.py`, `.../services/push_service.py`.
 
 **Contents** — `base.py`:
+
 ```python
 from fastapi import Depends
 from sqlmodel import Session
@@ -650,6 +661,7 @@ class BaseService:
 ```
 
 `item_service.py`:
+
 ```python
 from uuid import UUID
 
@@ -709,6 +721,7 @@ class ItemService(BaseService):
 ```
 
 `push_service.py`:
+
 ```python
 from datetime import datetime, timedelta, timezone
 
@@ -781,6 +794,7 @@ mock transport in unit tests); `prune_stale()` is the scheduled-job entry point.
 `.../schemas/user.py`.
 
 **Contents** — `common.py` (strict base + problem+json DTO so it lands in OpenAPI):
+
 ```python
 from pydantic import BaseModel, ConfigDict
 
@@ -803,6 +817,7 @@ class Problem(BaseModel):
 ```
 
 `item.py`:
+
 ```python
 from datetime import datetime
 from uuid import UUID
@@ -830,6 +845,7 @@ class ItemRead(StrictDTO):
 ```
 
 `push.py`:
+
 ```python
 from uuid import UUID
 
@@ -848,6 +864,7 @@ class PushTokenRead(StrictDTO):
 ```
 
 `user.py`:
+
 ```python
 from .common import StrictDTO
 
@@ -872,6 +889,7 @@ the generated TS client) carries the typed error shape.
 **Files:** `products/_template/api/src/template_api/auth.py`.
 
 **Contents:**
+
 ```python
 from functools import lru_cache
 from typing import Annotated
@@ -965,6 +983,7 @@ here so `/v1/me` and owner-scoped items work.
 **Files:** `products/_template/api/src/template_api/security.py`.
 
 **Contents:**
+
 ```python
 from collections.abc import Awaitable, Callable
 
@@ -1036,9 +1055,9 @@ limiter is instantiated here and attached to `app.state` in `main.py`; the 429 i
 rendered as problem+json by the handler in Step 4.
 
 > **Per-user rate key (resolved):** key on the JWT **`sub`** claim, not a token slice — a
-> token slice keys per-*token* (a refreshed token = a new bucket) and is effectively random
+> token slice keys per-_token_ (a refreshed token = a new bucket) and is effectively random
 > per signature, not per user. Decoding the bearer with `options={"verify_signature": False}`
-> *only to extract `sub` for bucketing* is acceptable: the real auth dependency verifies the
+> _only to extract `sub` for bucketing_ is acceptable: the real auth dependency verifies the
 > same token on the protected route, so this unverified read never grants access — it just
 > picks a bucket. Fall back to `get_remote_address` for anonymous requests. The `100/minute`
 > `default_limits` value is a sane env-driven default (`rate_limit_default`); tune per product.
@@ -1050,6 +1069,7 @@ rendered as problem+json by the handler in Step 4.
 **Files:** `products/_template/api/src/template_api/middleware.py`.
 
 **Contents:**
+
 ```python
 import uuid
 from collections.abc import Awaitable, Callable
@@ -1087,6 +1107,7 @@ explicitly Phase 8** — noted inline so it is not built prematurely here.
 `.../routers/hello.py`.
 
 **Contents:**
+
 ```python
 from fastapi import APIRouter
 
@@ -1115,6 +1136,7 @@ DTO, never a model.
 **Files:** `products/_template/api/src/template_api/routers/me.py`.
 
 **Contents:**
+
 ```python
 from fastapi import APIRouter
 
@@ -1140,6 +1162,7 @@ but the route + verification exist from here.
 **Files:** `products/_template/api/src/template_api/routers/items.py`.
 
 **Contents:**
+
 ```python
 from uuid import UUID
 
@@ -1202,6 +1225,7 @@ cursor envelope Phase 4's `useInfiniteQuery` consumes.
 **Files:** `products/_template/api/src/template_api/routers/push.py`.
 
 **Contents:**
+
 ```python
 from fastapi import APIRouter, Depends, status
 
@@ -1230,6 +1254,7 @@ provides token registration in the locked thin shape.
 **Files:** `products/_template/api/src/template_api/main.py`.
 
 **Contents:**
+
 ```python
 from fastapi import FastAPI
 from slowapi.middleware import SlowAPIMiddleware
@@ -1271,6 +1296,7 @@ app = create_app()
 ```
 
 **Commands:**
+
 ```bash
 cd products/_template/api
 uv run uvicorn template_api.main:app --reload --port 8000   # or: pnpm --filter @platform/template-api dev
@@ -1288,6 +1314,7 @@ is caught by the registered handler and rendered problem+json.
 **Files:** `products/_template/api/src/template_api/export_openapi.py`.
 
 **Contents:**
+
 ```python
 import json
 from pathlib import Path
@@ -1308,6 +1335,7 @@ if __name__ == "__main__":
 ```
 
 **Commands:**
+
 ```bash
 pnpm --filter @platform/template-api openapi   # or: uv run python -m template_api.export_openapi
 ```
@@ -1328,6 +1356,7 @@ file as its output.
 `.../template_api/tasks.py`.
 
 **Contents** — `seed.py`:
+
 ```python
 from sqlmodel import Session
 
@@ -1350,6 +1379,7 @@ if __name__ == "__main__":
 ```
 
 `tasks.py`:
+
 ```python
 """Lightweight scheduled jobs run on Fly scheduled machines (no queue infra).
 
@@ -1383,6 +1413,7 @@ if __name__ == "__main__":
 ```
 
 **Commands:**
+
 ```bash
 pnpm --filter @platform/template-api seed
 uv run python -m template_api.tasks prune-stale-tokens
@@ -1403,6 +1434,7 @@ marker — outside a request we pass a real session.
 `.../alembic/versions/` (dir).
 
 **Contents** — `alembic.ini` (trimmed to essentials; URL comes from env in `env.py`):
+
 ```ini
 [alembic]
 script_location = alembic
@@ -1437,6 +1469,7 @@ format = %(levelname)-5.5s [%(name)s] %(message)s
 ```
 
 `alembic/env.py`:
+
 ```python
 from logging.config import fileConfig
 
@@ -1487,6 +1520,7 @@ else:
 ```
 
 **Commands:**
+
 ```bash
 cd products/_template/api
 uv run alembic init -t generic alembic   # then replace env.py/alembic.ini with the above
@@ -1505,6 +1539,7 @@ registers them on `SQLModel.metadata` for autogenerate.
 
 **Contents** (hand-authored to include the raw RLS statements — autogenerate won't emit
 those):
+
 ```python
 """initial: item + push_token tables, RLS deny-all on every table"""
 
@@ -1560,6 +1595,7 @@ def downgrade() -> None:
 ```
 
 **Commands:**
+
 ```bash
 cd products/_template/api
 uv run alembic upgrade head     # applies over DATABASE_MIGRATION_URL (5432)
@@ -1574,7 +1610,7 @@ and writes. `FORCE ROW LEVEL SECURITY` ensures even the table owner is subject t
 
 > **Privileged role (resolved):** connect `DATABASE_URL` / `DATABASE_MIGRATION_URL` as the
 > Supabase **`postgres`** role, which has **`BYPASSRLS`**. `BYPASSRLS` (and superuser) skip RLS
-> *even with* `FORCE ROW LEVEL SECURITY`, so the service layer's own queries still read/write
+> _even with_ `FORCE ROW LEVEL SECURITY`, so the service layer's own queries still read/write
 > `item`/`push_token` after the deny-all migration, while the anon/authenticated roles
 > PostgREST + Realtime use get nothing. Do NOT connect as `authenticated`/`anon` (they would be
 > blocked by the deny-all). `FORCE` is redundant for a `BYPASSRLS` connection but kept for
@@ -1589,6 +1625,7 @@ and writes. `FORCE ROW LEVEL SECURITY` ensures even the table owner is subject t
 **Files:** `products/_template/api/Dockerfile`, `products/_template/api/.dockerignore`.
 
 **Contents** — `Dockerfile`:
+
 ```dockerfile
 # syntax=docker/dockerfile:1
 
@@ -1611,6 +1648,7 @@ CMD ["uvicorn", "template_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 `.dockerignore`:
+
 ```
 .venv
 __pycache__
@@ -1621,6 +1659,7 @@ tests
 ```
 
 **Commands:**
+
 ```bash
 cd products/_template/api
 docker build -t template-api:dev .
@@ -1639,6 +1678,7 @@ source.
 `products/_template/api/fly.production.toml`.
 
 **Contents** — `fly.staging.toml`:
+
 ```toml
 app = "example-template-api-stg"
 primary_region = "iad"
@@ -1668,6 +1708,7 @@ timeout = "2s"
 ```
 
 `fly.production.toml` is identical except:
+
 ```toml
 app = "example-template-api-prod"
 [env]
@@ -1676,6 +1717,7 @@ ENVIRONMENT = "production"
 ```
 
 **Commands:** (deploy is Phase 8 / generator infra checklist)
+
 ```bash
 flyctl deploy -c fly.staging.toml    # after `fly apps create example-template-api-stg` + secrets
 ```
@@ -1694,6 +1736,7 @@ secrets**, never committed (Env/config bullet).
 `products/_template/api/tests/conftest.py`, `.../tests/factories.py`.
 
 **Contents** — `conftest.py`:
+
 ```python
 import os
 from collections.abc import Generator
@@ -1765,6 +1808,7 @@ def auth_client(session: Session) -> Generator[TestClient, None, None]:
 ```
 
 `factories.py` (polyfactory):
+
 ```python
 from polyfactory.factories.pydantic_factory import ModelFactory
 
@@ -1781,6 +1825,7 @@ class PushTokenCreateFactory(ModelFactory[PushTokenCreate]):
 ```
 
 **Commands:**
+
 ```bash
 # dev: bring up real Postgres (Phase 6 wires the full Supabase stack)
 supabase start            # or: docker run -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:16
@@ -1821,6 +1866,7 @@ tested directly in `test_auth.py`).
 `products/_template/api/tests/test_auth.py`.
 
 **Contents** — `test_items.py` (CRUD + paging + problem+json + DTO/ORM separation):
+
 ```python
 from fastapi.testclient import TestClient
 
@@ -1869,6 +1915,7 @@ def test_unauthenticated_is_401_problem_json(client: TestClient) -> None:
 `test_auth.py` (JWT paths — unit-level, mock external HTTP per mocking conventions). NOTE:
 these mint HS256 tokens directly to exercise the fallback branch; they stay valid but no
 longer mirror the live local stack (a current Supabase CLI issues ES256 → the JWKS branch):
+
 ```python
 import datetime as dt
 
@@ -1919,6 +1966,7 @@ def test_bad_signature_raises_401() -> None:
 ```
 
 **Commands:**
+
 ```bash
 pnpm --filter @platform/template-api test
 ```
@@ -1941,7 +1989,7 @@ hit the real DB.
   **transaction-mode** Supavisor pooler (6543) for serverless-friendly autoscaling; it does
   not reliably keep server-side prepared statements (connections are reassigned per
   transaction), so they break. (Correction: session mode was **NOT removed** — Supavisor
-  deprecated session mode *on the 6543 pooler* on 2025-02-28; session mode and direct
+  deprecated session mode _on the 6543 pooler_ on 2025-02-28; session mode and direct
   connections still live on **5432**. The 2024 event was the PgBouncer→Supavisor migration +
   IPv4 deprecation for direct connections.) Runtime MUST use **psycopg v3**
   (`postgresql+psycopg://`), **`NullPool`**, and **`connect_args={"prepare_threshold": None}`**.
@@ -1968,7 +2016,7 @@ hit the real DB.
   access to the anon/authenticated roles PostgREST + Realtime use, keeping the schema
   private (the broadcast-only Realtime pattern depends on this). The API connects with a
   **privileged/BYPASSRLS role** so the service layer still works. Forgetting `ENABLE ROW
-  LEVEL SECURITY` on a new table silently opens it — every new table needs the deny-all in
+LEVEL SECURITY` on a new table silently opens it — every new table needs the deny-all in
   its migration.
 - **pyright strict means no implicit `Any`.** `typeCheckingMode = "strict"` rejects untyped
   defs and implicit `Any`. Annotate every function (including test helpers); use
@@ -2001,15 +2049,18 @@ hit the real DB.
 Each maps to a DoD / PHILOSOPHY.md Verify item. Run from repo root unless noted.
 
 1. **dev + /healthz (Verify 1).**
+
    ```bash
    pnpm --filter @platform/template-api dev &     # or: turbo run dev --filter=*template-api
    curl -s localhost:8000/healthz
    ```
+
    Expected: `{"status":"ok"}` (HTTP 200), response carries an `X-Request-Id` header.
 
 2. **Items CRUD + paging (Verify 2).** With a valid bearer token — either a hand-minted HS256
    token exercising the fallback branch (no live Supabase stack needed; the real ES256/JWKS
    local path is wired in Phase 6), or via the test suite:
+
    ```bash
    TOKEN=...   # a hand-minted HS256 token signed with SUPABASE_JWT_SECRET, aud=authenticated
                #   (fallback branch; the live local CLI issues ES256 → JWKS, exercised in Phase 6)
@@ -2017,31 +2068,38 @@ Each maps to a DoD / PHILOSOPHY.md Verify item. Run from repo root unless noted.
         -H 'content-type: application/json' -d '{"title":"a","description":null}'
    curl -s "localhost:8000/v1/items?limit=20" -H "Authorization: Bearer $TOKEN"
    ```
+
    Expected: POST → 201 with a DTO body; GET → `{"items":[...],"next_cursor":"..."|null}`;
    `?cursor=<next_cursor>` returns the next page with no overlap. (Covered by
    `test_list_is_cursor_paginated`.)
 
 3. **problem+json errors (Verify 3).**
+
    ```bash
    curl -s -i localhost:8000/v1/items/00000000-0000-0000-0000-0000000000ff \
         -H "Authorization: Bearer $TOKEN"
    ```
+
    Expected: `HTTP/1.1 404`, `content-type: application/problem+json`, body with
    `type`/`title`/`status`/`instance`.
 
 4. **429 on rate limit (Verify 4).**
+
    ```bash
    for i in $(seq 1 120); do curl -s -o /dev/null -w "%{http_code}\n" localhost:8000/v1/hello; done | sort | uniq -c
    ```
+
    Expected: a run of `200` then `429` once the per-IP `100/minute` default is exceeded; the
    429 body is `application/problem+json`.
 
 5. **CORS preflight from web origin (Verify 5).**
+
    ```bash
    curl -s -i -X OPTIONS localhost:8000/v1/items \
         -H "Origin: http://localhost:8081" \
         -H "Access-Control-Request-Method: GET"
    ```
+
    Expected: `200/204` with `Access-Control-Allow-Origin: http://localhost:8081` (the web
    origin is in `CORS_ORIGINS`). An origin NOT in the allowlist gets no allow header.
 
@@ -2050,23 +2108,29 @@ Each maps to a DoD / PHILOSOPHY.md Verify item. Run from repo root unless noted.
    DTO fields.
 
 7. **pyright clean strict (Verify 7).**
+
    ```bash
    pnpm --filter @platform/template-api lint     # ruff check + ruff format --check + pyright
    ```
+
    Expected: `0 errors, 0 warnings` from pyright (strict mode).
 
 8. **seed.py populates DB (Verify 8).**
+
    ```bash
    pnpm --filter @platform/template-api migrate   # alembic upgrade head (5432)
    pnpm --filter @platform/template-api seed
    ```
+
    Expected: `seeded 25 items`; querying `/v1/items` for the seed owner returns them.
 
 9. **turbo run test lint (Verify 9).**
+
    ```bash
    TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/postgres \
      turbo run test lint --filter=*template-api
    ```
+
    Expected: green, against a real Postgres (service container in CI).
 
 10. **docker build (Verify 10).**
@@ -2074,7 +2138,7 @@ Each maps to a DoD / PHILOSOPHY.md Verify item. Run from repo root unless noted.
     cd products/_template/api && docker build -t template-api:dev .
     ```
     Expected: image builds through both stages; `docker run -e DATABASE_URL=... -p 8000:8000
-    template-api:dev` then serves `/healthz`.
+template-api:dev` then serves `/healthz`.
 
 ---
 
@@ -2118,7 +2182,7 @@ Suggested commit sequence on a feature branch (one phase = one or a few logical 
   (`BYPASSRLS`, bypasses even `FORCE RLS`); ⚠️ REVIEW the exact credentials when the project
   exists, and add a read-after-deny-all integration test (Step 20).
 - **⚠️ export_openapi output path depth** (`parents[3]`) — verify against the final layout;
-  Phase 4 reads `../api/openapi.json` (Step 17). *(Out of domain for this review.)*
+  Phase 4 reads `../api/openapi.json` (Step 17). _(Out of domain for this review.)_
 - **Test schema build — RESOLVED** — keep `SQLModel.metadata.create_all` for the test DB;
   add ONE test running `alembic upgrade head` + asserting `relrowsecurity` is true for
   `item`/`push_token`, since `create_all` skips the raw RLS statements (Step 23).

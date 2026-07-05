@@ -15,6 +15,7 @@ This is the concrete expansion of the PHILOSOPHY.md **Phase 4** row:
 > hook (cache-persisted).
 
 **Verify (restated from PHILOSOPHY.md):**
+
 1. `turbo run build --filter=*template-app` shows **openapi → client → app** order.
 2. A model change (edit a Pydantic response DTO) **regenerates types**.
 3. Web **renders paginated API data**.
@@ -93,9 +94,11 @@ marked **⚠️ OPEN / TO CONFIRM**.
 ### Step 1 — Confirm `export_openapi.py` emits a stable, server-free `openapi.json`
 
 **Files**
+
 - `products/_template/api/src/template_api/export_openapi.py`
 
 **Contents**
+
 ```python
 """Dump the FastAPI OpenAPI document to a stable JSON file (no server needed).
 
@@ -131,6 +134,7 @@ if __name__ == "__main__":
 ```
 
 **Commands**
+
 ```bash
 # From the api workspace; uv run resolves the project venv without a live server.
 cd products/_template/api && uv run python -m template_api.export_openapi
@@ -149,10 +153,12 @@ on. Deriving `OUTPUT` from `__file__` keeps it correct after the generator renam
 ### Step 2 — Add the `openapi` script to the api workspace `package.json`
 
 **Files**
+
 - `products/_template/api/package.json`
 
 **Contents** (the `api/` package.json is "only a script shim so Turborepo can orchestrate
 `uv run` tasks" — Package management model table)
+
 ```json
 {
   "name": "@platform/template-api",
@@ -169,6 +175,7 @@ on. Deriving `OUTPUT` from `__file__` keeps it correct after the generator renam
 ```
 
 **Commands**
+
 ```bash
 pnpm --filter @platform/template-api run openapi
 # equivalently, through the task graph:
@@ -187,9 +194,11 @@ Port `8000` here is the template's `portIndex=0` value; the generator rewrites i
 ### Step 3 — Create the `@platform/template-api-client` workspace `package.json`
 
 **Files**
+
 - `products/_template/api-client/package.json`
 
 **Contents**
+
 ```json
 {
   "name": "@platform/template-api-client",
@@ -220,8 +229,8 @@ Port `8000` here is the template's `portIndex=0` value; the generator rewrites i
 
 > **Do NOT add `@hey-api/client-fetch` to `dependencies`.** Since openapi-ts **0.73.0** the
 > Fetch client is **bundled inside `@hey-api/openapi-ts`**; the standalone
-> `@hey-api/client-fetch` npm package is **deprecated** (its npm message: *"Starting with
-> v0.73.0, this package is bundled directly inside @hey-api/openapi-ts"*). The string
+> `@hey-api/client-fetch` npm package is **deprecated** (its npm message: _"Starting with
+> v0.73.0, this package is bundled directly inside @hey-api/openapi-ts"_). The string
 > `@hey-api/client-fetch` survives **only as a plugin identifier** in the
 > `openapi-ts.config.ts` `plugins` array (Step 4) — that usage is correct; installing it as
 > a dependency pulls a deprecated, redundant package. `@hey-api/openapi-ts` is the **only**
@@ -235,6 +244,7 @@ Port `8000` here is the template's `portIndex=0` value; the generator rewrites i
 > version the app uses. ⚠️ REVIEW: confirm the catalog exists in Phase 1 before relying on it.
 
 **Commands**
+
 ```bash
 mkdir -p products/_template/api-client/src
 # package.json written, then:
@@ -256,9 +266,11 @@ point at `src/index.ts`, no separate build artifact — same no-build pattern as
 ### Step 4 — Author `openapi-ts.config.ts`
 
 **Files**
+
 - `products/_template/api-client/openapi-ts.config.ts`
 
 **Contents**
+
 ```ts
 import { defineConfig } from "@hey-api/openapi-ts";
 
@@ -308,6 +320,7 @@ export default defineConfig({
 > response field), so confirm both against Phase 3's `schemas/` and route.
 
 **Commands**
+
 ```bash
 cd products/_template/api-client && pnpm run generate   # runs `openapi-ts`
 git add products/_template/api-client/src                # commit generated output
@@ -325,9 +338,11 @@ Prettier config so the drift check only flags real contract changes.
 ### Step 5 — Add the package-level `api-client/turbo.json`
 
 **Files**
+
 - `products/_template/api-client/turbo.json`
 
 **Contents**
+
 ```json
 {
   "extends": ["//"],
@@ -362,10 +377,12 @@ generation; `outputs: ["src/**"]` is the generated client (caching keys off it).
 ### Step 6 — Wire the root `turbo.json` tasks
 
 **Files**
+
 - `turbo.json` (repo root)
 
 **Contents** (the Phase-4-relevant tasks; merge into the existing pipeline — do **not**
 drop tasks added in earlier phases)
+
 ```json
 {
   "$schema": "https://turborepo.com/schema.json",
@@ -403,6 +420,7 @@ drop tasks added in earlier phases)
 > location the team standardizes on.
 
 **Commands**
+
 ```bash
 pnpm turbo run build --filter=@platform/template-app --dry=json | less   # inspect order
 ```
@@ -422,9 +440,11 @@ edges, no hand-wired topology.
 ### Step 7 — Make the app depend on the generated client
 
 **Files**
+
 - `products/_template/app/package.json`
 
 **Contents** (add the dependency; existing fields elided)
+
 ```json
 {
   "name": "@platform/template-app",
@@ -438,6 +458,7 @@ edges, no hand-wired topology.
 ```
 
 **Commands**
+
 ```bash
 pnpm install   # relinks; the workspace:* edge now feeds the turbo graph
 ```
@@ -455,12 +476,14 @@ this one. It also makes the generated hooks importable from app code as
 ### Step 8 — Wire the client baseUrl in `core/api.ts`
 
 **Files**
+
 - `packages/core/src/api.ts`
 - `packages/core/src/env.ts` (already present from Phase 2 — referenced, not rewritten)
 - `packages/core/src/index.ts` (export `configureApiClient`)
 
 **Contents** (`packages/core/src/api.ts` — Phase 4 scope: baseUrl from
 `EXPO_PUBLIC_API_URL`; the auth-header and `X-Request-Id` injection land in Phases 6/8)
+
 ```ts
 // PHILOSOPHY.md (Config essentials → Typegen): "App sets client baseUrl from EXPO_PUBLIC_API_URL
 // at startup." packages/core (api.ts) is the client wrapper: baseUrl, auth header,
@@ -503,6 +526,7 @@ export function configureApiClient(): void {
 > the seam exists; it is out of Phase 4 scope.
 
 **Commands**
+
 ```bash
 # EXPO_PUBLIC_API_URL is read from the committed per-env file (Phase 2/3), e.g.
 # products/_template/app/.env.development -> EXPO_PUBLIC_API_URL=http://localhost:8000
@@ -522,10 +546,12 @@ lives in `app/.env.development`, written by Phase 2/3 and re-ported by the gener
 ### Step 9 — Build the `features/home` list screen
 
 **Files**
+
 - `products/_template/app/features/home/home-screen.tsx`
 - (optional) `products/_template/app/features/home/components/item-row.tsx`
 
 **Contents** (`home-screen.tsx`)
+
 ```tsx
 // PHILOSOPHY.md (features/home tree): "list screen via generated API hooks".
 // Renders cursor-paginated /v1/items through the generated useInfiniteQuery hook.
@@ -561,7 +587,7 @@ export function HomeScreen() {
 
   if (isPending) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
+      <View className="bg-background flex-1 items-center justify-center">
         <ActivityIndicator />
       </View>
     );
@@ -569,7 +595,7 @@ export function HomeScreen() {
 
   if (isError) {
     return (
-      <View className="flex-1 items-center justify-center gap-2 bg-background p-6">
+      <View className="bg-background flex-1 items-center justify-center gap-2 p-6">
         {/* RFC 9457 problem+json is typed; surface its title. */}
         <Text className="text-destructive">Couldn’t load items</Text>
         <Text className="text-muted-foreground">{String(error)}</Text>
@@ -585,7 +611,7 @@ export function HomeScreen() {
 
   if (items.length === 0) {
     return (
-      <View className="flex-1 items-center justify-center bg-background p-6">
+      <View className="bg-background flex-1 items-center justify-center p-6">
         <Text className="text-muted-foreground">No items yet</Text>
       </View>
     );
@@ -597,7 +623,7 @@ export function HomeScreen() {
       keyExtractor={(item) => item.id}
       contentContainerClassName="bg-background"
       renderItem={({ item }) => (
-        <View className="border-b border-border p-4">
+        <View className="border-border border-b p-4">
           <Text className="text-foreground">{item.title}</Text>
         </View>
       )}
@@ -605,12 +631,8 @@ export function HomeScreen() {
       onEndReached={() => {
         if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
       }}
-      ListFooterComponent={
-        isFetchingNextPage ? <ActivityIndicator className="py-4" /> : null
-      }
-      refreshControl={
-        <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
-      }
+      ListFooterComponent={isFetchingNextPage ? <ActivityIndicator className="py-4" /> : null}
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
     />
   );
 }
@@ -620,6 +642,7 @@ export function HomeScreen() {
 ```
 
 > **Resolved & remaining flags:**
+>
 > - **Generated hook name — confirmed.** `listItemsInfiniteOptions` is correct, verified
 >   against the plugin's default `{{name}}InfiniteOptions` camelCase template. The only thing
 >   to verify is the **operationId** (`list_items` → `listItems`) in Phase 3, not the plugin
@@ -638,6 +661,7 @@ export function HomeScreen() {
 >   hard-code names).
 
 **Commands**
+
 ```bash
 mkdir -p products/_template/app/features/home
 pnpm --filter @platform/template-app run typecheck
@@ -659,9 +683,11 @@ tokens-only invariant — never hex.
 ### Step 10 — Make the route file a thin one-liner
 
 **Files**
+
 - `products/_template/app/app/(tabs)/index.tsx`
 
 **Contents**
+
 ```tsx
 // Expo Router route files stay thin one-liners (Decision Sheet: "route files stay thin
 // one-liners"); all logic lives in features/home.
@@ -685,10 +711,12 @@ into `packages/*` later without dragging routing concerns along.
   **contract** (a Pydantic model/route in the api) and regenerate.
 
 - **Drift check is the contract guard.** PHILOSOPHY.md's exact command:
+
   ```bash
   turbo run openapi build --filter=*api-client* && \
     git diff --exit-code products/*/api-client products/*/api/openapi.json
   ```
+
   Run in CI on every PR (Contract testing row). If a contributor changed a DTO but didn't
   regenerate, the regen produces a diff and `git diff --exit-code` returns non-zero →
   CI red. Stale `openapi.json` fails the check (Phase 8 verify echoes this).
@@ -735,6 +763,7 @@ into `packages/*` later without dragging routing concerns along.
 Run from repo root unless noted. Expected results are stated per command.
 
 **1. Task ordering — `turbo run build --filter=*template-app` shows openapi → client → app**
+
 ```bash
 # Inspect the planned graph (no execution):
 pnpm turbo run build --filter=@platform/template-app --dry=json \
@@ -742,12 +771,14 @@ pnpm turbo run build --filter=@platform/template-app --dry=json \
 # Then run for real:
 pnpm turbo run build --filter=@platform/template-app
 ```
+
 Expected: the dry run shows `@platform/template-api#openapi` as a dependency (transitively)
 of `@platform/template-api-client#build`, which is a dependency of
 `@platform/template-app#build`. The real run prints tasks in the order **openapi →
 api-client build → app build** (api-client build never starts before openapi finishes).
 
 **2. Model change regenerates types**
+
 ```bash
 # Edit a Pydantic response DTO, e.g. add a field to the Item read schema:
 #   products/_template/api/src/template_api/schemas/items.py
@@ -756,12 +787,14 @@ pnpm turbo run openapi build --filter=@platform/template-api-client
 git status --porcelain products/_template/api/openapi.json products/_template/api-client/src
 git diff products/_template/api-client/src
 ```
+
 Expected: `openapi.json` changes (new field in the schema), and the generated
 `api-client/src` types change (the new field appears on the generated `Item`/`ItemRead`
 type). A diff is present. Committing both keeps the contract green; **not** regenerating
 would leave a diff that fails the CI drift check.
 
 **3. Web renders paginated API data**
+
 ```bash
 # Terminal A — run the api (Phase 3), Supabase local up if required:
 pnpm --filter @platform/template-api run dev      # http://localhost:8000
@@ -770,15 +803,18 @@ cd products/_template/api && uv run python -m template_api.seed && cd -
 # Terminal B — run the app on web:
 pnpm --filter @platform/template-app exec expo start --web   # http://localhost:8081
 ```
+
 Expected: the home tab shows the items list fetched from `/v1/items`. Scrolling to the
 bottom triggers `fetchNextPage` and loads the next cursor page (footer spinner, then more
 rows). An empty DB shows the "No items yet" empty state; a stopped api shows the error
 state with a retry.
 
 **4. Reload shows cached data instantly**
+
 ```bash
 # With the web app showing items, hard-reload the browser tab (Cmd/Ctrl-R).
 ```
+
 Expected: the list paints **immediately** from the persisted cache (no loading spinner
 flash) and then revalidates in the background. This proves the `packages/core` query
 persister (localStorage on web / AsyncStorage on native) is in effect for the generated
@@ -786,10 +822,12 @@ hook's query keys. **⚠️ OPEN / TO CONFIRM:** the exact `maxAge`/`gcTime` for
 set in Phase 2's `query.ts`, not here.
 
 **Bonus — CI drift check (Contract testing row), run locally:**
+
 ```bash
 pnpm turbo run openapi build --filter=*api-client* && \
   git diff --exit-code products/*/api-client products/*/api/openapi.json
 ```
+
 Expected: exit code 0 (no diff) when the committed client matches the contract; non-zero
 if anything is stale.
 

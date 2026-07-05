@@ -16,6 +16,7 @@ in `e2e-nightly.yml`, plus one local Maestro flow); and complete the **docs / ag
 surface** (README + CLAUDE.md + `.claude/commands/` at root, `packages/ui`, and product).
 
 **Verify (restated from the Phase 8 row):**
+
 > push branch → CI green; touch one product → other is cache-hit; stale `openapi.json`
 > fails drift check; items list refreshes across two open clients after a mutation; API
 > log lines carry the `request_id`; `e2e-nightly.yml` green via `workflow_dispatch` (E2E +
@@ -57,7 +58,7 @@ Phase 8 is the capstone — it assumes **Phases 1–7 are complete** and both pr
    login/signup, protected `/v1/me`, `core/storage.ts` + avatar upload.
 7. **Phase 7** — generator + stamped **`demo`** product (portIndex 1). Both products build
    under `--affected`; `pnpm bootstrap` runs both local stacks; `git grep -iw template
-   products/demo` is empty.
+products/demo` is empty.
 
 This guide **adds files** to `_template` (token-rewritten into `demo` by re-running the
 generator, or by the patterns being copied forward); it does **not** re-stamp `demo`.
@@ -109,21 +110,23 @@ from an earlier phase the step says so.
 ### (a) Observability — request_id, structlog JSON, Sentry both sides, X-Request-Id
 
 **Files**
-- `products/_template/api/src/template_api/middleware.py` *(extend — created as a stub in
-  Phase 3)*
-- `products/_template/api/src/template_api/logging.py` *(new — structlog config)*
-- `products/_template/api/src/template_api/sentry.py` *(new — server Sentry init)*
-- `products/_template/api/src/template_api/main.py` *(extend — register middleware + init)*
-- `packages/core/src/api.ts` *(extend — X-Request-Id injection)*
-- `packages/core/src/sentry.ts` *(extend — tag request id)*
-- `products/_template/app/app.config.ts` *(extend — add the `@sentry/react-native/expo`
-  config plugin; cross-reference Phase 2 step (h))*
-- `products/_template/app/metro.config.ts` *(extend — compose `getSentryExpoConfig` with
-  `withNativeWind`; created in Phase 2)*
+
+- `products/_template/api/src/template_api/middleware.py` _(extend — created as a stub in
+  Phase 3)_
+- `products/_template/api/src/template_api/logging.py` _(new — structlog config)_
+- `products/_template/api/src/template_api/sentry.py` _(new — server Sentry init)_
+- `products/_template/api/src/template_api/main.py` _(extend — register middleware + init)_
+- `packages/core/src/api.ts` _(extend — X-Request-Id injection)_
+- `packages/core/src/sentry.ts` _(extend — tag request id)_
+- `products/_template/app/app.config.ts` _(extend — add the `@sentry/react-native/expo`
+  config plugin; cross-reference Phase 2 step (h))_
+- `products/_template/app/metro.config.ts` _(extend — compose `getSentryExpoConfig` with
+  `withNativeWind`; created in Phase 2)_
 
 **Contents**
 
 `api/.../logging.py` — structlog rendering JSON, sharing stdlib's stream:
+
 ```python
 import logging
 import sys
@@ -150,6 +153,7 @@ log = structlog.get_logger()
 ```
 
 `api/.../middleware.py` — request id + structlog binding + access log:
+
 ```python
 import time
 import uuid
@@ -194,6 +198,7 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
 ```
 
 `api/.../sentry.py`:
+
 ```python
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
@@ -215,6 +220,7 @@ def init_sentry() -> None:
 
 `api/.../main.py` (excerpt — order matters, request-id middleware **outermost** so it wraps
 errors too):
+
 ```python
 configure_logging(level=settings.LOG_LEVEL)
 init_sentry()
@@ -225,6 +231,7 @@ app.add_middleware(RequestIdMiddleware)
 ```
 
 `packages/core/src/api.ts` (extend the hey-api client wrapper — inject id + auth header):
+
 ```ts
 import { client } from "@platform/<product>-api-client"; // hey-api client-fetch instance
 import { captureRequestId } from "./sentry";
@@ -241,7 +248,7 @@ export function configureApiClient(opts: { baseUrl: string; getToken: () => stri
   client.interceptors.request.use((request) => {
     const rid = newRequestId();
     request.headers.set("X-Request-Id", rid);
-    captureRequestId(rid);              // tag the client-side Sentry scope
+    captureRequestId(rid); // tag the client-side Sentry scope
     const token = opts.getToken();
     if (token) request.headers.set("Authorization", `Bearer ${token}`);
     return request;
@@ -250,6 +257,7 @@ export function configureApiClient(opts: { baseUrl: string; getToken: () => stri
 ```
 
 `packages/core/src/sentry.ts` (extend — note `@sentry/react-native`, NOT `sentry-expo`):
+
 ```ts
 import * as Sentry from "@sentry/react-native";
 import { env } from "./env";
@@ -258,7 +266,7 @@ export function initSentry() {
   if (!env.EXPO_PUBLIC_SENTRY_DSN) return; // no-op without DSN
   Sentry.init({
     dsn: env.EXPO_PUBLIC_SENTRY_DSN,
-    environment: env.EXPO_PUBLIC_ENV,      // staging | production
+    environment: env.EXPO_PUBLIC_ENV, // staging | production
     tracesSampleRate: 0.1,
   });
 }
@@ -267,6 +275,7 @@ export function captureRequestId(requestId: string) {
   Sentry.setTag("request_id", requestId); // matches the API tag → traceable
 }
 ```
+
 > `Sentry.init()` alone is NOT enough for production source maps / native symbolication — it
 > ships the JS-only runtime half. For Expo you ALSO need the build-time half: the config
 > plugin (below) + Metro wiring (below). Pin `@sentry/react-native` to a release that lists
@@ -275,6 +284,7 @@ export function captureRequestId(requestId: string) {
 `app/app.config.ts` (extend — add the Expo config plugin; cross-reference the Phase 2
 `app.config.ts` that already sets `scheme`, bundle ids, `extra.eas.projectId`, and the
 `updates.url` + `runtimeVersion` OTA policy):
+
 ```ts
 // inside the Expo config `plugins` array:
 plugins: [
@@ -293,24 +303,24 @@ plugins: [
 
 `app/metro.config.ts` (extend — compose Sentry's Metro config with NativeWind; created in
 Phase 2 with `getDefaultConfig` + `withNativeWind`):
+
 ```ts
 const { getSentryExpoConfig } = require("@sentry/react-native/metro");
 const { withNativeWind } = require("nativewind/metro");
 
 // Sentry FIRST (replaces getDefaultConfig), THEN wrap with NativeWind.
 const config = getSentryExpoConfig(__dirname);
-config.watchFolders = [workspaceRoot];           // ../../.. — preserve Phase 2 monorepo wiring
-config.resolver.nodeModulesPaths = [
-  projectRoot + "/node_modules",
-  workspaceRoot + "/node_modules",
-];
+config.watchFolders = [workspaceRoot]; // ../../.. — preserve Phase 2 monorepo wiring
+config.resolver.nodeModulesPaths = [projectRoot + "/node_modules", workspaceRoot + "/node_modules"];
 module.exports = withNativeWind(config, { input: "./global.css" });
 ```
+
 > ⚠️ REVIEW: Phase 2's `metro.config.js` uses `getDefaultConfig`; here it is swapped for
 > `getSentryExpoConfig(__dirname)` (which internally calls `getDefaultConfig` and adds the
 > Sentry serializer). Keep the existing `watchFolders`/`nodeModulesPaths` monorepo wiring.
 
 **Commands**
+
 ```bash
 cd products/_template/api && uv add structlog "sentry-sdk[fastapi]" && cd -
 pnpm --filter @platform/core add @sentry/react-native
@@ -334,17 +344,19 @@ the request.
 ### (b) Push loop — register → /v1/push-tokens → send_push()
 
 **Files**
-- `packages/core/src/notifications.ts` *(extend — created stub in Phase 2/6 tree)*
-- `products/_template/api/src/template_api/models/push_token.py` *(new)*
-- `products/_template/api/src/template_api/schemas/push.py` *(new — DTOs)*
-- `products/_template/api/src/template_api/services/push.py` *(new — `PushService`)*
-- `products/_template/api/src/template_api/routers/push.py` *(new — `/v1/push-tokens`)*
-- `products/_template/api/alembic/versions/<rev>_push_tokens.py` *(new migration — RLS deny-all)*
-- `products/_template/api/tests/test_push.py` *(new)*
+
+- `packages/core/src/notifications.ts` _(extend — created stub in Phase 2/6 tree)_
+- `products/_template/api/src/template_api/models/push_token.py` _(new)_
+- `products/_template/api/src/template_api/schemas/push.py` _(new — DTOs)_
+- `products/_template/api/src/template_api/services/push.py` _(new — `PushService`)_
+- `products/_template/api/src/template_api/routers/push.py` _(new — `/v1/push-tokens`)_
+- `products/_template/api/alembic/versions/<rev>_push_tokens.py` _(new migration — RLS deny-all)_
+- `products/_template/api/tests/test_push.py` _(new)_
 
 **Contents**
 
 `core/notifications.ts`:
+
 ```ts
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
@@ -363,6 +375,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
 ```
 
 `api/.../models/push_token.py` (SQLModel, UUIDv7 base from Phase 3):
+
 ```python
 from sqlmodel import Field, UniqueConstraint
 from .base import UUIDBase   # UUIDv7 PK base from Phase 3
@@ -376,6 +389,7 @@ class PushToken(UUIDBase, table=True):
 ```
 
 `api/.../schemas/push.py`:
+
 ```python
 from pydantic import BaseModel, ConfigDict
 
@@ -391,6 +405,7 @@ class PushTokenOut(BaseModel):
 ```
 
 `api/.../services/push.py` (service holds the session; httpx for the external call):
+
 ```python
 import httpx
 import structlog
@@ -431,11 +446,13 @@ class PushService(BaseService):
             if http is None:
                 await client.aclose()
 ```
+
 > `http` is injectable so `test_push.py` passes an `httpx.AsyncClient` backed by
 > `httpx.MockTransport` (mocking conventions: API unit tests mock external HTTP via httpx
 > mock transport).
 
 `api/.../routers/push.py` (thin; depends on the service + `CurrentUser`):
+
 ```python
 from fastapi import APIRouter, Depends
 from ..auth import CurrentUser
@@ -452,6 +469,7 @@ def register_token(body: PushTokenIn, user: CurrentUser,
 ```
 
 `tests/test_push.py` (excerpt):
+
 ```python
 import httpx, pytest
 from template_api.services.push import PushService
@@ -470,6 +488,7 @@ async def test_send_push_mocks_expo(session, user):
 ```
 
 **Commands**
+
 ```bash
 cd products/_template/api && uv add httpx && uv run alembic revision --autogenerate -m "push_tokens" && cd -
 pnpm --filter @platform/<product>-app add expo-notifications expo-device
@@ -489,15 +508,17 @@ it). Expo Go cannot receive a token — registration only works in a dev build (
 ### (c) Realtime broadcast-only — API broadcast + core subscribe-and-invalidate
 
 **Files**
-- `products/_template/api/src/template_api/services/realtime.py` *(new — broadcast helper)*
-- `products/_template/api/src/template_api/services/items.py` *(extend — broadcast on mutation)*
-- `packages/core/src/realtime.ts` *(extend — subscribe-and-invalidate)*
-- `products/_template/app/features/home/*` *(extend — wire the subscription)*
+
+- `products/_template/api/src/template_api/services/realtime.py` _(new — broadcast helper)_
+- `products/_template/api/src/template_api/services/items.py` _(extend — broadcast on mutation)_
+- `packages/core/src/realtime.ts` _(extend — subscribe-and-invalidate)_
+- `products/_template/app/features/home/*` _(extend — wire the subscription)_
 
 **Contents**
 
 `api/.../services/realtime.py` — broadcast via Supabase Realtime's HTTP broadcast endpoint
 using the **service role** key (tables stay RLS-locked; we never open Postgres-Changes):
+
 ```python
 import httpx
 import structlog
@@ -527,6 +548,7 @@ async def broadcast_invalidate(resource: str, *, http: httpx.AsyncClient | None 
         if http is None:
             await client.aclose()
 ```
+
 > ⚠️ REVIEW: the broadcast-only architecture and the client side
 > (`supabase.channel(...).on("broadcast", {event}, cb).subscribe()`) are confirmed current
 > supabase-js. The **server-side HTTP broadcast path** `POST /realtime/v1/api/broadcast` with
@@ -536,6 +558,7 @@ async def broadcast_invalidate(resource: str, *, http: httpx.AsyncClient | None 
 > against the live project when it exists. The architecture does not change either way.
 
 `api/.../services/items.py` (extend the create/update/delete paths — broadcast after commit):
+
 ```python
 from .realtime import broadcast_invalidate
 
@@ -547,6 +570,7 @@ class ItemService(BaseService):
         return row
     # update() / delete() call broadcast_invalidate("items") after their commit too
 ```
+
 > Router methods that call these become `async def` and `await` the service — the broadcast
 > is fire-and-don't-block-correctness; failures are logged, not fatal (catch in the service
 > or let it raise per product policy). ⚠️ OPEN / TO CONFIRM: PHILOSOPHY.md does not pin whether a
@@ -554,6 +578,7 @@ class ItemService(BaseService):
 > outage never breaks writes; confirm per product.
 
 `packages/core/src/realtime.ts` (the shipped subscribe-and-invalidate helper):
+
 ```ts
 import type { QueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -562,7 +587,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export function subscribeAndInvalidate(
   supabase: SupabaseClient,
   queryClient: QueryClient,
-  opts: { channel: string },           // e.g. "<product>:realtime"
+  opts: { channel: string }, // e.g. "<product>:realtime"
 ) {
   const channel = supabase
     .channel(opts.channel)
@@ -578,6 +603,7 @@ export function subscribeAndInvalidate(
 ```
 
 `app/features/home/*` (wire it — call inside the home screen's effect):
+
 ```ts
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -591,11 +617,13 @@ export function useItemsRealtime() {
   );
 }
 ```
+
 > The generated items query key must be `["items", ...]` (hey-api TanStack plugin key) so
 > `invalidateQueries({ queryKey: ["items"] })` matches. Confirm the generated key prefix in
 > `api-client/`.
 
 **Commands**
+
 ```bash
 turbo run typecheck --filter=@platform/core --filter=*template-api
 turbo run test --filter=*template-api      # service tests can mock broadcast httpx transport
@@ -612,13 +640,15 @@ helper. No Postgres-Changes subscriptions, no RLS holes, schema stays private." 
 ### (d) Scheduled job — prune stale push tokens via a Fly machine
 
 **Files**
-- `products/_template/api/src/template_api/tasks.py` *(extend — stub in Phase 3 tree)*
-- `products/_template/api/fly.staging.toml` / `fly.production.toml` *(reference only — the
-  scheduled machine is created via CLI, documented here)*
+
+- `products/_template/api/src/template_api/tasks.py` _(extend — stub in Phase 3 tree)_
+- `products/_template/api/fly.staging.toml` / `fly.production.toml` _(reference only — the
+  scheduled machine is created via CLI, documented here)_
 
 **Contents**
 
 `api/.../tasks.py` — a tiny CLI module (no queue infra; one example task):
+
 ```python
 """Scheduled jobs run as one-off Fly machines: `python -m template_api.tasks <task>`."""
 import sys
@@ -655,11 +685,13 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 ```
+
 > Requires an `updated_at` column on `PushToken` (add to the UUIDv7 base or the model). ⚠️
 > OPEN / TO CONFIRM: PHILOSOPHY.md says "prune stale push tokens" but does not define "stale" —
 > 90 days by last-update is a documented default; confirm per product.
 
 **Commands** (run against the staging Fly app — `<org>` placeholder):
+
 ```bash
 # one-off run (the Verify step):
 fly machine run \
@@ -674,6 +706,7 @@ fly machine run \
   registry.fly.io/example-template-api-stg:latest \
   python -m template_api.tasks prune-push-tokens
 ```
+
 > `fly machine run --schedule` takes **interval keywords ONLY** —
 > `hourly` / `daily` / `weekly` / `monthly` (NOT cron expressions) — and runs are **"fuzzy"**
 > (approximate, not guaranteed at an exact minute). `daily` is fine for prune-stale-tokens. If
@@ -692,16 +725,18 @@ cron needs Cron Manager / Supercronic.
 ### (e) E2E harness — Playwright web E2E + Storybook visual regression + Maestro
 
 **Files**
-- `products/_template/app/playwright.config.ts` *(new)*
-- `products/_template/app/e2e/items.spec.ts` *(new — signup → login → CRUD → realtime)*
-- `products/_template/app/e2e/global-setup.ts` *(new — build dist, start API + supabase)*
-- `packages/ui/.storybook/visual-regression.spec.ts` *(new — VR over storybook-static)*
-- `packages/ui/playwright.config.ts` *(new — VR project)*
-- `products/_template/app/.maestro/login.yaml` *(new — local mobile flow)*
+
+- `products/_template/app/playwright.config.ts` _(new)_
+- `products/_template/app/e2e/items.spec.ts` _(new — signup → login → CRUD → realtime)_
+- `products/_template/app/e2e/global-setup.ts` _(new — build dist, start API + supabase)_
+- `packages/ui/.storybook/visual-regression.spec.ts` _(new — VR over storybook-static)_
+- `packages/ui/playwright.config.ts` _(new — VR project)_
+- `products/_template/app/.maestro/login.yaml` _(new — local mobile flow)_
 
 **Contents**
 
 `app/playwright.config.ts`:
+
 ```ts
 import { defineConfig, devices } from "@playwright/test";
 
@@ -711,7 +746,7 @@ export default defineConfig({
   timeout: 60_000,
   use: { baseURL: "http://localhost:8081", trace: "on-first-retry" },
   webServer: {
-    command: "npx serve dist -l 8081",   // exported SPA from `expo export --platform web`
+    command: "npx serve dist -l 8081", // exported SPA from `expo export --platform web`
     url: "http://localhost:8081",
     reuseExistingServer: !process.env.CI,
   },
@@ -720,6 +755,7 @@ export default defineConfig({
 ```
 
 `app/e2e/items.spec.ts` (skeleton — full-stack flow):
+
 ```ts
 import { test, expect } from "@playwright/test";
 
@@ -752,6 +788,7 @@ test("signup → login → items CRUD → realtime", async ({ browser }) => {
 ```
 
 `app/e2e/global-setup.ts` (skeleton — orchestrates the real stack):
+
 ```ts
 import { execSync } from "node:child_process";
 
@@ -759,12 +796,16 @@ export default async function globalSetup() {
   // 1. local Supabase (per-product offset ports from config.toml)
   execSync("pnpm --filter @platform/<product>-api supabase:start", { stdio: "inherit" });
   // 2. migrate + seed
-  execSync("cd products/_template/api && uv run alembic upgrade head && uv run python -m template_api.seed", { stdio: "inherit" });
+  execSync(
+    "cd products/_template/api && uv run alembic upgrade head && uv run python -m template_api.seed",
+    { stdio: "inherit" },
+  );
   // 3. start the API (background — see note)
   // 4. export the web bundle for `npx serve dist`
   execSync("turbo run export:web --filter=*template-app", { stdio: "inherit" });
 }
 ```
+
 > ⚠️ OPEN / TO CONFIRM: PHILOSOPHY.md says E2E runs "against exported dist + api + supabase local"
 > but does not pin the exact process-management glue (background API + teardown). The
 > skeleton above starts Supabase + exports dist; the API server should be launched as a
@@ -772,6 +813,7 @@ export default async function globalSetup() {
 > `globalTeardown`. Confirm the process orchestration when wiring CI.
 
 `packages/ui/.storybook/visual-regression.spec.ts` (iterate `storybook-static/index.json`):
+
 ```ts
 import fs from "node:fs";
 import { test, expect } from "@playwright/test";
@@ -793,6 +835,7 @@ for (const story of stories) {
 ```
 
 `packages/ui/playwright.config.ts` (VR project against the static build):
+
 ```ts
 import { defineConfig } from "@playwright/test";
 
@@ -810,6 +853,7 @@ export default defineConfig({
 ```
 
 `app/.maestro/login.yaml` (local-only mobile flow):
+
 ```yaml
 appId: com.example.template
 ---
@@ -823,6 +867,7 @@ appId: com.example.template
 ```
 
 **Commands**
+
 ```bash
 pnpm --filter @platform/<product>-app add -D @playwright/test serve
 pnpm --filter @platform/ui add -D @playwright/test http-server
@@ -853,6 +898,7 @@ VR visits `iframe.html?id=<story>&globals=theme:dark|light` per the Storybook co
 **Files** — `.github/workflows/ci.yml`
 
 **Contents**
+
 ```yaml
 name: CI
 on:
@@ -868,9 +914,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0          # turbo --affected needs history for the base diff
-      - uses: jdx/mise-action@v4  # installs Node 24 / pnpm 11 / Python 3.13 / uv from mise.toml
-                                   # v4 = Node-24 action runtime (Node 20 is EOL on GH runners); commit a mise.lock for locked installs
+          fetch-depth: 0 # turbo --affected needs history for the base diff
+      - uses:
+          jdx/mise-action@v4 # installs Node 24 / pnpm 11 / Python 3.13 / uv from mise.toml
+          # v4 = Node-24 action runtime (Node 20 is EOL on GH runners); commit a mise.lock for locked installs
       - run: pnpm install --frozen-lockfile
       - name: uv sync (affected APIs)
         run: |
@@ -888,7 +935,7 @@ jobs:
         run: |
           git diff --exit-code products/*/api-client products/*/api/openapi.json
     services:
-      postgres:                   # real Postgres for API integration tests
+      postgres: # real Postgres for API integration tests
         image: postgres:16
         env:
           POSTGRES_PASSWORD: postgres
@@ -897,6 +944,7 @@ jobs:
           --health-cmd "pg_isready" --health-interval 10s
           --health-timeout 5s --health-retries 5
 ```
+
 > RESOLVED (affected base ref): with `fetch-depth: 0`, Turborepo 2.x auto-detects the base
 > (PR base ref on `pull_request`, previous commit on `push` to `main`) — usually correct. To
 > be robust against squash-merge histories and shallow edge cases, the step above sets
@@ -917,12 +965,13 @@ check is the contract guard — a stale `openapi.json` or generated client makes
 **Files** — `.github/workflows/deploy-api.yml`
 
 **Contents**
+
 ```yaml
 name: Deploy API
 on:
   push:
-    branches: [main]                    # → staging
-    tags: ["*-api-v*"]                  # <product>-api-v* → production
+    branches: [main] # → staging
+    tags: ["*-api-v*"] # <product>-api-v* → production
 jobs:
   changes:
     runs-on: ubuntu-latest
@@ -949,7 +998,7 @@ jobs:
       - name: Deploy (staging on main, production on tag)
         working-directory: products/${{ matrix.product == 'template' && '_template' || matrix.product }}/api
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}   # PLACEHOLDER secret
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }} # PLACEHOLDER secret
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             flyctl deploy -c fly.production.toml --remote-only
@@ -957,6 +1006,7 @@ jobs:
             flyctl deploy -c fly.staging.toml --remote-only
           fi
 ```
+
 > Alembic runs as the Fly **release_command** (Key ruling #4) over the direct 5432
 > `DATABASE_MIGRATION_URL` — not a CI step. The `paths-filter` includes `packages/**` so a
 > shared-package change can trigger an API redeploy if its image embeds shared TS (typically
@@ -974,6 +1024,7 @@ matrix `flyctl deploy -c fly.staging.toml`; tags → prod." Trunk-based: `main` 
 **Files** — `.github/workflows/eas-build.yml`
 
 **Contents**
+
 ```yaml
 name: EAS Build
 on:
@@ -982,18 +1033,18 @@ on:
       product: { description: "product token (e.g. template, demo)", required: true }
       profile: { description: "EAS build profile", required: true, default: "production" }
   push:
-    tags: ["*-app-v*"]                  # <product>-app-v* → store build
+    tags: ["*-app-v*"] # <product>-app-v* → store build
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v4
-      - run: pnpm install --frozen-lockfile     # honours pnpm-workspace.yaml `nodeLinker: hoisted` (pnpm 11)
+      - run: pnpm install --frozen-lockfile # honours pnpm-workspace.yaml `nodeLinker: hoisted` (pnpm 11)
       - uses: expo/expo-github-action@v8
         with:
           eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}        # PLACEHOLDER secret
+          token: ${{ secrets.EXPO_TOKEN }} # PLACEHOLDER secret
       - name: Resolve product token (from tag on tag-push)
         id: tag
         if: startsWith(github.ref, 'refs/tags/')
@@ -1004,6 +1055,7 @@ jobs:
         working-directory: products/${{ (github.event.inputs.product || steps.tag.outputs.product) == 'template' && '_template' || (github.event.inputs.product || steps.tag.outputs.product) }}/app
         run: eas build --non-interactive --profile "${{ github.event.inputs.profile || 'production' }}"
 ```
+
 > **eas-cli workspace-detection workaround (gotcha):** the build relies on the committed
 > hoisted node-linker (`nodeLinker: hoisted` in `pnpm-workspace.yaml` — pnpm 11 relocates this
 > out of `.npmrc`; the `.npmrc` form is still honoured but the canonical home is the workspace
@@ -1026,6 +1078,7 @@ builds only for native changes."
 **Files** — `.github/workflows/eas-update.yml`
 
 **Contents**
+
 ```yaml
 name: EAS Update (OTA)
 on:
@@ -1067,10 +1120,11 @@ jobs:
             eas update --channel staging --non-interactive --auto
           fi
 ```
+
 > **OTA delivery prerequisite (cross-reference Phase 2 `app.config.ts`):** `eas update
-> --channel` only reaches INSTALLED builds if `app.config.ts` sets `updates.url`
+--channel` only reaches INSTALLED builds if `app.config.ts` sets `updates.url`
 > (`https://u.expo.dev/<projectId>`) AND a `runtimeVersion` policy (e.g. `{ policy:
-> "appVersion" }` or `"fingerprint"`). `extra.eas.projectId` alone does NOT deliver OTA —
+"appVersion" }` or `"fingerprint"`). `extra.eas.projectId` alone does NOT deliver OTA —
 > without `updates.url` + a matching `runtimeVersion`, this workflow publishes an update that
 > no installed build ever fetches. `eas update:configure` populates both.
 
@@ -1087,12 +1141,13 @@ EXACTLY `staging` / `production`. Mobile = OTA for JS-only changes; native chang
 **Files** — `.github/workflows/e2e-nightly.yml`
 
 **Contents**
+
 ```yaml
 name: E2E Nightly
 on:
   schedule:
-    - cron: "0 4 * * *"          # nightly 04:00 UTC
-  workflow_dispatch: {}          # on-demand (the Verify path)
+    - cron: "0 4 * * *" # nightly 04:00 UTC
+  workflow_dispatch: {} # on-demand (the Verify path)
 jobs:
   web-e2e:
     runs-on: ubuntu-latest
@@ -1122,6 +1177,7 @@ jobs:
       - name: Visual regression (each story × light/dark vs committed baselines)
         run: pnpm --filter @platform/ui exec playwright test
 ```
+
 > Two independent jobs so a VR diff doesn't mask an E2E failure (and vice versa). VR baselines
 > are committed; a diff fails the job and uploads the comparison (add an
 > `actions/upload-artifact` step for the Playwright report when wiring CI for real).
@@ -1136,11 +1192,12 @@ jobs:
 **Files** — `.github/workflows/electron-release.yml`
 
 **Contents**
+
 ```yaml
 name: Electron Release
 on:
   push:
-    tags: ["*-desktop-v*"]       # <product>-desktop-v* → 3-OS matrix
+    tags: ["*-desktop-v*"] # <product>-desktop-v* → 3-OS matrix
 jobs:
   release:
     strategy:
@@ -1161,9 +1218,9 @@ jobs:
         if: runner.os != 'macOS' || env.MAC_CSC_LINK != ''
         working-directory: products/${{ steps.tag.outputs.product == 'template' && '_template' || steps.tag.outputs.product }}/desktop
         env:
-          GH_TOKEN: ${{ secrets.DESKTOP_RELEASES_TOKEN }}   # PLACEHOLDER (token for <org>/<product>-desktop-releases)
-          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}          # PLACEHOLDER (empty until certs exist)
-          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}              # electron-builder reads CSC_LINK
+          GH_TOKEN: ${{ secrets.DESKTOP_RELEASES_TOKEN }} # PLACEHOLDER (token for <org>/<product>-desktop-releases)
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }} # PLACEHOLDER (empty until certs exist)
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }} # electron-builder reads CSC_LINK
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
         run: pnpm electron-builder --publish always
       - name: electron-builder — macOS build-only (no certs yet)
@@ -1171,8 +1228,9 @@ jobs:
         working-directory: products/${{ steps.tag.outputs.product == 'template' && '_template' || steps.tag.outputs.product }}/desktop
         env:
           MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
-        run: pnpm electron-builder --mac --publish never   # builds unsigned; does NOT publish the mac artifact
+        run: pnpm electron-builder --mac --publish never # builds unsigned; does NOT publish the mac artifact
 ```
+
 > The tag must match `desktop/package.json` `version`. RESOLVED (tag→product parse): the `tag`
 > step derives `<product>` from `${GITHUB_REF_NAME%%-desktop-v*}` (bash parameter expansion),
 > mapping the literal `template` token to the on-disk `_template` dir. RESOLVED (macOS
@@ -1213,15 +1271,18 @@ tag must match `desktop/package.json` version." Each product's desktop publishes
 **Files** — `README.md`, `CLAUDE.md`, `.claude/commands/{new-product,affected,typegen,release,add-component,sync-tokens,bootstrap-design-system}.md`
 
 **Contents** — root `CLAUDE.md` is the monorepo map + conventions + gotchas:
+
 ```markdown
 # CLAUDE.md — platform monorepo
 
 ## Map
+
 packages/{config,ui,core}; products/{_template,demo}/{app,desktop,api,api-client}.
 
 ## Conventions (locked)
+
 - Promote-on-2nd-use: compositions start product-local; move into packages/* on 2nd use.
-- Naming derives from the PRODUCT, never the repo: @platform/*, com.example.*,
+- Naming derives from the PRODUCT, never the repo: @platform/_, com.example._,
   infra <org>-<product>-<env> (org placeholder `example`).
 - Theming = semantic CSS variables. NEVER name a color in a component — tokens only.
 - Figma modes ARE brand modes; theme.ts is the export of a Figma brand mode.
@@ -1229,6 +1290,7 @@ packages/{config,ui,core}; products/{_template,demo}/{app,desktop,api,api-client
 - Errors are RFC 9457 problem+json; the generated api-client is NEVER hand-edited.
 
 ## Gotchas
+
 - pnpm hoisted linker (`nodeLinker: hoisted` in pnpm-workspace.yaml, pnpm 11); never set disableHierarchicalLookups.
 - Supabase pooler 6543 = transaction-mode only (psycopg3, NullPool, prepare_threshold=None);
   Alembic migrates over direct 5432 (DATABASE_MIGRATION_URL).
@@ -1236,9 +1298,11 @@ packages/{config,ui,core}; products/{_template,demo}/{app,desktop,api,api-client
 - X-Request-Id: client → API → logs; same id tags Sentry on both sides.
 
 ## Commands
+
 /new-product <name> · /affected · /typegen <product> · /release <product> <surface>
 /add-component <name> · /sync-tokens · /bootstrap-design-system
 ```
+
 Root `.claude/commands/` inventory (each a thin runnable recipe): `new-product.md`
 (`node scripts/new-product.mjs $ARG`), `affected.md` (`turbo run lint typecheck test build
 --affected`), `typegen.md` (`turbo run openapi build --filter=*$ARG-api-client`),
@@ -1255,13 +1319,14 @@ is the **primary way products are built**: `ptfm-product` → `ptfm-architect` �
 `ptfm-implement` → `ptfm-audit` → `ptfm-simplify` → `ptfm-commonify` → `ptfm-review` →
 `ptfm-test-ui`. Each takes the **product name as its first arg** and writes its artifact to that
 product's own docs tree: `products/<product>/docs/{product,architecture,plans,implementation,
-reviews}/` (created on first write — no pre-seeding; the *product* already exists via
+reviews}/` (created on first write — no pre-seeding; the _product_ already exists via
 `new-product`). These commands encode PHILOSOPHY.md's invariants as executable flows; they are
 already authored at `.claude/commands/ptfm-*.md` and **must NOT be deleted by the post-setup
 cleanup** (they are runtime, not build scaffolding).
 
 **Step — wire the agentic tooling (do this as part of the agent-surface build).** For the
 `ptfm-*` pipeline to work, the implementing agent must:
+
 1. Keep the `ptfm-*.md` command files in `.claude/commands/` (they ship with the repo).
 2. Document the **operational stack** (the MCP integrations the pipeline drives) in the root
    `README.md` and root `CLAUDE.md`: **Linear** (`mcp__Linear__*`), **Notion**
@@ -1270,7 +1335,7 @@ cleanup** (they are runtime, not build scaffolding).
    **GitHub** (`mcp__github__*`) — and that a developer must connect them in Claude Code before
    running the pipeline.
 3. State in each product's `CLAUDE.md` that the per-product `docs/{product,architecture,plans,
-   implementation,reviews}/` tree is where the pipeline's artifacts live, and that the pipeline
+implementation,reviews}/` tree is where the pipeline's artifacts live, and that the pipeline
    is the canonical build workflow for that product.
 
 Root `README.md` = human quickstart: `mise install && pnpm install && pnpm bootstrap`; where
@@ -1287,10 +1352,12 @@ cleanup" section here, that step is automated by Phase 9.
 
 **Contents** — `packages/ui/CLAUDE.md` is the design-system runbook (symmetric to the api
 CLAUDE.md). The **add-a-component recipe** (enforced verbatim):
+
 ```markdown
 # CLAUDE.md — @platform/ui design system
 
 ## add-a-component recipe (run via /add-component)
+
 1. cli-add (react-native-reusables CLI) OR author the component into
    src/components/ui/<name>.tsx — OWNED source (shadcn model), tokens-only.
 2. Pin @rn-primitives/* deps EXACT (pre-1.0).
@@ -1300,6 +1367,7 @@ CLAUDE.md). The **add-a-component recipe** (enforced verbatim):
 6. Commit the VR baseline (light + dark) — see e2e-nightly VR.
 
 ## Invariants
+
 - Tokens ONLY. NEVER name a color (no hex, no brand values) — use bg-primary etc.
 - Two-tier ownership: tier-1 owned primitives here; tier-2 compositions start
   product-local, promote here on 2nd use.
@@ -1307,13 +1375,16 @@ CLAUDE.md). The **add-a-component recipe** (enforced verbatim):
   (figma-tokens.mjs) — NEVER hand-edit generated theme values.
 
 ## Storybook
+
 pnpm --filter @platform/ui storybook — toolbar has light/dark + brand (template/demo).
 
 ## Figma
+
 Code Connect maps are authored as *.figma.tsx and published via the Code Connect CLI.
 See FIGMA.md for the designer-side library conventions. /bootstrap-design-system is the
 handover-day import (reconcile → tokens → components → verify).
 ```
+
 `packages/ui/FIGMA.md` (designer-facing — the single doc handed to design): Variables
 structure (`primitives` raw scale + `semantic` collection), **modes = light/dark × brand
 (template/demo)**, names-as-API, component anatomy must match the code, publish as a team
@@ -1332,22 +1403,26 @@ library (Foundations = Variables, Components = component sets). `.claude/command
 (`features/<x>/components/`) + the promote-on-2nd-use trigger, and that the product's
 `theme.ts` is the export of its Figma brand mode. The **nested api `CLAUDE.md`** holds the
 **add-an-endpoint-end-to-end recipe** (enforced verbatim):
+
 ```markdown
 # CLAUDE.md — template api
 
 ## add-an-endpoint recipe
+
 model (SQLModel, UUIDv7 base, RLS deny-all migration)
-  → service (class per aggregate, holds the session via Depends, owns logic + data access)
-  → schema (Pydantic v2 DTO — the ONLY thing crossing HTTP; ORM models never serialized)
-  → router (thin; depends on the service; maps schema↔domain)
-  → openapi (turbo run openapi) → typegen (turbo run build --filter=*api-client)
-  → hook (generated TanStack hook) → screen (features/<x>)
+→ service (class per aggregate, holds the session via Depends, owns logic + data access)
+→ schema (Pydantic v2 DTO — the ONLY thing crossing HTTP; ORM models never serialized)
+→ router (thin; depends on the service; maps schema↔domain)
+→ openapi (turbo run openapi) → typegen (turbo run build --filter=*api-client)
+→ hook (generated TanStack hook) → screen (features/<x>)
 
 ## Rules
+
 - Strict layered OOP, NO repository layer (services query directly).
 - pyright strict + Pydantic strict — enforced in pre-push AND CI.
 - RFC 9457 problem+json errors; cursor pagination (useInfiniteQuery-ready).
 ```
+
 Product `.claude/commands/` (product-scoped, apply when a session opens in the product dir):
 `dev.md` (`turbo run dev --filter=*<product>-*`), `typegen.md` (`turbo run openapi build
 --filter=*<product>-api-client`), `migrate.md` (`uv run alembic …`), `add-feature.md`
@@ -1356,6 +1431,7 @@ Product `README.md` = human quickstart (where components live, launch the workbe
 tokens) pointing at the CLAUDE.md for the recipe.
 
 **Commands**
+
 ```bash
 # verify the agent surface exists at all three levels:
 ls CLAUDE.md README.md .claude/commands/
@@ -1381,7 +1457,7 @@ product-scoped and load from the session's project root.
   miss bug.
 - **Drift check is the contract guard.** `turbo run openapi build --filter=*api-client*`
   regenerates `openapi.json` + the client; `git diff --exit-code products/*/api-client
-  products/*/api/openapi.json` must be clean. A model change without a regen → non-zero diff
+products/*/api/openapi.json` must be clean. A model change without a regen → non-zero diff
   → CI red. Never hand-edit the generated client.
 - **Broadcast-only — never Postgres-Changes.** The realtime path is service-role HTTP
   broadcast on a per-product channel; clients refetch through the API. Do NOT subscribe to
@@ -1403,11 +1479,11 @@ product-scoped and load from the session's project root.
 - **Web has NO workflow.** Do not add a `web-deploy.yml`. Vercel git integration handles web;
   adding a workflow would double-deploy. Skip-unaffected is now Vercel's built-in
   "Automatically skip unnecessary deployments in monorepos" setting (preferred) — `npx
-  turbo-ignore` as the manual "ignored build step" is OPTIONAL now, and if invoked bare must
+turbo-ignore` as the manual "ignored build step" is OPTIONAL now, and if invoked bare must
   pass `--fallback=HEAD^` to avoid the new-branch always-deploy gotcha.
 - **macOS desktop signing gating.** `electron-builder --publish always` only signs/notarizes
   macOS once certs exist. The workflow gates the publish step `if: runner.os != 'macOS' ||
-  env.MAC_CSC_LINK != ''` (win/linux always publish; macOS publishes only when the cert
+env.MAC_CSC_LINK != ''` (win/linux always publish; macOS publishes only when the cert
   secret is set) and falls back to an unsigned `--mac --publish never` build-only step when
   certs are absent. Alternatively drop `macos-latest` from the matrix. Auto-update on macOS
   requires signing AND notarization (PHILOSOPHY.md Electron essentials).
@@ -1512,7 +1588,7 @@ commits):
   explicitly to be robust against squash-merge histories. Revisit only if CI mis-scopes.
 - **RESOLVED — tag→product parsing:** `eas-build.yml` and `electron-release.yml` now derive
   `<product>` from the tag via a step (`echo "product=${GITHUB_REF_NAME%%-<surface>-v*}" >>
-  "$GITHUB_OUTPUT"`) and map the literal `template` token to the `_template` dir — no more
+"$GITHUB_OUTPUT"`) and map the literal `template` token to the `_template` dir — no more
   `PARSE-FROM-TAG` placeholder.
 - **RESOLVED — macOS signing:** `electron-release.yml` gates the signed publish step with
   `if: runner.os != 'macOS' || env.MAC_CSC_LINK != ''` (win/linux always publish; macOS only

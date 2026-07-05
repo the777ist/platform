@@ -216,13 +216,10 @@ const textVariants = cva("text-base text-foreground", {
   defaultVariants: { variant: "default", size: "base" },
 });
 
-export type TextProps = React.ComponentProps<typeof RNText> &
-  VariantProps<typeof textVariants>;
+export type TextProps = React.ComponentProps<typeof RNText> & VariantProps<typeof textVariants>;
 
 export function Text({ className, variant, size, ...props }: TextProps) {
-  return (
-    <RNText className={cn(textVariants({ variant, size }), className)} {...props} />
-  );
+  return <RNText className={cn(textVariants({ variant, size }), className)} {...props} />;
 }
 
 export { textVariants };
@@ -237,26 +234,23 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/text";
 
-const buttonVariants = cva(
-  "flex-row items-center justify-center rounded-md",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary",
-        secondary: "bg-secondary",
-        destructive: "bg-destructive",
-        outline: "border border-input bg-background",
-        ghost: "bg-transparent",
-      },
-      size: {
-        sm: "h-9 px-3",
-        default: "h-10 px-4",
-        lg: "h-11 px-6",
-      },
+const buttonVariants = cva("flex-row items-center justify-center rounded-md", {
+  variants: {
+    variant: {
+      default: "bg-primary",
+      secondary: "bg-secondary",
+      destructive: "bg-destructive",
+      outline: "border border-input bg-background",
+      ghost: "bg-transparent",
     },
-    defaultVariants: { variant: "default", size: "default" },
+    size: {
+      sm: "h-9 px-3",
+      default: "h-10 px-4",
+      lg: "h-11 px-6",
+    },
   },
-);
+  defaultVariants: { variant: "default", size: "default" },
+});
 
 const buttonTextVariants = cva("text-sm font-medium", {
   variants: {
@@ -274,13 +268,7 @@ const buttonTextVariants = cva("text-sm font-medium", {
 export type ButtonProps = React.ComponentProps<typeof Pressable> &
   VariantProps<typeof buttonVariants> & { children?: React.ReactNode };
 
-export function Button({
-  className,
-  variant,
-  size,
-  children,
-  ...props
-}: ButtonProps) {
+export function Button({ className, variant, size, children, ...props }: ButtonProps) {
   return (
     <Pressable
       className={cn(buttonVariants({ variant, size }), className)}
@@ -308,19 +296,17 @@ import { cn } from "@/lib/utils";
 
 export type InputProps = React.ComponentProps<typeof TextInput>;
 
-export const Input = React.forwardRef<TextInput, InputProps>(
-  ({ className, ...props }, ref) => (
-    <TextInput
-      ref={ref}
-      className={cn(
-        "h-10 rounded-md border border-input bg-background px-3 text-base text-foreground",
-        className,
-      )}
-      placeholderTextColor="hsl(var(--muted-foreground))"
-      {...props}
-    />
-  ),
-);
+export const Input = React.forwardRef<TextInput, InputProps>(({ className, ...props }, ref) => (
+  <TextInput
+    ref={ref}
+    className={cn(
+      "border-input bg-background text-foreground h-10 rounded-md border px-3 text-base",
+      className,
+    )}
+    placeholderTextColor="hsl(var(--muted-foreground))"
+    {...props}
+  />
+));
 Input.displayName = "Input";
 ```
 
@@ -334,14 +320,13 @@ import { Text } from "@/components/ui/text";
 
 export function Card({ className, ...props }: React.ComponentProps<typeof View>) {
   return (
-    <View
-      className={cn("rounded-lg border border-border bg-card p-4", className)}
-      {...props}
-    />
+    <View className={cn("border-border bg-card rounded-lg border p-4", className)} {...props} />
   );
 }
 export function CardTitle({ className, ...props }: React.ComponentProps<typeof Text>) {
-  return <Text className={cn("text-lg font-semibold text-card-foreground", className)} {...props} />;
+  return (
+    <Text className={cn("text-card-foreground text-lg font-semibold", className)} {...props} />
+  );
 }
 export function CardContent({ className, ...props }: React.ComponentProps<typeof View>) {
   return <View className={cn("pt-2", className)} {...props} />;
@@ -540,18 +525,12 @@ import { View } from "react-native";
 import { colorScheme } from "nativewind";
 import { themes, type Theme } from "@/lib/theme";
 
-export function ThemeProvider({
-  theme,
-  children,
-}: {
-  theme: Theme;
-  children: React.ReactNode;
-}) {
+export function ThemeProvider({ theme, children }: { theme: Theme; children: React.ReactNode }) {
   React.useEffect(() => {
     colorScheme.set(theme); // toggles the `.dark` class on web
   }, [theme]);
   return (
-    <View style={themes[theme]} className="flex-1 bg-background">
+    <View style={themes[theme]} className="bg-background flex-1">
       {children}
     </View>
   );
@@ -591,7 +570,8 @@ broadest RN-web-vite + NativeWind compat). Add Storybook devDeps to
 `storybook` (9.1.x), `@storybook/react-native-web-vite` (9.1.x), `vite`, `react`,
 `react-dom`, `react-native-web` (via `expo install`), and the Tailwind toolchain for the
 `global.css` step — for **Tailwind v3 / NativeWind v4** that is `postcss` + `tailwindcss@^3.4`
-+ `autoprefixer` (NOT `@tailwindcss/vite`, which is the Tailwind v4 path).
+
+- `autoprefixer` (NOT `@tailwindcss/vite`, which is the Tailwind v4 path).
 
 > Do NOT separately install `@storybook/react-vite`, `@storybook/react`, or
 > `@vitejs/plugin-react` — `@storybook/react-native-web-vite` depends on all three (plus
@@ -786,28 +766,24 @@ import { Button } from "./button";
 
 // ⚠️ OPEN / TO CONFIRM: replace the placeholder node URL once the real Figma
 // Components library file key exists (filled during /bootstrap-design-system).
-figma.connect(
-  Button,
-  "https://www.figma.com/design/FILE_KEY/Design-System?node-id=BUTTON_NODE",
-  {
-    props: {
-      label: figma.string("Label"),
-      variant: figma.enum("Variant", {
-        Default: "default",
-        Secondary: "secondary",
-        Destructive: "destructive",
-        Outline: "outline",
-        Ghost: "ghost",
-      }),
-      size: figma.enum("Size", { sm: "sm", default: "default", lg: "lg" }),
-    },
-    example: ({ label, variant, size }) => (
-      <Button variant={variant} size={size}>
-        {label}
-      </Button>
-    ),
+figma.connect(Button, "https://www.figma.com/design/FILE_KEY/Design-System?node-id=BUTTON_NODE", {
+  props: {
+    label: figma.string("Label"),
+    variant: figma.enum("Variant", {
+      Default: "default",
+      Secondary: "secondary",
+      Destructive: "destructive",
+      Outline: "outline",
+      Ghost: "ghost",
+    }),
+    size: figma.enum("Size", { sm: "sm", default: "default", lg: "lg" }),
   },
-);
+  example: ({ label, variant, size }) => (
+    <Button variant={variant} size={size}>
+      {label}
+    </Button>
+  ),
+});
 ```
 
 (Other three analogous; map each Figma variant/property to its cva variant prop.)
@@ -914,10 +890,9 @@ async function loadSource() {
     // Enterprise-only: GET /v1/files/:key/variables/local (needs FIGMA_TOKEN w/
     // file_variables:read + file_content:read). Dereference VARIABLE_ALIAS references and
     // emit a DTCG token tree keyed by mode (cfg.modes maps brand -> modeId).
-    const res = await fetch(
-      `https://api.figma.com/v1/files/${cfg.fileKey}/variables/local`,
-      { headers: { "X-Figma-Token": process.env.FIGMA_TOKEN } },
-    );
+    const res = await fetch(`https://api.figma.com/v1/files/${cfg.fileKey}/variables/local`, {
+      headers: { "X-Figma-Token": process.env.FIGMA_TOKEN },
+    });
     if (!res.ok) throw new Error(`Figma REST ${res.status}`);
     return toDtcg(normalizeRest(await res.json()));
   }
@@ -926,8 +901,12 @@ async function loadSource() {
   return toDtcg(JSON.parse(fs.readFileSync(cfg.tokensFile, "utf8")));
 }
 
-function normalizeRest(json) { /* resolve semantic collection modes via cfg.modes */ }
-function toDtcg(json) { /* -> DTCG token tree: { semantic: { background: { $value, $type:"color" }, ... } } per mode */ }
+function normalizeRest(json) {
+  /* resolve semantic collection modes via cfg.modes */
+}
+function toDtcg(json) {
+  /* -> DTCG token tree: { semantic: { background: { $value, $type:"color" }, ... } } per mode */
+}
 
 // Custom transform: emit space-separated HSL CHANNELS ("240 6% 10%") so the Tailwind preset's
 // hsl(var(--x)) wrapper resolves. SD's stock color transforms output hex/rgb — not channels —
@@ -947,12 +926,13 @@ StyleDictionary.registerFormat({
 
 function emitThemeTs(modesByName) {
   const order = ["light", "dark"]; // resolved per product brand mode pair
-  const block = (name) =>
-    `  ${name}: vars(${JSON.stringify(modesByName[name], null, 4)}),`;
-  return `import { vars } from "nativewind";\n\n` +
+  const block = (name) => `  ${name}: vars(${JSON.stringify(modesByName[name], null, 4)}),`;
+  return (
+    `import { vars } from "nativewind";\n\n` +
     `// NOTE: regenerated by scripts/figma-tokens.mjs — do NOT hand-edit.\n` +
     `export const themes = {\n${order.map(block).join("\n")}\n} as const;\n\n` +
-    `export type Theme = keyof typeof themes;\n`;
+    `export type Theme = keyof typeof themes;\n`
+  );
 }
 
 const tokens = await loadSource();
@@ -963,7 +943,9 @@ const sd = new StyleDictionary({
     web: {
       transforms: ["color/hsl-channels"],
       buildPath: "packages/ui/src/",
-      files: [{ destination: "global.css", format: "css/variables", options: { selector: ":root" } }],
+      files: [
+        { destination: "global.css", format: "css/variables", options: { selector: ":root" } },
+      ],
     },
     // NATIVE: custom JS format -> theme.ts vars() objects.
     native: {
@@ -985,7 +967,8 @@ console.log("regenerated global.css (web) + theme.ts (native)");
 > `global.css`, and a small **JS format** writes the native `theme.ts` `vars()` objects. This
 > resolves the prior "does it also rewrite global.css?" TODO — **yes, both web and native are
 > co-generated**, matching the PHILOSOPHY's "both derive from the same modes". SD v5 is **ESM-only
-> + DTCG-default**, which is why the script is `.mjs` and the fixture is DTCG.
+>
+> - DTCG-default**, which is why the script is `.mjs` and the fixture is DTCG.
 
 `packages/ui/figma/tokens.json` — the committed Tokens Studio fixture **in DTCG format** (the
 default source so the pipeline runs in CI with **no** Figma file): `light`/`dark` token sets
@@ -1034,25 +1017,30 @@ This is the contract between Figma and code. The repo's theming mechanism (seman
 variables, per-product = override VALUES) has an exact Figma mirror.
 
 ## Variables (two collections)
+
 - **primitives** — raw scale (color ramps, spacing). Never referenced directly by components.
 - **semantic** — `--background`, `--foreground`, `--primary`, `--primary-foreground`,
   `--secondary`, `--muted`, `--muted-foreground`, `--destructive`, `--border`, `--input`,
   `--ring`. Components bind ONLY to semantic variables.
 
 ## Modes = theme × brand
+
 The `semantic` collection's modes are **light/dark × brand (template/demo)**. Each maps
 1:1 onto a product's `theme.ts` / `global.css`. A new product = a new brand mode.
 
 ## Names are the API
+
 Variable + component-property names must be code-friendly (match the cva variant values:
 `Variant=Default|Secondary|Destructive|Outline|Ghost`, `Size=sm|default|lg`). No raw hex
 fills — every fill bound to a semantic variable.
 
 ## Component anatomy matches code
+
 Component sets mirror the owned components (Text, Button, Input, Card). Variant axes match
 the cva variants exactly so Code Connect maps stay 1:1.
 
 ## Publish as a team library
+
 Two libraries: **Foundations** (Variables) + **Components** (component sets). Publish so MCP
 read access + Code Connect resolve them.
 ```
@@ -1322,7 +1310,7 @@ export default config;
 > insufficient — `eas update --channel …` (Phase 8) only reaches installed builds when the
 > app config carries `updates.url` (`https://u.expo.dev/<projectId>`) and a `runtimeVersion`
 > policy (`appVersion` or `fingerprint`). `eas init` writes the projectId; `eas
-> update:configure` adds/maintains `updates.url` + `runtimeVersion`. Phase 8's OTA flow
+update:configure` adds/maintains `updates.url` + `runtimeVersion`. Phase 8's OTA flow
 > depends on these being present here.
 >
 > **SDK 56 fetch / Expo Router gotchas (apply across this app):** (1) SDK 56 routes
@@ -1359,10 +1347,7 @@ module.exports = withNativeWind(config, { input: "./global.css" });
 module.exports = function (api) {
   api.cache(true);
   return {
-    presets: [
-      ["babel-preset-expo", { jsxImportSource: "nativewind" }],
-      "nativewind/babel",
-    ],
+    presets: [["babel-preset-expo", { jsxImportSource: "nativewind" }], "nativewind/babel"],
   };
 };
 ```
@@ -1459,7 +1444,7 @@ import { Card, CardTitle, CardContent, Button, Text, Input } from "@platform/ui"
 
 export default function Home() {
   return (
-    <View className="flex-1 gap-4 bg-background p-4">
+    <View className="bg-background flex-1 gap-4 p-4">
       <Text size="xl">Template</Text>
       <Card>
         <CardTitle>Components</CardTitle>
@@ -1483,7 +1468,7 @@ import { useThemeStore } from "../../features/settings/use-theme";
 export default function Settings() {
   const { theme, toggle } = useThemeStore();
   return (
-    <View className="flex-1 gap-4 bg-background p-4">
+    <View className="bg-background flex-1 gap-4 p-4">
       <Text>Theme: {theme}</Text>
       <Button onPress={toggle}>Toggle dark mode</Button>
     </View>
@@ -1602,10 +1587,10 @@ relevant for this pure-UI test).
 ## Gotchas & pitfalls
 
 - **NativeWind v4 ↔ Expo SDK 56 compat (the phase's headline risk).** Phase 2 must
-  *settle* this. Use **NativeWind v4** (v5 is pre-release — forbidden; v5 moves to Tailwind
+  _settle_ this. Use **NativeWind v4** (v5 is pre-release — forbidden; v5 moves to Tailwind
   v4.1+ CSS-first config and deprecates the `vars()`/`cssInterop` surface this stack relies
   on). NativeWind v4 is **actively maintained** (4.2.x patch line shipped through June 2026)
-  and has long supported the New Architecture, so there is no *version-level* blocker — but
+  and has long supported the New Architecture, so there is no _version-level_ blocker — but
   there is **no official source confirming v4 runs cleanly on SDK 56 / RN 0.85 + New Arch +
   Hermes v1**; the only on-record official NativeWind↔Expo pairing is **SDK 54**, and the
   maintainer has stated releases are no longer pegged to specific SDKs. NativeWind's metro
@@ -1613,7 +1598,7 @@ relevant for this pure-UI test).
   RN-0.85 break. Decide empirically: scaffold the app, run `expo start` web + native, confirm
   `className` utilities resolve and the dark toggle works under New Arch / Hermes v1. **If
   blocked on a known SDK-56 incompat, the safe-harbor fallback is Expo SDK 54, NOT 55** — SDK
-  55 is *also* New-Architecture-only (no legacy-arch escape hatch) and is *not* the
+  55 is _also_ New-Architecture-only (no legacy-arch escape hatch) and is _not_ the
   officially-NativeWind-validated SDK, so dropping to 55 may not fix a New-Arch/interop break;
   SDK 54 is the last officially NativeWind-validated SDK and the last with a legacy-arch
   option. Pin `nativewind` AND `react-native-css-interop` exact. Record the outcome in the
@@ -1633,7 +1618,7 @@ relevant for this pure-UI test).
 - **`react-native` → `react-native-web` alias is AUTO-HANDLED in Storybook Vite — do NOT
   add it manually.** `@storybook/react-native-web-vite` bundles `vite-plugin-rnw`, which
   performs the `react-native` → `react-native-web` aliasing automatically; the reference setup
-  (`dannyhw/vite-rnw-example`) has no manual `react-native` alias. The *real* requirement for
+  (`dannyhw/vite-rnw-example`) has no manual `react-native` alias. The _real_ requirement for
   NativeWind utilities to render is the trio in `main.ts`/Vite (Storybook issue #32018):
   (1) `pluginReactOptions.jsxImportSource: "nativewind"` in the framework options,
   (2) `global.css` imported in `preview.tsx`, and (3) an actual Tailwind v3 PostCSS pipeline

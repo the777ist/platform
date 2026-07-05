@@ -5,12 +5,7 @@ export {
   buttonTextVariants,
   type ButtonProps,
 } from "./components/ui/button";
-export {
-  Badge,
-  badgeVariants,
-  badgeTextVariants,
-  type BadgeProps,
-} from "./components/ui/badge";
+export { Badge, badgeVariants, badgeTextVariants, type BadgeProps } from "./components/ui/badge";
 export { Input, type InputProps } from "./components/ui/input";
 export { Card, CardTitle, CardContent } from "./components/ui/card";
 export { cn } from "./lib/utils";

@@ -31,14 +31,8 @@ const config: StorybookConfig = {
       name: "fix-css-interop-doctor-cjs",
       transform(code: string, id: string) {
         const isDoctor =
-          /(react-native-css-interop|nativewind)[\\/]dist[\\/]doctor(\.native)?\.js/.test(
-            id,
-          );
-        if (
-          !isDoctor ||
-          !/(^|\n)\s*exports\./.test(code) ||
-          code.includes("export ")
-        ) {
+          /(react-native-css-interop|nativewind)[\\/]dist[\\/]doctor(\.native)?\.js/.test(id);
+        if (!isDoctor || !/(^|\n)\s*exports\./.test(code) || code.includes("export ")) {
           return null;
         }
         const names = [...code.matchAll(/exports\.(\w+)\s*=/g)]
@@ -47,20 +41,14 @@ const config: StorybookConfig = {
         const unique = [...new Set(names)];
         // Aliased bindings — the file may declare a local of the same name
         // (e.g. `function verifyInstallation` + `exports.verifyInstallation = ...`).
-        const bindings = unique
-          .map((n) => `const __cjs_${n} = exports.${n};`)
-          .join("\n");
+        const bindings = unique.map((n) => `const __cjs_${n} = exports.${n};`).join("\n");
         const reexports = unique.map((n) => `__cjs_${n} as ${n}`).join(", ");
         // Hoist static require("x") calls into ESM imports + a local require shim
         // (once this file is ESM-ified the commonjs plugin no longer converts them).
         const reqIds = [
-          ...new Set(
-            [...code.matchAll(/require\(["']([^"']+)["']\)/g)].map((m) => m[1]),
-          ),
+          ...new Set([...code.matchAll(/require\(["']([^"']+)["']\)/g)].map((m) => m[1])),
         ];
-        const imports = reqIds
-          .map((r, i) => `import * as __req_${i} from "${r}";`)
-          .join("\n");
+        const imports = reqIds.map((r, i) => `import * as __req_${i} from "${r}";`).join("\n");
         const requireShim = reqIds.length
           ? `const require = (id) => {\n${reqIds
               .map((r, i) => `  if (id === "${r}") return __req_${i};`)

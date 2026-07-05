@@ -32,11 +32,8 @@ function ThemeGlobals({
     const root = document.documentElement;
     root.classList.toggle("dark", theme === "dark");
     const effectOverrides = BRAND_VARS[brand] ?? {};
-    Object.entries(effectOverrides).forEach(([k, v]) =>
-      root.style.setProperty(k, v),
-    );
-    return () =>
-      Object.keys(effectOverrides).forEach((k) => root.style.removeProperty(k));
+    Object.entries(effectOverrides).forEach(([k, v]) => root.style.setProperty(k, v));
+    return () => Object.keys(effectOverrides).forEach((k) => root.style.removeProperty(k));
   }, [theme, brand]);
 
   const overrides = BRAND_VARS[brand] ?? {};

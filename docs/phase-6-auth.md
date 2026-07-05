@@ -15,11 +15,13 @@ This is the first phase where the frontend talks to Supabase directly. Per the l
 Storage** — core data still flows through FastAPI, which verifies the Supabase-issued JWT.
 
 **Verify (restated from the Phase 6 row):**
+
 > `supabase start`; sign up through the template's login screen; guarded tabs redirect when
 > signed out; bearer-token curl → user id; bad token → 401; avatar uploads and renders back
 > from Storage.
 
 Concretely:
+
 - `supabase start` brings up the local stack on the template's **offset ports** (base 54321,
   `portIndex 0`).
 - The login/signup screens (rendered on web at `localhost:8081`) create a real Supabase user.
@@ -117,6 +119,7 @@ adds the **avatars storage bucket + policy** migration in step 9).
 
 **Contents** (`config.toml` — ports for `portIndex 0`; the generator offsets every `port` by
 `+100·portIndex`, Key ruling #7 / generator step 4):
+
 ```toml
 # products/_template/supabase/config.toml
 # Local-only Supabase stack for the `template` product.
@@ -181,6 +184,7 @@ enabled = true             # broadcast-only pattern lands in Phase 8; bucket ena
 ```
 
 **Commands:**
+
 ```bash
 supabase --version                                   # CLI present
 supabase start --workdir products/_template          # boots the local stack (Docker)
@@ -214,19 +218,21 @@ current CLI.
 **Files:** `packages/core/package.json` (add deps), `packages/core/src/supabase.ts`.
 
 **Contents** (`package.json` — add to `dependencies`):
+
 ```jsonc
 {
   // ...
   "dependencies": {
     "@supabase/supabase-js": "PLACEHOLDER-pin-exact",
     "@react-native-async-storage/async-storage": "PLACEHOLDER-pin-exact",
-    "zustand": "PLACEHOLDER-pin-exact"
+    "zustand": "PLACEHOLDER-pin-exact",
     // ...existing: tanstack query, persist client, env, etc.
-  }
+  },
 }
 ```
 
 **Contents** (`packages/core/src/supabase.ts`):
+
 ```ts
 // packages/core/src/supabase.ts
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -245,7 +251,9 @@ import { env } from "./env";
  */
 const authStorage =
   Platform.OS === "web"
-    ? (typeof window !== "undefined" ? window.localStorage : undefined)
+    ? typeof window !== "undefined"
+      ? window.localStorage
+      : undefined
     : AsyncStorage;
 
 let _client: SupabaseClient | null = null;
@@ -282,6 +290,7 @@ committed env file because RLS (deny-all by default, Key ruling on DB convention
 **Files:** `packages/core/src/env.ts` (extend the existing module).
 
 **Contents:**
+
 ```ts
 // packages/core/src/env.ts  (additions — the module already exists from Phase 2)
 //
@@ -313,6 +322,7 @@ export const env = {
 **Files:** `packages/core/src/auth.ts`.
 
 **Contents:**
+
 ```ts
 // packages/core/src/auth.ts
 import { useEffect } from "react";
@@ -422,6 +432,7 @@ bearer token outside React.
 **Files:** `packages/core/src/api.ts` (extend the existing wrapper from Phase 4).
 
 **Contents** (the auth-relevant addition):
+
 ```ts
 // packages/core/src/api.ts  (excerpt — wrapper already sets baseUrl + X-Request-Id in Phase 4)
 import { getAccessToken } from "./auth";
@@ -446,6 +457,7 @@ store via `getAccessToken()` (not a hook) keeps the interceptor synchronous. `X-
 **Files:** `packages/core/src/storage.ts`.
 
 **Contents:**
+
 ```ts
 // packages/core/src/storage.ts
 import { getSupabase } from "./supabase";
@@ -513,6 +525,7 @@ match supabase-js v2 current.
 `products/_template/app/features/auth/signup.tsx`.
 
 **Contents** (`features/auth/login.tsx` — signup is the same shape calling `signUp`):
+
 ```tsx
 // products/_template/app/features/auth/login.tsx
 import { useState } from "react";
@@ -544,9 +557,9 @@ export function LoginScreen() {
   }
 
   return (
-    <View className="flex-1 items-center justify-center bg-background p-6">
+    <View className="bg-background flex-1 items-center justify-center p-6">
       <Card className="w-full max-w-sm gap-4 p-6">
-        <Text className="text-2xl font-semibold text-foreground">Sign in</Text>
+        <Text className="text-foreground text-2xl font-semibold">Sign in</Text>
         <Input
           placeholder="Email"
           autoCapitalize="none"
@@ -554,12 +567,7 @@ export function LoginScreen() {
           value={email}
           onChangeText={setEmail}
         />
-        <Input
-          placeholder="Password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+        <Input placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
         {error ? <Text className="text-destructive">{error}</Text> : null}
         <Button onPress={onSubmit} disabled={busy}>
           <Text>{busy ? "Signing in…" : "Sign in"}</Text>
@@ -574,6 +582,7 @@ export function LoginScreen() {
 ```
 
 **Commands:**
+
 ```bash
 # image-picker dep is needed by the settings avatar demo (step 10) but is an app dep:
 pnpm --filter @platform/template-app add expo-image-picker
@@ -589,6 +598,7 @@ no hex) + the core plumbing (`signIn`/`signUp`), keeping them brandable and deco
 ### 8. Thin route files: `(auth)` + `(tabs)` guard + `_layout.tsx` providers
 
 **Files:**
+
 - `products/_template/app/app/(auth)/_layout.tsx`
 - `products/_template/app/app/(auth)/login.tsx`
 - `products/_template/app/app/(auth)/signup.tsx`
@@ -596,6 +606,7 @@ no hex) + the core plumbing (`signIn`/`signUp`), keeping them brandable and deco
 - `products/_template/app/app/_layout.tsx`
 
 **Contents** (`app/(auth)/login.tsx` — thin one-liner; `signup.tsx` mirrors it):
+
 ```tsx
 // products/_template/app/app/(auth)/login.tsx
 export { LoginScreen as default } from "../../features/auth/login";
@@ -610,6 +621,7 @@ export default function AuthLayout() {
 ```
 
 **Contents** (`app/(tabs)/_layout.tsx` — carries the guard):
+
 ```tsx
 // products/_template/app/app/(tabs)/_layout.tsx
 import { Tabs } from "expo-router";
@@ -620,7 +632,7 @@ export default function TabsLayout() {
   const { loading } = useProtectedRoute(); // redirects to (auth)/login when signed out
   if (loading) {
     // hold the splash/loader while the persisted session hydrates — no flicker
-    return <Text className="m-auto text-muted-foreground">Loading…</Text>;
+    return <Text className="text-muted-foreground m-auto">Loading…</Text>;
   }
   return (
     <Tabs screenOptions={{ headerShown: false }}>
@@ -632,10 +644,11 @@ export default function TabsLayout() {
 ```
 
 **Contents** (`app/_layout.tsx` — provider composition + error boundary):
+
 ```tsx
 // products/_template/app/app/_layout.tsx
 import { Slot } from "expo-router";
-import { ThemeProvider } from "@platform/ui";          // theme/CSS-var provider (Phase 2)
+import { ThemeProvider } from "@platform/ui"; // theme/CSS-var provider (Phase 2)
 import { QueryProvider, AuthProvider } from "@platform/core"; // query+persist (P4) + auth (P6)
 import { ErrorBoundary } from "../features/_shared/error-boundary"; // product-local error UX
 
@@ -676,6 +689,7 @@ boundary wrapping the rendered tree.
 **Files:** `products/_template/supabase/migrations/<timestamp>_avatars_bucket.sql`.
 
 **Contents:**
+
 ```sql
 -- products/_template/supabase/migrations/<timestamp>_avatars_bucket.sql
 -- Avatars bucket for the direct-to-Storage upload demo.
@@ -707,6 +721,7 @@ create policy "avatars_owner_update"
 ```
 
 **Commands:**
+
 ```bash
 supabase db reset --workdir products/_template   # re-applies ALL migrations incl. this one (local)
 # or, against a running stack without a full reset:
@@ -736,6 +751,7 @@ tables).
 existing `features/settings/` screen (theme toggle already lives there from Phase 2).
 
 **Contents:**
+
 ```tsx
 // products/_template/app/features/settings/avatar-uploader.tsx
 import { useState } from "react";
@@ -776,11 +792,11 @@ export function AvatarUploader() {
 
   return (
     <View className="gap-3">
-      <Text className="text-lg font-medium text-foreground">Avatar</Text>
+      <Text className="text-foreground text-lg font-medium">Avatar</Text>
       {url ? (
         <Image source={{ uri: url }} className="h-24 w-24 rounded-full" />
       ) : (
-        <View className="h-24 w-24 rounded-full bg-muted" />
+        <View className="bg-muted h-24 w-24 rounded-full" />
       )}
       {error ? <Text className="text-destructive">{error}</Text> : null}
       <Button onPress={onPick} disabled={busy}>
@@ -803,6 +819,7 @@ trip. `user.id` from the session scopes the upload to the RLS-allowed prefix.
 gitignored).
 
 **Contents** (local-stack values — fill anon key from `supabase status`):
+
 ```bash
 # products/_template/app/.env.development  (COMMITTED — publishable only, NO secrets)
 EXPO_PUBLIC_API_URL=http://localhost:8000/v1
@@ -826,6 +843,7 @@ rewrites these ports per `portIndex` for stamped products (generator step 4). `.
 `products/_template/api/src/template_api/schemas/me.py`.
 
 **Contents** (`settings.py` — auth-relevant fields; the module exists from Phase 3):
+
 ```python
 # products/_template/api/src/template_api/settings.py  (auth fields)
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -857,6 +875,7 @@ settings = Settings()  # type: ignore[call-arg]
 ```
 
 **Contents** (`auth.py` — JWKS + HS256 fallback, `CurrentUser`):
+
 ```python
 # products/_template/api/src/template_api/auth.py
 from typing import Annotated, Any
@@ -939,6 +958,7 @@ CurrentUser = Annotated[AuthUser, Depends(get_current_user)]
 ```
 
 **Contents** (`routers/me.py` — thin, protected):
+
 ```python
 # products/_template/api/src/template_api/routers/me.py
 from fastapi import APIRouter
@@ -968,6 +988,7 @@ class MeOut(BaseModel):
 ```
 
 **Commands** (api `.env` — server-side, NOT committed; templated by `.env.example`):
+
 ```bash
 # products/_template/api/.env  (local; from `supabase status`)
 # SUPABASE_URL points at the LOCAL stack so PyJWKClient verifies the CLI's ES256 tokens
@@ -1008,8 +1029,7 @@ didn't.
   manually-minted test tokens); if you genuinely want HS256 locally, pin it explicitly in
   `config.toml` via the signing-keys mechanism (§1) and document the CLI-version dependency.
 - **`audience="authenticated"` is required.** Supabase access tokens carry `aud:
-  "authenticated"`. If `jwt.decode` omits `audience`, PyJWT raises `InvalidAudienceError` →
-  401. Set `supabase_jwt_aud = "authenticated"` (default above).
+"authenticated"`. If `jwt.decode` omits `audience`, PyJWT raises `InvalidAudienceError` → 401. Set `supabase_jwt_aud = "authenticated"` (default above).
 - **supabase-js is ONLY for auth / Realtime / Storage.** Do **not** query app tables (items,
   push tokens, etc.) from the client — those flow through FastAPI, which holds the privileged
   role and bypasses RLS. The frontend client is RLS-gated by design; tables are deny-all.
@@ -1045,18 +1065,22 @@ Run from repo root. Two terminals: one for the api (`turbo run dev --filter=*tem
 one for the app (`turbo run dev --filter=*template-app`). Supabase up first.
 
 ### V1 — `supabase start`
+
 ```bash
 supabase start --workdir products/_template
 supabase status --workdir products/_template
 ```
+
 **Expected:** Stack boots; `status` prints `API URL: http://localhost:54321`, an **anon key**,
 and a **JWT secret**. Paste the anon key into `app/.env.development` and the JWT secret into the
 api `.env`. Studio reachable at `http://localhost:54323`.
 
 ### V2 — sign up through the template's login screen
+
 ```bash
 turbo run dev --filter=*template-app   # web at http://localhost:8081
 ```
+
 Open `localhost:8081` → you land on **`(auth)/login`** (no session) → tap "Sign up" → submit a
 new email + password.
 **Expected:** A real user is created in the local Supabase (visible in Studio → Authentication).
@@ -1064,6 +1088,7 @@ With `enable_confirmations = false`, the session lands immediately and the guard
 `(tabs)`**.
 
 ### V3 — guarded tabs redirect when signed out
+
 From the settings screen, **sign out** (calls `signOut()`).
 **Expected:** `onAuthStateChange` fires `SIGNED_OUT` → store clears → `useProtectedRoute`
 redirects to **`(auth)/login`**. Reloading the page while signed out keeps you on login (no
@@ -1071,27 +1096,33 @@ tabs flash). Reloading while signed **in** lands on tabs with **no login flash**
 handled).
 
 ### V4 — bearer-token curl → user id
+
 Grab a valid token from the running web app (devtools → `localStorage` Supabase session, or log
 `getAccessToken()`), then:
+
 ```bash
 TOKEN="<access_token from a signed-in session>"
 curl -s http://localhost:8000/v1/me -H "Authorization: Bearer $TOKEN" | jq
 ```
+
 **Expected:** `200` with `{"id":"<uuid>","email":"<the signup email>"}` — the `id` matches the
 user's Supabase `sub`.
 
 ### V5 — bad token → 401
+
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/v1/me \
   -H "Authorization: Bearer not-a-real-token"
 curl -s http://localhost:8000/v1/me -H "Authorization: Bearer not-a-real-token" \
   -H "Accept: application/json" | jq
 ```
+
 **Expected:** HTTP **401**; body is **RFC 9457 problem+json**
 (`{"type":...,"title":"Unauthorized","status":401,"detail":"invalid token"}`). Missing header
 also 401 (`"missing bearer token"`).
 
 ### V6 — avatar uploads and renders back from Storage
+
 On the settings screen (signed in), tap **Upload avatar**, pick an image.
 **Expected:** The image uploads (Studio → Storage → `avatars/<uid>/avatar.*` appears) and the
 **same image renders back** in the avatar circle from its public URL. Re-uploading replaces it
@@ -1099,9 +1130,11 @@ in place and the new image shows (cache-bust working). A signed-out attempt is i
 (screen is behind the guard); a write to another user's prefix would be rejected by RLS.
 
 ### V7 — affected gate green
+
 ```bash
 turbo run typecheck test lint --affected
 ```
+
 **Expected:** Green for `@platform/core`, `@platform/template-app`, `@platform/template-api`.
 API tests include `test_auth.py` (JWT paths: a minted HS256 token exercising the fallback
 branch, bad token → 401, missing aud → 401) and a `/v1/me` router round-trip over the real

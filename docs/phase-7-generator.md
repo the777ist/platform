@@ -18,9 +18,10 @@ This is the concrete expansion of the PHILOSOPHY.md **Phase 7** row:
 > its own placeholder brand assets; `git grep -iw template products/demo` empty.
 
 **Verify (restated from PHILOSOPHY.md):**
+
 1. `pnpm new-product demo` succeeds (validates name, computes `portIndex=1`, stamps).
 2. **Both products build via `--affected`** — `turbo run build --affected` touches
-   `template` *and* `demo`.
+   `template` _and_ `demo`.
 3. **Both local stacks run simultaneously** via `pnpm bootstrap` — on distinct, offset
    ports (no collisions).
 4. **demo carries its own placeholder brand assets** (icon/splash/favicon under
@@ -83,7 +84,7 @@ token-pipeline config `tokens.config.json`, distinct from Code Connect's root
   Code Connect's own `figma.config.json` — which also lives at the repo root, holds the
   `codeConnect.include` globs, is **NOT per-product**, and is **not** touched by the
   generator — to avoid a filename collision. Per PHILOSOPHY.md Figma-bridge note + ruling #11.)
-- **`scripts/figma-tokens.mjs`** exists (Phase 2). Phase 7 only *appends a mode entry* to
+- **`scripts/figma-tokens.mjs`** exists (Phase 2). Phase 7 only _appends a mode entry_ to
   `tokens.config.json`; it does not change the token script and does not touch
   `figma.config.json`.
 
@@ -129,7 +130,7 @@ token-pipeline config `tokens.config.json`, distinct from Code Connect's root
       Connect's root `figma.config.json` is left untouched — it is not per-product).
 - [ ] The generator **preserves placeholders** unchanged: org `example`,
       `com.example.*`, `TODO-EAS-PROJECT-ID`, releases-repo owner placeholder. These are
-      *not* product tokens, so the whole-word replacement must not touch them.
+      _not_ product tokens, so the whole-word replacement must not touch them.
 - [ ] Build artifacts are **not** copied (`node_modules`, `.venv`, `dist`, `.expo`,
       `release`) — but `uv.lock` **is** kept.
 
@@ -145,9 +146,11 @@ token-pipeline config `tokens.config.json`, distinct from Code Connect's root
 ### Step 1 — `product.json` generator metadata on the template
 
 **Files**
+
 - `products/_template/product.json`
 
 **Contents**
+
 ```json
 {
   "name": "template",
@@ -156,6 +159,7 @@ token-pipeline config `tokens.config.json`, distinct from Code Connect's root
 ```
 
 **Commands**
+
 ```bash
 cat products/_template/product.json   # exactly {"name":"template","portIndex":0}
 ```
@@ -175,6 +179,7 @@ step 3 parenthetical).
 ### Step 2 — Single-source brand assets + regen script
 
 **Files**
+
 - `products/_template/app/assets/brand/source.svg` — the **one** source of truth
   (placeholder mark).
 - `products/_template/app/assets/brand/gen-brand.mjs` — regen script producing all sizes.
@@ -184,6 +189,7 @@ step 3 parenthetical).
   `favicon.png`.
 
 **Contents** — `source.svg` (placeholder mark; intentionally generic):
+
 ```svg
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
   <rect width="1024" height="1024" rx="220" fill="#6366F1"/>
@@ -194,6 +200,7 @@ step 3 parenthetical).
 ```
 
 **Contents** — `gen-brand.mjs` (Node; rasterizes the single source to every wired size):
+
 ```js
 #!/usr/bin/env node
 // Regenerate ALL brand raster sizes from the single source.svg.
@@ -213,10 +220,10 @@ const SRC = join(HERE, "source.svg");
 
 // The four assets app.config.ts references. Keep this list and app.config.ts in sync.
 const TARGETS = [
-  { out: "icon.png", size: 1024 },          // App store / Expo `icon`
+  { out: "icon.png", size: 1024 }, // App store / Expo `icon`
   { out: "adaptive-icon.png", size: 1024 }, // Android adaptive foreground
-  { out: "splash.png", size: 1284 },        // expo-splash-screen image
-  { out: "favicon.png", size: 48 },         // web favicon
+  { out: "splash.png", size: 1284 }, // expo-splash-screen image
+  { out: "favicon.png", size: 48 }, // web favicon
 ];
 
 async function main() {
@@ -229,10 +236,14 @@ async function main() {
     console.log(`gen-brand: ${SRC} -> ${out} @ ${size}px`);
   }
 }
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
 ```
 
 **Commands**
+
 ```bash
 node products/_template/app/assets/brand/gen-brand.mjs   # regenerate all sizes
 # add a workspace script so it's discoverable:
@@ -253,10 +264,12 @@ open. These outputs are committed (raster PNGs) so CI/build never needs the rast
 ### Step 3 — Root `package.json` script entries (verify; both already exist from Phase 1)
 
 **Files**
+
 - `package.json` (root)
 
 **Contents** — both root scripts were added in Phase 1's root `package.json`; **nothing to add
 here, just confirm they are present and unchanged**:
+
 ```json
 {
   "scripts": {
@@ -267,6 +280,7 @@ here, just confirm they are present and unchanged**:
 ```
 
 **Commands**
+
 ```bash
 pnpm new-product demo          # -> node scripts/new-product.mjs demo (the generator built in Step 4)
 pnpm bootstrap                 # -> node scripts/bootstrap.mjs (data-driven, built in Phase 1)
@@ -278,16 +292,18 @@ entry + `scripts/bootstrap.mjs` already shipped in **Phase 1** (data-driven over
 so it needs no change here — it picks up the freshly-stamped `demo` automatically). Keep the
 `packageManager` field + `devDeps` intact. Root name `platform` and the `@platform/*` scope are
 **not** product tokens and are never rewritten by the generator (naming derives from the
-*product*, not the repo).
+_product_, not the repo).
 
 ---
 
 ### Step 4 — `scripts/new-product.mjs` (the generator, plain Node, zero deps)
 
 **Files**
+
 - `scripts/new-product.mjs`
 
 **Contents** — the full generator implementing all 6 PHILOSOPHY.md steps:
+
 ```js
 #!/usr/bin/env node
 // scripts/new-product.mjs — stamp a new product from products/_template.
@@ -298,7 +314,15 @@ so it needs no change here — it picks up the freshly-stamped `demo` automatica
 //
 // Key ruling #7: the template uses the literal token `template`; we whole-word replace
 // `template` (kebab) / `Template` (Pascal) / `template_api` (snake module) variants.
-import { readFileSync, writeFileSync, readdirSync, statSync, mkdirSync, existsSync, copyFileSync } from "node:fs";
+import {
+  readFileSync,
+  writeFileSync,
+  readdirSync,
+  statSync,
+  mkdirSync,
+  existsSync,
+  copyFileSync,
+} from "node:fs";
 import { join, dirname, relative, sep } from "node:path";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -316,7 +340,9 @@ function parseArgs() {
   const name = process.argv[2];
   if (!name) die("usage: pnpm new-product <name>");
   if (!/^[a-z][a-z0-9-]*$/.test(name)) {
-    die(`invalid name "${name}": must match /^[a-z][a-z0-9-]*$/ (lowercase, digits, hyphens; start with a letter)`);
+    die(
+      `invalid name "${name}": must match /^[a-z][a-z0-9-]*$/ (lowercase, digits, hyphens; start with a letter)`,
+    );
   }
   if (name === "template" || name.startsWith("_")) {
     die(`name "${name}" is reserved (template token / underscore-prefixed)`);
@@ -340,7 +366,10 @@ function nextPortIndex() {
 
 // ---- Naming variants (PHILOSOPHY.md: kebab / Pascal / snake) ---------------------------------
 function toPascal(kebab) {
-  return kebab.split("-").map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join("");
+  return kebab
+    .split("-")
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join("");
 }
 function toSnake(kebab) {
   return kebab.replace(/-/g, "_");
@@ -351,13 +380,13 @@ function toSnake(kebab) {
 // \b word boundaries ensure we never partial-match a word that merely CONTAINS "template"
 // (e.g. "templated", "templates", "templating") — those stay untouched.
 function buildReplacers(name) {
-  const kebab = name;                 // e.g. "demo"
-  const Pascal = toPascal(name);      // e.g. "Demo"
-  const snake = toSnake(name);        // e.g. "demo" (or "my_app" for "my-app")
+  const kebab = name; // e.g. "demo"
+  const Pascal = toPascal(name); // e.g. "Demo"
+  const snake = toSnake(name); // e.g. "demo" (or "my_app" for "my-app")
   return [
-    [/\btemplate_api\b/g, `${snake}_api`],   // Python module: template_api -> demo_api
-    [/\bTemplate\b/g, Pascal],               // Pascal symbols/types
-    [/\btemplate\b/g, kebab],                // kebab token: package names, slug, ids, fly, project_id
+    [/\btemplate_api\b/g, `${snake}_api`], // Python module: template_api -> demo_api
+    [/\bTemplate\b/g, Pascal], // Pascal symbols/types
+    [/\btemplate\b/g, kebab], // kebab token: package names, slug, ids, fly, project_id
   ];
 }
 
@@ -369,12 +398,29 @@ function rewrite(text, replacers) {
 
 // ---- Step 2 + 3: recursive copy with token replacement in CONTENTS and PATHS ------------
 const TEXT_EXT = new Set([
-  ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".md", ".py", ".toml", ".yml",
-  ".yaml", ".css", ".ini", ".cfg", ".txt", ".svg", ".env", "", // "" = dotfiles like .env.development
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".json",
+  ".md",
+  ".py",
+  ".toml",
+  ".yml",
+  ".yaml",
+  ".css",
+  ".ini",
+  ".cfg",
+  ".txt",
+  ".svg",
+  ".env",
+  "", // "" = dotfiles like .env.development
 ]);
 function isText(path) {
   const base = path.split(sep).pop();
-  if (base.startsWith(".env")) return true;          // .env.development/.staging/.production
+  if (base.startsWith(".env")) return true; // .env.development/.staging/.production
   const dot = base.lastIndexOf(".");
   const ext = dot === -1 ? "" : base.slice(dot);
   return TEXT_EXT.has(ext);
@@ -383,9 +429,9 @@ function isText(path) {
 function copyTree(srcDir, destDir, replacers) {
   mkdirSync(destDir, { recursive: true });
   for (const entry of readdirSync(srcDir)) {
-    if (SKIP.has(entry)) continue;                   // build artifacts; uv.lock NOT here
+    if (SKIP.has(entry)) continue; // build artifacts; uv.lock NOT here
     const src = join(srcDir, entry);
-    const renamed = rewrite(entry, replacers);       // <-- token replacement in PATHS
+    const renamed = rewrite(entry, replacers); // <-- token replacement in PATHS
     const dest = join(destDir, renamed);
     const st = statSync(src);
     if (st.isDirectory()) {
@@ -393,7 +439,7 @@ function copyTree(srcDir, destDir, replacers) {
     } else if (isText(src)) {
       writeFileSync(dest, rewrite(readFileSync(src, "utf8"), replacers)); // <-- in CONTENTS
     } else {
-      copyFileSync(src, dest);                        // binaries (PNG brand assets) verbatim
+      copyFileSync(src, dest); // binaries (PNG brand assets) verbatim
     }
   }
 }
@@ -403,14 +449,14 @@ function copyTree(srcDir, destDir, replacers) {
 // Template (i=0): api 8000, supabase 54321.. ; demo (i=1): api 8010, supabase 54421..
 function applyPorts(dest, i) {
   const apiPort = 8000 + 10 * i;
-  const sbBase = 54321 + 100 * i;        // api/studio/db/etc. offset as a block of 100
-  const sbDelta = sbBase - 54321;        // amount to add to each default supabase port
+  const sbBase = 54321 + 100 * i; // api/studio/db/etc. offset as a block of 100
+  const sbDelta = sbBase - 54321; // amount to add to each default supabase port
 
   // (a) supabase/config.toml — shift every default 543xx port by sbDelta.
   const cfg = join(dest, "supabase", "config.toml");
   if (existsSync(cfg)) {
     const shifted = readFileSync(cfg, "utf8").replace(/\b(543\d\d)\b/g, (m) =>
-      String(Number(m) + sbDelta)
+      String(Number(m) + sbDelta),
     );
     writeFileSync(cfg, shifted);
   }
@@ -418,7 +464,10 @@ function applyPorts(dest, i) {
   // (b) api dev script (package.json "dev": "... --port 8000") -> apiPort.
   const apiPkg = join(dest, "api", "package.json");
   if (existsSync(apiPkg)) {
-    writeFileSync(apiPkg, readFileSync(apiPkg, "utf8").replace(/--port\s+8000\b/g, `--port ${apiPort}`));
+    writeFileSync(
+      apiPkg,
+      readFileSync(apiPkg, "utf8").replace(/--port\s+8000\b/g, `--port ${apiPort}`),
+    );
   }
 
   // (c) committed app/.env.{development,staging,production} — EXPO_PUBLIC_API_URL +
@@ -427,8 +476,8 @@ function applyPorts(dest, i) {
     const f = join(dest, "app", `.env.${env}`);
     if (!existsSync(f)) continue;
     let txt = readFileSync(f, "utf8");
-    txt = txt.replace(/(localhost|127\.0\.0\.1):8000\b/g, `$1:${apiPort}`);     // API url
-    txt = txt.replace(/(localhost|127\.0\.0\.1):54321\b/g, `$1:${sbBase}`);     // supabase url
+    txt = txt.replace(/(localhost|127\.0\.0\.1):8000\b/g, `$1:${apiPort}`); // API url
+    txt = txt.replace(/(localhost|127\.0\.0\.1):54321\b/g, `$1:${sbBase}`); // supabase url
     writeFileSync(f, txt);
   }
 }
@@ -441,7 +490,7 @@ function addFigmaMode(name) {
   if (!existsSync(f)) return;
   const cfg = JSON.parse(readFileSync(f, "utf8"));
   cfg.modes = cfg.modes || {};
-  if (!(name in cfg.modes)) cfg.modes[name] = "TODO-FIGMA-MODE-ID";  // placeholder until designer creates it
+  if (!(name in cfg.modes)) cfg.modes[name] = "TODO-FIGMA-MODE-ID"; // placeholder until designer creates it
   writeFileSync(f, JSON.stringify(cfg, null, 2) + "\n");
 }
 
@@ -486,7 +535,10 @@ function printChecklist(name, portIndex) {
 `);
 }
 
-function die(msg) { console.error("✖ " + msg); process.exit(1); }
+function die(msg) {
+  console.error("✖ " + msg);
+  process.exit(1);
+}
 
 // ---- main -------------------------------------------------------------------------------
 function main() {
@@ -495,20 +547,21 @@ function main() {
   const replacers = buildReplacers(name);
 
   console.log(`→ stamping "${name}" (portIndex=${portIndex}) from products/_template`);
-  copyTree(TEMPLATE_DIR, dest, replacers);   // Steps 2 + 3 (contents + paths)
-  applyPorts(dest, portIndex);               // Step 4
-  writeMeta(dest, name, portIndex);          // Step 5 (product.json)
-  addFigmaMode(name);                        // Figma bridge
+  copyTree(TEMPLATE_DIR, dest, replacers); // Steps 2 + 3 (contents + paths)
+  applyPorts(dest, portIndex); // Step 4
+  writeMeta(dest, name, portIndex); // Step 5 (product.json)
+  addFigmaMode(name); // Figma bridge
 
   console.log("→ pnpm install (resolving the new workspaces)...");
-  execSync("pnpm install", { cwd: ROOT, stdio: "inherit" });   // Step 5
+  execSync("pnpm install", { cwd: ROOT, stdio: "inherit" }); // Step 5
 
-  printChecklist(name, portIndex);           // Step 6
+  printChecklist(name, portIndex); // Step 6
 }
 main();
 ```
 
 **Commands**
+
 ```bash
 node scripts/new-product.mjs demo     # or: pnpm new-product demo
 ```
@@ -524,8 +577,8 @@ This is the literal implementation of PHILOSOPHY.md's **Generator** subsection, 
    is deliberately **absent** from `SKIP`, so it travels (Package-management model: each
    api carries its own lock).
 3. **Whole-word replace in CONTENTS and PATHS** — `buildReplacers()` uses `\b`-anchored
-   regexes and rewrites both the directory/file *name* (`rewrite(entry, …)`) and text-file
-   *contents*. `template_api` is replaced **before** `template` so the snake module name is
+   regexes and rewrites both the directory/file _name_ (`rewrite(entry, …)`) and text-file
+   _contents_. `template_api` is replaced **before** `template` so the snake module name is
    handled as a unit (e.g. `src/template_api/` → `src/demo_api/`).
 4. **Port math `API=8000+10i`, Supabase block `54321+100i`** — `applyPorts()` shifts
    `config.toml` 543xx ports by the block delta, rewrites the api dev `--port`, and updates
@@ -559,12 +612,14 @@ so the generator never touches it).
 ### Step 5 — `pnpm bootstrap` (already built in Phase 1 — verify only)
 
 **Files**
+
 - _none_ — `scripts/bootstrap.mjs` was created in **Phase 1** (Step 4b) as a single,
   data-driven definition. It loops `products/*` and runs `supabase start` in each product dir,
   so it requires **no change** when this phase stamps `demo` — it picks the new product up
   automatically. Do not re-create or fork it here.
 
 **Commands**
+
 ```bash
 pnpm bootstrap
 # verify BOTH stacks are up on distinct (offset) ports:
@@ -575,7 +630,7 @@ supabase status   # run inside each product dir (template, demo), or check the p
 Because each product's `supabase/config.toml` carries offset ports (Step 4), the Phase 1
 `bootstrap.mjs` loop yields **simultaneously running** local stacks for `template` AND `demo` —
 the exact condition Verify #3 and the end-to-end "Multi-product proof" check. This phase only
-*exercises* bootstrap (now that a second product exists); it does not build it.
+_exercises_ bootstrap (now that a second product exists); it does not build it.
 
 > ⚠️ OPEN / TO CONFIRM — whether `pnpm bootstrap` should start **all** products or just the
 > one the dev is working on. PHILOSOPHY.md says "supabase start" (singular flow) for onboarding
@@ -588,9 +643,11 @@ the exact condition Verify #3 and the end-to-end "Multi-product proof" check. Th
 ### Step 6 — Stamp the `demo` product
 
 **Files** (produced, not authored)
+
 - `products/demo/**` — the full stamped tree, `product.json` = `{"name":"demo","portIndex":1}`.
 
 **Commands**
+
 ```bash
 pnpm new-product demo
 git status --porcelain products/demo | head        # newly created tree
@@ -611,13 +668,13 @@ brand assets — with **zero** `template` tokens remaining (Verify #5).
 
 - **Whole-word only — never partial-match.** The replacement uses `\b`-anchored regexes
   (`/\btemplate\b/`, `/\bTemplate\b/`, `/\btemplate_api\b/`). Without word boundaries you
-  would corrupt any word that *contains* "template" — e.g. `templated`, `templates`,
+  would corrupt any word that _contains_ "template" — e.g. `templated`, `templates`,
   `templating`, a CSS class, a comment, or a third-party identifier. PHILOSOPHY.md ruling #7 is
-  explicit: **whole-word**. Test by grepping the stamped product for the *stem* and
+  explicit: **whole-word**. Test by grepping the stamped product for the _stem_ and
   confirming only intended hits would have matched.
 
 - **Replace in PATHS, not just contents.** The most common generator bug is rewriting file
-  *contents* but leaving directory/file *names* (`src/template_api/`,
+  _contents_ but leaving directory/file _names_ (`src/template_api/`,
   `template_api.egg-info`, doc filenames). `copyTree` rewrites `entry` (the path segment)
   on every node. If `git grep -iw template products/demo` is empty but
   `find products/demo -iname '*template*'` is **not**, paths were missed.
@@ -627,12 +684,12 @@ brand assets — with **zero** `template` tokens remaining (Verify #5).
   names. The generator's `buildReplacers` array is ordered for this reason.
 
 - **Keep `uv.lock` — do NOT delete it.** Each api is a self-contained uv project with its
-  own lock (Package-management model). `uv.lock` is *not* in the `SKIP` set, so it travels.
+  own lock (Package-management model). `uv.lock` is _not_ in the `SKIP` set, so it travels.
   If it were skipped, the stamped api would float its Python deps and `uv sync --frozen`
   (CI/Docker) would fail.
 
 - **Skip build artifacts, not source.** `SKIP = {node_modules, .venv, dist, .expo,
-  release}`. Copying `node_modules`/`.venv` would be slow, huge, and wrong (they'd point at
+release}`. Copying `node_modules`/`.venv` would be slow, huge, and wrong (they'd point at
   the template's resolved paths). `dist`/`.expo`/`release` are regenerable outputs. Never
   add `uv.lock` or `supabase/migrations` to this set.
 
@@ -650,7 +707,7 @@ brand assets — with **zero** `template` tokens remaining (Verify #5).
 
 - **Naming derives from the product name, never the repo name.** `platform`
   (root) and `@platform/*` (scope) are **not** product tokens; the generator must never
-  rewrite them. Only the `template`/`Template`/`template_api` *product* token is rewritten.
+  rewrite them. Only the `template`/`Template`/`template_api` _product_ token is rewritten.
   This is what keeps the scaffold portable (Naming conventions header).
 
 - **Preserve placeholders.** `example`, `com.example.*`, `TODO-EAS-PROJECT-ID`, the
@@ -680,45 +737,54 @@ brand assets — with **zero** `template` tokens remaining (Verify #5).
 Run from repo root. Expected results stated per command.
 
 **1. Stamp succeeds; metadata + ports correct**
+
 ```bash
 pnpm new-product demo
 cat products/demo/product.json
 ```
+
 Expected: prints the stamp log + infra checklist; `product.json` is
 `{"name":"demo","portIndex":1}`. Re-running `pnpm new-product demo` fails with
 `product "demo" already exists`. `pnpm new-product Demo` / `pnpm new-product 1bad` fail the
 `/^[a-z][a-z0-9-]*$/` validation.
 
 **2. No `template` token leaked (the headline check)**
+
 ```bash
 git grep -iw template products/demo          # EXPECT: empty (no output, exit 1)
 find products/demo -iname '*template*'        # EXPECT: empty (paths rewritten too)
 git grep -inE 'example|TODO' products/demo    # EXPECT: only intended placeholders
 ```
+
 Expected: the first two return nothing (token gone from contents **and** paths). The third
 surfaces exactly `example` org placeholders, `com.example.demo`, `TODO-EAS-PROJECT-ID`,
 releases-repo owner, `TODO-FIGMA-MODE-ID` — and nothing stray.
 
 **3. Both products build via `--affected`**
+
 ```bash
 pnpm install                                  # already run by the generator; safe to repeat
 pnpm turbo run build --affected --dry=json | jq '.packages'   # see the package set
 pnpm turbo run build --affected
 ```
+
 Expected: the affected set includes **both** `template` and `demo` workspaces (on the first
 post-stamp run, or after a `packages/*`/root change both products are affected). Build runs
 the real edge order per product: `openapi → api-client#build → app build → desktop build`.
 
 **4. Both local stacks run simultaneously on distinct ports**
+
 ```bash
 pnpm bootstrap
 # template: API http://localhost:8000  · Supabase API http://localhost:54321
 # demo:     API http://localhost:8010  · Supabase API http://localhost:54421
 ```
+
 Expected: `mise install` + `pnpm install` succeed, then `supabase start` runs for **both**
 products with no port collision (offset blocks). Both stacks reachable at the same time.
 
 **5. demo carries its own placeholder brand assets**
+
 ```bash
 ls products/demo/app/assets/brand/
 # EXPECT: source.svg gen-brand.mjs README.md icon.png adaptive-icon.png splash.png favicon.png
@@ -726,10 +792,12 @@ diff products/_template/app/assets/brand/icon.png products/demo/app/assets/brand
 # EXPECT: identical bytes (copied placeholders) — demo OWNS its copy, not a symlink
 test -L products/demo/app/assets/brand/icon.png && echo "FAIL: symlink" || echo "ok: real file"
 ```
+
 Expected: the full asset set is present and is a real (copied) file demo can replace
 independently.
 
 **6. Figma mode registered**
+
 ```bash
 jq '.modes' tokens.config.json
 # EXPECT: { "template": "<modeId>", "demo": "TODO-FIGMA-MODE-ID" }
@@ -745,7 +813,7 @@ Suggested split on a `phase-7-generator` branch:
 
 1. **`feat(template): product.json + single-source brand assets & regen script`** —
    `products/_template/product.json`, `app/assets/brand/{source.svg,gen-brand.mjs,README.md}`
-   + committed placeholder PNGs, `brand:gen` app script. (Steps 1–2)
+   - committed placeholder PNGs, `brand:gen` app script. (Steps 1–2)
 2. **`feat(scripts): zero-dep new-product generator`** — `scripts/new-product.mjs`
    (validate/collision/portIndex, copy + skip-list, whole-word replace in contents+paths,
    port offsets, figma mode, pnpm install, infra checklist). The root `new-product` +
@@ -764,13 +832,13 @@ Suggested split on a `phase-7-generator` branch:
 ## Open questions / deferred
 
 - **Brand rasterizer: `sharp`.** `gen-brand.mjs` uses `sharp` (rasterize SVG source + resize
-  every PNG), added to the app workspace devDeps and pinned exact at install. The *size matrix*
+  every PNG), added to the app workspace devDeps and pinned exact at install. The _size matrix_
   (`icon` 1024 / `adaptive-icon` / `splash` / `favicon`) is the contract; align it with
   whatever `app.config.ts` references (read it from Phase 2).
 - **Exact splash/icon sizes & extra densities** — PHILOSOPHY.md says "all sizes" without
   enumerating them; the matrix above is this guide's concrete set. **⚠️ OPEN / TO CONFIRM**
   against `app.config.ts` + EAS requirements.
-- **`pnpm bootstrap` scope** — start *all* products vs a `--filter`ed one. This guide starts
+- **`pnpm bootstrap` scope** — start _all_ products vs a `--filter`ed one. This guide starts
   all (to satisfy the simultaneous-stacks verify). **⚠️ OPEN / TO CONFIRM.**
 - **Supabase port-block granularity** — this guide shifts every `543xx` default by
   `100*i`. Exact per-service offsets (api/studio/db/inbucket/analytics) depend on which

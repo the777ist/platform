@@ -74,7 +74,7 @@ mise current            # sanity-check the resolved versions
 
 **Why.** PHILOSOPHY.md locks the toolchain in the Decision Sheet ("mise pins Node 24 LTS / pnpm 11 / Python 3.13 / uv") and lists `mise.toml` as the first root file. mise must be the toolchain owner so CI (`mise-action`, per "Workflows") and local dev resolve identical versions. **Node 24** is the current Active LTS (Node 22 has dropped to Maintenance LTS, EOL Apr 2027); **pnpm 11** is the current major (pure ESM, requires Node ≥ 22.13 — satisfied by 24). `uv` is pinned here even though Python deps are per-product (PHILOSOPHY "Package management model") because the generator and api Dockerfiles assume `uv` is on PATH.
 
-> **Note on `[settings] experimental`.** An earlier draft set `experimental = true` with a "reproducible installs" rationale — that rationale was wrong. The `experimental` flag gates mise's *experimental features* (e.g. `[hooks]`, monorepo mode), NOT version-pin reproducibility (which is just the `[tools]` specifiers). The `[env] _.path` line is basic env-path support and needs no experimental flag, so the flag is dropped here. Add `experimental = true` back only if you later introduce `[hooks]`.
+> **Note on `[settings] experimental`.** An earlier draft set `experimental = true` with a "reproducible installs" rationale — that rationale was wrong. The `experimental` flag gates mise's _experimental features_ (e.g. `[hooks]`, monorepo mode), NOT version-pin reproducibility (which is just the `[tools]` specifiers). The `[env] _.path` line is basic env-path support and needs no experimental flag, so the flag is dropped here. Add `experimental = true` back only if you later introduce `[hooks]`.
 
 **Resolved (uv pin):** `uv = "latest"` is valid mise syntax and fine for dev — mise's built-in uv provider supports both `latest` and an exact pin. For reproducible CI/Docker, pin an exact uv version once Phase 3's api Dockerfile depends on it. Not a correctness bug.
 
@@ -109,7 +109,7 @@ mise current            # sanity-check the resolved versions
 
 **Why.** Under pnpm 11 the `.npmrc` is **auth/registry-only**; the linker and lockfile/build-script settings that used to live here have moved to `pnpm-workspace.yaml` (Step 3) as camelCase keys. We keep a committed (near-empty) `.npmrc` because PHILOSOPHY "Workflows" calls it out as **committed** — the `eas-build.yml` runner looks for it for workspace detection — and because it's where future registry/auth lines belong.
 
-> **pnpm 10 → 11 migration note.** If you are migrating an existing pnpm-10 repo, `pnpm dlx codemod run pnpm-v10-to-v11` performs the `.npmrc` → `pnpm-workspace.yaml` split automatically (including `only-built-dependencies` → `allowBuilds`). The ruling #6 "hoisted linker / never `disableHierarchicalLookups`" guidance is unchanged — only the *location* of the setting moved.
+> **pnpm 10 → 11 migration note.** If you are migrating an existing pnpm-10 repo, `pnpm dlx codemod run pnpm-v10-to-v11` performs the `.npmrc` → `pnpm-workspace.yaml` split automatically (including `only-built-dependencies` → `allowBuilds`). The ruling #6 "hoisted linker / never `disableHierarchicalLookups`" guidance is unchanged — only the _location_ of the setting moved.
 
 ---
 
@@ -150,8 +150,8 @@ packages:
   # Each product is THREE JS workspaces + a generated client (PHILOSOPHY ruling #1):
   - "products/*/app"
   - "products/*/desktop"
-  - "products/*/api"          # script-shim package.json → uv run (PHILOSOPHY "Package management model")
-  - "products/*/api-client"   # generated + committed (hey-api)
+  - "products/*/api" # script-shim package.json → uv run (PHILOSOPHY "Package management model")
+  - "products/*/api-client" # generated + committed (hey-api)
 ```
 
 **Commands:**
@@ -162,9 +162,9 @@ packages:
 
 **Why.** PHILOSOPHY "Package management model" + Directory tree: the `packages:` globs are `packages/*` and `products/*/{app,desktop,api,api-client}`. Listing the four product sub-workspace types explicitly (rather than `products/*`) avoids pnpm trying to treat `products/<name>/supabase` or `products/<name>` itself as a package. In Phase 1 only `packages/config` matches; the product globs are inert no-ops until Phase 2+.
 
-Under **pnpm 11** this same file is now also where the pnpm *settings* live: `nodeLinker: hoisted` (relocated from `.npmrc` per ruling #6), `preferFrozenLockfile: true`, and the `allowBuilds` map (the pnpm-11 replacement for the removed `only-built-dependencies`). These keys are silently ignored if left in `.npmrc`, so they MUST be here.
+Under **pnpm 11** this same file is now also where the pnpm _settings_ live: `nodeLinker: hoisted` (relocated from `.npmrc` per ruling #6), `preferFrozenLockfile: true`, and the `allowBuilds` map (the pnpm-11 replacement for the removed `only-built-dependencies`). These keys are silently ignored if left in `.npmrc`, so they MUST be here.
 
-⚠️ **REVIEW:** PHILOSOPHY "Workflows" notes EAS relied on a committed `.npmrc` for workspace detection. Verify EAS (Phase 8) still keys off `.npmrc` presence vs. needing the linker setting itself — under pnpm 11 the linker is in `pnpm-workspace.yaml`, so if EAS expected `node-linker` *inside* `.npmrc` that workaround may need revisiting.
+⚠️ **REVIEW:** PHILOSOPHY "Workflows" notes EAS relied on a committed `.npmrc` for workspace detection. Verify EAS (Phase 8) still keys off `.npmrc` presence vs. needing the linker setting itself — under pnpm 11 the linker is in `pnpm-workspace.yaml`, so if EAS expected `node-linker` _inside_ `.npmrc` that workaround may need revisiting.
 
 ---
 
@@ -211,6 +211,7 @@ pnpm install            # installs devDeps, links @platform/config, runs `prepar
 ```
 
 **Why.**
+
 - `"prepare": "lefthook install"` — PHILOSOPHY Phase 1 explicitly says "hooks install via `pnpm prepare`". pnpm runs `prepare` automatically after `pnpm install`, so cloning + installing is the only step needed to get hooks.
 - `"packageManager": "pnpm@11.6.0"` — PHILOSOPHY "Workflows" calls out the `packageManager` field as the **eas-cli workspace detection workaround**; it also lets corepack/CI pick the right pnpm. Corepack expects a full exact semver, so set it to the exact pnpm version the lockfile resolves (the `11.6.0` shown is the current pnpm 11 patch as of June 2026 — replace with the lockfile's actual patch). Keeping this aligned with `mise.toml` matters MORE under pnpm 11, which fails a CI install when the lockfile was written by a newer pnpm major.
 - `scripts: new-product, bootstrap` and `devDeps: turbo, prettier, lefthook` come verbatim from the Directory-tree annotation for `package.json`. `bootstrap` = "mise → install → supabase start" (PHILOSOPHY "Operational defaults"), implemented as `scripts/bootstrap.mjs` (created in Step 4b below) — a single, data-driven definition so there is no inline-vs-script drift to reconcile in a later phase. The `new-product` entry points at `scripts/new-product.mjs`, which is built in Phase 7 (the entry exists now; running it before Phase 7 errors with "file not found" — expected).
@@ -223,9 +224,11 @@ pnpm install            # installs devDeps, links @platform/config, runs `prepar
 ### Step 4b — `scripts/bootstrap.mjs` (one-command onboarding, data-driven)
 
 **Files**
+
 - `scripts/bootstrap.mjs`
 
 **Contents**
+
 ```js
 #!/usr/bin/env node
 // scripts/bootstrap.mjs — one-command onboarding.
@@ -240,8 +243,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PRODUCTS = join(ROOT, "products");
 const run = (cmd, cwd = ROOT) => execSync(cmd, { cwd, stdio: "inherit" });
 
-run("mise install");          // pin & install Node 24 / pnpm 11 / Python 3.13 / uv
-run("pnpm install");          // single JS dependency universe (one lockfile)
+run("mise install"); // pin & install Node 24 / pnpm 11 / Python 3.13 / uv
+run("pnpm install"); // single JS dependency universe (one lockfile)
 
 // supabase start per product — each reads its own config.toml (offset ports), so all
 // stacks run simultaneously without colliding. Data-driven: a no-op until products exist,
@@ -258,6 +261,7 @@ console.log("✅ bootstrap complete");
 ```
 
 **Commands**
+
 ```bash
 pnpm bootstrap   # in Phase 1: runs mise install + pnpm install (no products yet -> empty loop)
 ```
@@ -559,6 +563,7 @@ module.exports = {
 #### Step 7e — `packages/config/tsconfig/{base,expo,node}.json`
 
 **Files:**
+
 - `packages/config/tsconfig/base.json`
 - `packages/config/tsconfig/expo.json`
 - `packages/config/tsconfig/node.json`
@@ -748,12 +753,14 @@ ls -la .git/hooks/      # expect lefthook-managed pre-commit & pre-push shims
 ```
 
 **Why.** This is the centerpiece of the Phase 1 Verify column. PHILOSOPHY's "Git hooks" decision spells the jobs out almost verbatim:
+
 - **pre-commit (fast, staged only):** "Prettier + ESLint on staged JS/TS, Ruff check+format on staged `.py` (scoped to the touched product's api)."
 - **pre-push:** "`turbo run typecheck test build --affected` + (for affected APIs) pyright strict + pytest — i.e. ONLY the product(s) actually touched run (plus all dependents when `packages/*` change). Builds are turbo-cached."
 
 `stage_fixed: true` makes `--write`/`--fix` reformats part of the commit. The hooks install via `pnpm prepare` per PHILOSOPHY Phase 1 — no manual `lefthook install` step.
 
 ⚠️ **OPEN / TO CONFIRM:**
+
 - PHILOSOPHY says Ruff is "scoped to the touched product's api" but doesn't give the exact lefthook invocation; the `uv run --project …` form above is one plausible scoping. In Phase 1 there is **no api**, so the `.py` commands never match and are no-ops — finalize the exact `--project` resolution in Phase 3 when `products/_template/api` exists (the `$(dirname …)` heuristic is fragile across multiple staged files in different products).
 - PHILOSOPHY says pre-push includes "(for affected APIs) pyright strict + pytest". Two faithful ways to honor this: (a) let turbo's per-api `typecheck`/`test` tasks (defined in the api `package.json` as `uv run pyright` / `uv run pytest`) be picked up by `turbo run typecheck test build --affected` — preferred, keeps it cached + affected-scoped; or (b) add explicit lefthook commands. This guide assumes (a). Confirm in Phase 3.
 - Lefthook reads `lefthook.yml` at repo root (PHILOSOPHY Directory tree). Version `^1.7.0` chosen as a recent stable; pin to whatever the lockfile resolves.
@@ -781,6 +788,7 @@ ls -la .git/hooks/      # expect lefthook-managed pre-commit & pre-push shims
 Run from repo root. Maps 1:1 to **Definition of done**.
 
 **DoD 1 — toolchain pins:**
+
 ```bash
 mise install
 mise current
@@ -789,48 +797,60 @@ pnpm -v        # 11.x
 python --version  # 3.13.x
 uv --version
 ```
+
 Expected: versions match `mise.toml`.
 
 **DoD 2 — clean install + hooks:**
+
 ```bash
 pnpm install
 ls -la .git/hooks/pre-commit .git/hooks/pre-push   # Lefthook shims present
 test -f pnpm-lock.yaml && echo "single lockfile OK"
 ```
+
 Expected: install succeeds, one `pnpm-lock.yaml`, hook shims exist.
 
 **DoD 3 — turbo lint no-op:**
+
 ```bash
 pnpm turbo run lint ; echo "exit=$?"
 ```
+
 Expected: `exit=0`. Output reads as "no tasks to run" / all cache-hit (only `packages/config` exists and has no lint task wired yet — adding a `lint` script to it later turns this into a real lint run).
 
 **DoD 4 — `@platform/config` resolves:**
+
 ```bash
 pnpm --filter @platform/config exec node -e "console.log('resolved @platform/config')"
 ls packages/config/eslint.config.js packages/config/prettier.json \
    packages/config/tailwind-preset.js \
    packages/config/tsconfig/base.json packages/config/tsconfig/expo.json packages/config/tsconfig/node.json
 ```
+
 Expected: all six files listed, no errors.
 
 **DoD 5 — strict TS base:**
+
 ```bash
 node -e "const c=require('./tsconfig.base.json').compilerOptions; \
   console.log(c.strict===true && c.moduleResolution==='bundler' && c.noEmit===true ? 'strict base OK' : 'FAIL')"
 ```
+
 Expected: `strict base OK`.
 
 **DoD 6 — .gitignore env boundary:**
+
 ```bash
 touch .env .env.local .env.development .env.staging .env.production
 git check-ignore .env .env.local            # both printed (ignored)
 git check-ignore .env.development .env.staging .env.production && echo "BAD: per-env ignored" || echo "per-env files tracked OK"
 rm -f .env .env.local .env.development .env.staging .env.production
 ```
+
 Expected: `.env` + `.env.local` ignored; the per-env trio NOT ignored (`per-env files tracked OK`).
 
 **DoD 7 — pre-commit fires:**
+
 ```bash
 printf 'export  const   x=1\n' > packages/config/_hooktest.ts
 git add packages/config/_hooktest.ts
@@ -838,18 +858,22 @@ git commit -m "test: hook"      # Prettier/ESLint should reformat/flag before co
 git show --stat HEAD            # the committed file is the reformatted version
 git rm packages/config/_hooktest.ts && git commit -m "test: cleanup"
 ```
+
 Expected: the staged file is auto-formatted (re-staged) and the commit reflects clean formatting.
 
 **DoD 8 — pre-push fires:**
+
 ```bash
 # Dry run the hook without a remote:
 lefthook run pre-push ; echo "exit=$?"
 ```
+
 Expected: it invokes `pnpm turbo run typecheck test build --affected`, which is a clean no-op while no products exist; `exit=0`.
 
 **DoD 9 — hooks auto-installed (already covered by DoD 2/7/8):** confirm you never ran `lefthook install` manually — only `pnpm install` (its `prepare` did it).
 
 **Phase Verify (the PHILOSOPHY row, end-to-end):**
+
 ```bash
 mise install && pnpm install && pnpm turbo run lint   # clean no-op, exit 0
 ```

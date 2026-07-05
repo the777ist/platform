@@ -1,17 +1,19 @@
 # Phase 5 — Electron desktop (app:// protocol)
 
 **Goal:** Wrap the **exported Expo web build** (`products/_template/app/dist`) in an Electron
-shell so `template` ships to desktop from the *same* shared UI codebase that powers iOS,
+shell so `template` ships to desktop from the _same_ shared UI codebase that powers iOS,
 Android, and web. There is **no separate desktop UI** — Electron loads the identical SPA
 bundle through a privileged custom `app://` protocol (see Key ruling #2). electron-builder
 packages installers; electron-updater is wired but is a **no-op until a real
 `<org>/template-desktop-releases` repo exists** (Key ruling #3).
 
 **Verify (restated from the Phase 5 row):**
+
 > `turbo run build` + start → same screen in window; navigation works; API down → shell
 > still launches; `electron-builder --dir` packs.
 
 Concretely:
+
 - `turbo run build` produces `app/dist` (the SPA) and copies it into `desktop/renderer/`.
 - `electron .` (the `start` script) opens a window showing the **same screen** as web.
 - In-app navigation (Expo Router routes, e.g. tabs → settings) works under `app://-/`.
@@ -97,6 +99,7 @@ confirm:
 **Files:** `products/_template/desktop/package.json`
 
 **Contents:**
+
 ```json
 {
   "name": "@platform/template-desktop",
@@ -130,12 +133,14 @@ confirm:
 ```
 
 **Commands:**
+
 ```bash
 # after editing pnpm-workspace.yaml glob already includes products/*/desktop
 pnpm install
 ```
 
 **Why:**
+
 - `name` is **exactly** `@platform/template-desktop` (locked naming). The generator
   whole-word-replaces `template` → `<product>` everywhere, so the package name, appId, and
   releases repo all re-derive from the product name.
@@ -169,6 +174,7 @@ pnpm install
 **Files:** `products/_template/desktop/tsconfig.json`
 
 **Contents:**
+
 ```jsonc
 {
   // Node/Electron main-process build: emits CJS to build/.
@@ -187,23 +193,25 @@ pnpm install
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "sourceMap": true,
-    "noEmitOnError": true
+    "noEmitOnError": true,
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
 }
 ```
 
 **Commands:**
+
 ```bash
 pnpm --filter @platform/template-desktop run typecheck
 ```
 
 **Why:**
+
 - The main process is a **Node/CJS** program, not an RN/web bundle. `tsconfig.base.json`
   (strict, `moduleResolution: bundler`, `noEmit`) is wrong for emitting runnable Electron
   code, so this config stands alone and emits CJS to `build/`.
 - `module: CommonJS` + `"main": "build/main.js"` — Electron's default main entry is CJS.
-  **Decision: keep the main process CJS.** ESM main *is* available on Electron 42 (supported
+  **Decision: keep the main process CJS.** ESM main _is_ available on Electron 42 (supported
   since Electron 28 via Node's ESM loader, `.mjs`/`"type":"module"`), but CJS is the deliberate
   choice here: it is the lowest-risk default, integrates cleanly with `protocol.handle` /
   `net.fetch`, and — critically — avoids ESM's async-import caveat where only entry-point import
@@ -219,6 +227,7 @@ pnpm --filter @platform/template-desktop run typecheck
 **Files:** `products/_template/desktop/src/main.ts`
 
 **Contents:**
+
 ```ts
 import { app, BrowserWindow, protocol, net, shell } from "electron";
 import { autoUpdater } from "electron-updater";
@@ -345,8 +354,7 @@ function createWindow(): void {
 // Gated twice: only when packaged AND a real repo is configured. electron-updater
 // reads the `publish` block baked into the build from electron-builder.yml; with
 // the placeholder owner/repo it would 404, so we skip entirely off-repo.
-const UPDATER_ENABLED =
-  app.isPackaged && process.env.DESKTOP_RELEASES_CONFIGURED === "1";
+const UPDATER_ENABLED = app.isPackaged && process.env.DESKTOP_RELEASES_CONFIGURED === "1";
 
 function maybeCheckForUpdates(): void {
   if (!UPDATER_ENABLED) return;
@@ -375,12 +383,14 @@ app.on("window-all-closed", () => {
 ```
 
 **Commands:**
+
 ```bash
 pnpm --filter @platform/template-desktop run build   # copy renderer + compile
 pnpm --filter @platform/template-desktop run start   # electron .
 ```
 
 **Why:**
+
 - **`registerSchemesAsPrivileged` runs at module top-level**, before `app.whenReady()`.
   Chromium freezes scheme registration once the app is ready; registering late silently
   fails and the SPA loses secure-context / fetch behaviour (PHILOSOPHY.md "Electron main.ts
@@ -417,6 +427,7 @@ pnpm --filter @platform/template-desktop run start   # electron .
 **Files:** `products/_template/desktop/src/preload.ts`
 
 **Contents:**
+
 ```ts
 import { contextBridge, ipcRenderer } from "electron";
 
@@ -438,6 +449,7 @@ contextBridge.exposeInMainWorld("desktop", api);
 **Commands:** _(compiled as part of `build`/`compile`)_
 
 **Why:**
+
 - **`contextBridge.exposeInMainWorld` only** — never assign to `window` directly and never
   expose `ipcRenderer`/`require`. With context isolation on, this is the single safe channel
   between the privileged main process and the untrusted SPA.
@@ -460,6 +472,7 @@ contextBridge.exposeInMainWorld("desktop", api);
 **Files:** `products/_template/desktop/scripts/copy-renderer.mjs`
 
 **Contents:**
+
 ```mjs
 // Cross-platform copy of the exported Expo web build into the desktop renderer dir.
 // Run as part of `build` (after ^export:web has produced ../app/dist via turbo).
@@ -481,7 +494,7 @@ async function main() {
     console.error(
       `[copy-renderer] Missing ${path.join(SRC, "index.html")}.\n` +
         `Run the web export first: turbo run export:web --filter=*template-app ` +
-        `(turbo's ^export:web edge does this automatically via the workspace devDependency).`
+        `(turbo's ^export:web edge does this automatically via the workspace devDependency).`,
     );
     process.exit(1);
   }
@@ -498,11 +511,13 @@ main().catch((err) => {
 ```
 
 **Commands:**
+
 ```bash
 pnpm --filter @platform/template-desktop run copy:renderer
 ```
 
 **Why:**
+
 - **Cross-platform via `node:fs/promises.cp`** — no `cp -r`/`xcopy`/`robocopy` shell
   branching; works identically on the 3-OS matrix (`electron-release.yml`).
 - **Cleans `renderer/` first** so old hashed assets from a previous export don't linger and
@@ -517,6 +532,7 @@ pnpm --filter @platform/template-desktop run copy:renderer
 **Files:** `products/_template/desktop/turbo.json`
 
 **Contents:**
+
 ```jsonc
 {
   "extends": ["//"],
@@ -527,25 +543,27 @@ pnpm --filter @platform/template-desktop run copy:renderer
       // devDepends on @platform/template-app.
       "dependsOn": ["^export:web"],
       // build/ = compiled main+preload; renderer/ = copied SPA bundle.
-      "outputs": ["build/**", "renderer/**"]
+      "outputs": ["build/**", "renderer/**"],
     },
     "typecheck": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
     },
     "pack": {
       "dependsOn": ["build"],
-      "outputs": ["release/**"]
-    }
-  }
+      "outputs": ["release/**"],
+    },
+  },
 }
 ```
 
 **Commands:**
+
 ```bash
 turbo run build --filter=@platform/template-desktop
 ```
 
 **Why:**
+
 - **`build.dependsOn: ["^export:web"]`** is the exact wiring from PHILOSOPHY.md "Config
   essentials" — the desktop build is gated on the app's web export. `^` means "the
   `export:web` task of my dependencies", and the dependency is the `workspace:*` edge to the
@@ -564,6 +582,7 @@ turbo run build --filter=@platform/template-desktop
 **Files:** `products/_template/desktop/electron-builder.yml`
 
 **Contents:**
+
 ```yaml
 # electron-builder configuration for @platform/template-desktop.
 # appId / publish repo are LOCKED placeholders — the generator whole-word-replaces
@@ -573,13 +592,13 @@ productName: Template
 copyright: Copyright © example
 
 directories:
-  output: release        # electron-builder --dir / installers land here
-  buildResources: build-resources   # icons etc. (see Open questions)
+  output: release # electron-builder --dir / installers land here
+  buildResources: build-resources # icons etc. (see Open questions)
 
 # What gets packaged into the app. The compiled main/preload + the copied SPA.
 files:
-  - build/**/*           # compiled main.js + preload.js
-  - renderer/**/*        # the exported Expo web SPA (copied by copy-renderer.mjs)
+  - build/**/* # compiled main.js + preload.js
+  - renderer/**/* # the exported Expo web SPA (copied by copy-renderer.mjs)
   - package.json
   # electron + electron-builder are devDeps and excluded automatically;
   # electron-updater is a runtime dep and IS bundled.
@@ -587,11 +606,11 @@ files:
 # --- Targets per OS --------------------------------------------------------
 win:
   target:
-    - nsis               # installer
-    - zip                # update artifact electron-updater can consume
+    - nsis # installer
+    - zip # update artifact electron-updater can consume
 linux:
   target:
-    - AppImage           # self-contained + electron-updater friendly
+    - AppImage # self-contained + electron-updater friendly
     - deb
   category: Utility
 mac:
@@ -602,7 +621,7 @@ mac:
   # macOS auto-update REQUIRES signing + notarization. Until certs exist, mac is
   # built locally/unsigned only and is NOT published (gated in `publish` + CI matrix).
   # Leave identity null to skip signing for `--dir` / unsigned local builds.
-  identity: null         # PLACEHOLDER: set to "Developer ID Application: …" when certs exist
+  identity: null # PLACEHOLDER: set to "Developer ID Application: …" when certs exist
   hardenedRuntime: false # PLACEHOLDER: true together with notarization once signed
 
 # --- Auto-update publish target -------------------------------------------
@@ -611,8 +630,8 @@ mac:
 # resolution does not collide across products in the monorepo.
 publish:
   provider: github
-  owner: example                       # PLACEHOLDER org
-  repo: template-desktop-releases      # <org>/template-desktop-releases (per-product)
+  owner: example # PLACEHOLDER org
+  repo: template-desktop-releases # <org>/template-desktop-releases (per-product)
   # `releaseType` left default; electron-release.yml runs `--publish always` only
   # on a real tag, and only win/linux are published until mac is signed.
   # FORWARD-LOOKING (electron-builder v27): implicit publishing (auto-publish on CI/tag
@@ -623,6 +642,7 @@ publish:
 ```
 
 **Commands:**
+
 ```bash
 # the Phase 5 verify gate — packs an unpacked dir, no signing, no publish:
 pnpm --filter @platform/template-desktop run pack
@@ -631,6 +651,7 @@ cd products/_template/desktop && pnpm exec electron-builder --dir
 ```
 
 **Why:**
+
 - **`appId: com.example.template.desktop`** — locked exactly (PHILOSOPHY.md desktop tree). The
   generator rewrites `template` → `<product>`; `com.example.*` is the marked bundle-id
   placeholder.
@@ -672,7 +693,7 @@ cd products/_template/desktop && pnpm exec electron-builder --dir
    the app `ready` event. Register it inside `whenReady` and Chromium has already locked the
    scheme table — it silently downgrades and you lose secure-context / `supportFetchAPI`,
    producing baffling fetch + service-worker failures. (`protocol.handle` itself is registered
-   *after* ready — only the privilege declaration must be early.)
+   _after_ ready — only the privilege declaration must be early.)
 
 3. **SPA fallback must return `index.html` with `Content-Type: text/html` for unknown
    paths.** Deep links / client routes (`app://-/settings`) have no file on disk. If the
@@ -703,17 +724,17 @@ cd products/_template/desktop && pnpm exec electron-builder --dir
    and add notarization once certs exist.
 
 7. **electron-updater multi-product collision (Key ruling #3).** The GitHub provider resolves
-   "the latest release of *the* repo" — if every product published to the monorepo's repo,
+   "the latest release of _the_ repo" — if every product published to the monorepo's repo,
    `template`'s updater would pick up `demo`'s release and vice-versa. The fix baked into this
    config: **each product publishes to its own `<org>/<product>-desktop-releases` repo.** The
    generator rewrites `template-desktop-releases` → `<product>-desktop-releases`.
 
 8. **Renderer staleness.** `copy-renderer.mjs` deletes `renderer/` before copying so old
-   hashed bundles don't linger. If you ever see the desktop window showing a *previous*
+   hashed bundles don't linger. If you ever see the desktop window showing a _previous_
    version of the UI, you skipped `build` (or ran `electron .` against a stale copy) — always
    `turbo run build` (which runs `^export:web` → copy) before `start`.
 
-9. **CORS allowlist must include the exact origin `app://-`.** A custom *standard* scheme
+9. **CORS allowlist must include the exact origin `app://-`.** A custom _standard_ scheme
    produces a real `Origin` header, and a cross-origin `fetch` from the renderer to the API is
    CORS-checked. A request from `app://-/` sends the literal Origin **`app://-`** (scheme +
    host, **no trailing slash**) — so that exact string is what the FastAPI env-driven allowlist
@@ -734,6 +755,7 @@ cd products/_template/desktop && pnpm exec electron-builder --dir
 Run from repo root. Each block maps directly to a clause of the Phase 5 verify line.
 
 ### V1 — `turbo run build` + start → same screen in window
+
 ```bash
 # Build: ^export:web produces app/dist, copy-renderer.mjs -> desktop/renderer, tsc -> build/
 turbo run build --filter=@platform/template-desktop
@@ -745,11 +767,13 @@ ls products/_template/desktop/build/main.js          # exists
 # Launch the shell:
 pnpm --filter @platform/template-desktop run start
 ```
+
 **Expected:** an Electron window opens showing the **same home/list screen** as
 `localhost:8081` / the web build — same shared `@platform/ui` components, same theme. (If the
 API is up, the items list populates via the generated TanStack hook.)
 
 ### V2 — navigation works
+
 In the open window: navigate between routes — tabs (home ↔ settings), toggle dark mode in
 settings, and **reload** (Cmd/Ctrl-R) while on a non-root route (e.g. settings).
 **Expected:** route changes render the correct screen; **reload on a deep route stays on that
@@ -757,31 +781,36 @@ route** (proves the `index.html` SPA fallback + history routing under `app://`).
 window, no 404.
 
 ### V3 — API down → shell still launches
+
 ```bash
 # Ensure the template API is NOT running (stop turbo dev / the uvicorn process).
 # Then build + start as in V1:
 turbo run build --filter=@platform/template-desktop
 pnpm --filter @platform/template-desktop run start
 ```
+
 **Expected:** the window **still opens and renders the shell** (navigation, theme, offline/
 error UX from the app's global error boundary). Only data fetches fail/show the offline state
 — because the bundle is served from `app://` locally, not over the network. The updater does
 **not** run (unpackaged), so nothing blocks startup.
 
 ### V4 — `electron-builder --dir` packs
+
 ```bash
 pnpm --filter @platform/template-desktop run build   # ensure renderer/ + build/ are fresh
 pnpm --filter @platform/template-desktop run pack     # electron-builder --dir
 ls products/_template/desktop/release/                # unpacked app dir present
 ```
+
 **Expected:** `electron-builder --dir` completes **without signing certs and without a
 releases repo**, producing an unpacked application under `release/` (e.g.
 `release/<os>-unpacked/`). Launching that unpacked binary opens the same window as V1.
 
 ### V5 — launch smoke (Desktop testing row)
+
 Per PHILOSOPHY.md testing strategy, desktop has **no separate E2E** — the same web bundle is already
 covered by web Playwright. Phase 5's check is the **launch smoke** above (V1 + V3): the shell
-launches and shows the screen. Playwright `_electron` is only added later *if* shell logic
+launches and shows the screen. Playwright `_electron` is only added later _if_ shell logic
 grows (deferred — see Open questions).
 
 ---

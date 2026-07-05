@@ -17,7 +17,7 @@ fetched cleanly); each finding cites its source URL.
   Supabase reality — **with one materially outdated claim**: ruling #5's premise that "the
   local CLI stack still issues HS256" is **no longer true** as of Supabase CLI **v2.71.1**
   (the local default flipped to **ES256/asymmetric**). The HS256 fallback the plan builds is
-  still valuable, but it is now a *fallback*, not the local happy path, and the local stack
+  still valuable, but it is now a _fallback_, not the local happy path, and the local stack
   must be explicitly pinned to HS256 (or the JWKS path tested locally) or every local
   `/v1/me` 401s. Everything else (pooler ports, server-side broadcast) holds up.
 
@@ -46,6 +46,7 @@ Verdict on the three load-bearing claims:
 ## Findings
 
 ### 1. Ruling #5 / Phase 3 §9 / Phase 6 §12 — "local CLI stack still issues HS256"
+
 - **Location:** PHILOSOPHY.md ruling #5 (lines 75–77); `docs/phase-3-api.md` Step 9 + Gotchas
   ("the local CLI stack still issues HS256"); `docs/phase-6-auth.md` §1 Why, §12 Why, Gotchas
   ("the local CLI stack signs tokens with HS256").
@@ -75,6 +76,7 @@ Verdict on the three load-bearing claims:
 - **Source(s):** supabase/cli#4726; CLI v2.71.1 changelog note; JWT Signing Keys docs.
 
 ### 2. Ruling #5 — asymmetric default for new projects
+
 - **Location:** PHILOSOPHY.md ruling #5; Phase 3 Step 9 / Phase 6 §12.
 - **Claim:** "new Supabase projects use asymmetric keys → verify via JWKS (PyJWKClient,
   ES256/RS256, cached)".
@@ -90,6 +92,7 @@ Verdict on the three load-bearing claims:
   page; objectgraph migration writeup.
 
 ### 3. Phase 3 Step 9 / Phase 6 §12 — JWKS endpoint path
+
 - **Location:** `docs/phase-3-api.md` Step 9 (`{supabase_url}/auth/v1/.well-known/jwks.json`);
   `docs/phase-6-auth.md` §12 (`{supabase_url}/auth/v1/.well-known/jwks.json`).
 - **Claim:** JWKS URL = `<supabase_url>/auth/v1/.well-known/jwks.json`.
@@ -103,6 +106,7 @@ Verdict on the three load-bearing claims:
 - **Source(s):** JWT Signing Keys docs; supabase/auth#1724 (`.well-known/jwks.json` for REST).
 
 ### 4. Ruling #5 — `audience="authenticated"`
+
 - **Location:** PHILOSOPHY.md ruling #5 (implied); Phase 3 Step 9; Phase 6 §12 + Gotchas.
 - **Claim:** Verify with `audience="authenticated"`; omitting it raises `InvalidAudienceError`.
 - **Status:** ✅.
@@ -112,14 +116,14 @@ Verdict on the three load-bearing claims:
 - **Source(s):** Supabase JWT docs (access-token claims); PyJWT behavior (well established).
 
 ### 5. Ruling #4 / Phase 3 — pooler 6543 transaction-only, session mode removed 2025
+
 - **Location:** PHILOSOPHY.md ruling #4 (lines 73–74); Phase 3 Step 3 `db.py` comment + Gotchas;
   root CLAUDE.md gotcha (Phase 8 §g).
 - **Claim:** Port 6543 is transaction-mode only (session mode removed 2025); Alembic migrates
   over direct **5432** via a separate `DATABASE_MIGRATION_URL`.
 - **Status:** ✅ (with a wording nuance, see Finding 6).
 - **Finding:** Confirmed. Supavisor deprecated **Session Mode on 6543 effective 2025-02-28**;
-  thereafter 6543 = transaction mode only, session mode on 5432, direct connection also on
-  5432. Running migrations over the direct/session 5432 URL and runtime over 6543 transaction
+  thereafter 6543 = transaction mode only, session mode on 5432, direct connection also on 5432. Running migrations over the direct/session 5432 URL and runtime over 6543 transaction
   is the documented split. The Fly `release_command = "alembic upgrade head"` over
   `DATABASE_MIGRATION_URL` is consistent with this.
 - **Recommended change:** None for the mechanism. (See Finding 6 on the "session mode removed"
@@ -128,6 +132,7 @@ Verdict on the three load-bearing claims:
   Connect-to-Postgres docs; Supavisor FAQ.
 
 ### 6. Phrasing — "session mode removed 2025"
+
 - **Location:** PHILOSOPHY.md ruling #4; Phase 3 Step 3 comment ("session mode removed 2025").
 - **Claim:** Session mode was "removed" in 2025.
 - **Status:** ⚠️ (imprecise wording).
@@ -142,6 +147,7 @@ Verdict on the three load-bearing claims:
 - **Source(s):** Supabase changelog; Connect-to-Postgres docs.
 
 ### 7. Phase 6 §1 — `config.toml` key set (and missing local-JWT algorithm pin)
+
 - **Location:** `docs/phase-6-auth.md` §1 `config.toml` block + its OPEN flag.
 - **Claim:** The shown `config.toml` (`[api]`/`[db]`/`[db.pooler]`/`[studio]`/`[inbucket]`/
   `[storage]`/`[auth]`/`[auth.email]`/`[analytics]`/`[realtime]`) reflects required intent;
@@ -164,6 +170,7 @@ Verdict on the three load-bearing claims:
   supabase/cli#4488 (`signing_keys` config); `supabase gen signing-key`.
 
 ### 8. Ruling #4 / Phase 3 — psycopg3 + `prepare_threshold=None` + NullPool
+
 - **Location:** PHILOSOPHY.md ruling #4; Phase 3 Step 3 `db.py`, "Config essentials" `api/db.py`
   note, Gotchas.
 - **Claim:** Use psycopg v3 (`postgresql+psycopg://`) with
@@ -182,9 +189,10 @@ Verdict on the three load-bearing claims:
   supabase discussions #28239, #36618.
 
 ### 9. Realtime — server-side HTTP broadcast endpoint shape
+
 - **Location:** `docs/phase-8-cicd-obs.md` §c `services/realtime.py`
   (`{SUPABASE_URL}/realtime/v1/api/broadcast`, headers `apikey` + `Authorization: Bearer
-  <service_role>`, body `{"messages":[{"topic","event","payload"}]}`).
+<service_role>`, body `{"messages":[{"topic","event","payload"}]}`).
 - **Claim:** POST to `/realtime/v1/api/broadcast` with the service-role key broadcasts an
   `invalidate` event on a per-product channel.
 - **Status:** ✅ (with one caveat, Finding 10).
@@ -197,9 +205,10 @@ Verdict on the three load-bearing claims:
   rasc.ch Apr-2026 walkthrough.
 
 ### 10. Realtime — `private` flag / channel authorization alignment
+
 - **Location:** `docs/phase-8-cicd-obs.md` §c (server payload omits `private`; client
   `supabase.channel(opts.channel).on("broadcast", ...)` subscribes without `{ config: { private:
-  true } }`).
+true } }`).
 - **Claim:** Implicit — client and server use a plain (public) channel for invalidation events.
 - **Status:** ⚠️ (works, but make the public-vs-private decision explicit).
 - **Finding:** As written, both sides use a **public** channel (no `private: true` on subscribe,
@@ -210,7 +219,7 @@ Verdict on the three load-bearing claims:
   rides `realtime.messages`/channels, not Postgres-Changes), so the "no RLS holes" claim holds.
   BUT: if a product later flips on private channels, the server payload must set
   `"private": true` AND the client must subscribe with `{ config: { broadcast: ... }, private:
-  true }`, and you must add an INSERT/SELECT RLS policy on `realtime.messages` (authorization is
+true }`, and you must add an INSERT/SELECT RLS policy on `realtime.messages` (authorization is
   enforced via `realtime.messages`, checked once per channel-join and cached). Also note the
   account-level "Allow public access" Realtime setting governs whether public channels are
   permitted at all.
@@ -223,6 +232,7 @@ Verdict on the three load-bearing claims:
   and Presence Authorization".
 
 ### 11. Realtime — `realtime.broadcast_changes` vs raw HTTP
+
 - **Location:** PHILOSOPHY.md Realtime bullet ("service-role HTTP call"); task brief mentions
   `realtime.broadcast_changes`.
 - **Claim:** Server broadcasts via a service-role HTTP call.
@@ -231,7 +241,7 @@ Verdict on the three load-bearing claims:
   endpoint (what Phase 8 uses) and the in-database **`realtime.send`** / **`realtime.broadcast_changes`**
   SQL functions (typically driven from Postgres triggers, formatted compatibly with
   Postgres-Changes). The plan deliberately chooses the HTTP path because the broadcast is
-  initiated from FastAPI *after* a successful commit, not from a DB trigger — a valid and clean
+  initiated from FastAPI _after_ a successful commit, not from a DB trigger — a valid and clean
   choice. `realtime.broadcast_changes` would be the alternative if you wanted DB-trigger-driven
   events, but that reintroduces DB-side coupling the plan intentionally avoids.
 - **Recommended change:** None. Optionally note the trigger-based `broadcast_changes` path as a
@@ -240,6 +250,7 @@ Verdict on the three load-bearing claims:
   concepts docs.
 
 ### 12. Storage — bucket upload + public/signed URL API (supabase-js v2)
+
 - **Location:** `docs/phase-6-auth.md` §6 `storage.ts` (`supabase.storage.from(bucket).upload`,
   `getPublicUrl`, `createSignedUrl`).
 - **Claim:** Upload via `.upload(path, blob, {contentType, upsert})`; public via
@@ -260,6 +271,7 @@ Verdict on the three load-bearing claims:
   `@supabase/supabase-js` (2.108.x).
 
 ### 13. supabase-js used ONLY for auth/Realtime/Storage; PKCE; storage adapter
+
 - **Location:** PHILOSOPHY.md Topology; `docs/phase-6-auth.md` §2 `supabase.ts` (PKCE,
   `detectSessionInUrl` web-only, AsyncStorage native / localStorage web).
 - **Claim:** Frontend uses supabase-js only for auth/Realtime/Storage; PKCE flow;
@@ -274,6 +286,7 @@ Verdict on the three load-bearing claims:
 - **Source(s):** supabase-js v2 docs/blog; Supabase Auth (PKCE / session persistence) docs.
 
 ### 14. RLS deny-all default migration pattern + privileged-role bypass
+
 - **Location:** PHILOSOPHY.md DB conventions / ruling on RLS; Phase 3 Step 20 (ENABLE + FORCE RLS,
   no policy); Phase 6 §9 (storage bucket policies).
 - **Claim:** `ENABLE ROW LEVEL SECURITY` (+ `FORCE`) with **no policy** denies all access to
@@ -293,6 +306,7 @@ Verdict on the three load-bearing claims:
   Realtime Authorization docs (anon/authenticated roles).
 
 ### 15. Storage bucket public vs private (OPEN flag)
+
 - **Location:** `docs/phase-6-auth.md` §9 + OPEN flags; `storage.ts` `uploadAvatar`/`signedAvatarUrl`.
 - **Claim:** Ship a **public** avatars bucket for the demo (`getPublicUrl`), with a
   `signedAvatarUrl` path retained for the private variant.
@@ -306,6 +320,7 @@ Verdict on the three load-bearing claims:
 - **Source(s):** Storage public/signed-URL docs; supabase-js storage reference.
 
 ### 16. CLI ports / offset scheme
+
 - **Location:** `docs/phase-6-auth.md` §1 (base 54321, offset `+100·portIndex`); PHILOSOPHY.md generator
   step 4.
 - **Claim:** Local stack ports offset per product from base 54321; API `8000+10i`.
@@ -317,6 +332,7 @@ Verdict on the three load-bearing claims:
 - **Source(s):** Supabase CLI config reference; local-development overview.
 
 ### 17. `[db.pooler]` local disabled / local uses 5432 direct
+
 - **Location:** `docs/phase-6-auth.md` §1 (`[db.pooler] enabled = false`, comment "local uses 5432
   direct"); Phase 3 test conftest uses `:5432`.
 - **Claim:** Local stack uses the direct 5432 connection (no local Supavisor); the hosted pooler
@@ -331,6 +347,7 @@ Verdict on the three load-bearing claims:
 - **Source(s):** Supabase CLI config reference; Connect-to-Postgres docs.
 
 ### 18. Sentry SDK (`@sentry/react-native`, not `sentry-expo`) — Supabase-adjacent, noted
+
 - **Location:** PHILOSOPHY.md Cross-cutting; Phase 8 §a.
 - **Claim:** Use `@sentry/react-native`; `sentry-expo` is deprecated.
 - **Status:** ✅ (out of strict Supabase scope, but verified true and unchanged).
@@ -352,8 +369,7 @@ Verdict on the three load-bearing claims:
   **Additionally**, because the current CLI defaults the local stack to **ES256** (Finding 1), the
   `[auth]` signing-key configuration must be set deliberately if HS256-local is wanted (use
   `supabase gen signing-key --algorithm ES256` + `signing_keys_path`, or accept ES256 and exercise
-  the JWKS path locally). A dedicated `jwt_algorithm` toggle was still a feature request as of Jan
-  2026. Source: CLI config reference; supabase/cli#4726, #4488.
+  the JWKS path locally). A dedicated `jwt_algorithm` toggle was still a feature request as of Jan 2026. Source: CLI config reference; supabase/cli#4726, #4488.
 - **Privileged/BYPASSRLS role for the API (Phase 3 Step 20 OPEN).** **Resolved (guidance)** — on
   Supabase the API should connect as the `postgres` role (the role behind the standard pooler
   connection string), which owns the schema and effectively bypasses the deny-all policies that

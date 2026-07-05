@@ -11,7 +11,7 @@
 
 **Headline:** The plan's two highest-stakes claims both hold up. The **Fly scheduled-machine primitive is correct**: `fly machine run --schedule <hourly|daily|weekly|monthly>` is the native, no-queue-infra mechanism, and the plan's `--schedule daily` example uses a valid keyword. And **`@sentry/react-native` is indeed current while `sentry-expo` is deprecated** (deprecated at Expo SDK 50 / Jan 2024; merged into `@sentry/react-native`). Both are confirmed against official docs.
 
-**The one systematic weakness is stale GitHub Action major versions.** Every pinned third-party action in the workflows is one major behind current (June 2026): `actions/checkout@v4` → **v6**, `jdx/mise-action@v2` → **v4**, `dorny/paths-filter@v3` → **v4**, `expo/expo-github-action@v8` (still current — the only one that's right). v4 of both mise-action and paths-filter were Node-24 runtime bumps (Node 20 deprecated on GitHub Actions), so the stale pins are not merely cosmetic — they reference EOL runner versions. None of this *breaks* the architecture; it's a version-refresh pass.
+**The one systematic weakness is stale GitHub Action major versions.** Every pinned third-party action in the workflows is one major behind current (June 2026): `actions/checkout@v4` → **v6**, `jdx/mise-action@v2` → **v4**, `dorny/paths-filter@v3` → **v4**, `expo/expo-github-action@v8` (still current — the only one that's right). v4 of both mise-action and paths-filter were Node-24 runtime bumps (Node 20 deprecated on GitHub Actions), so the stale pins are not merely cosmetic — they reference EOL runner versions. None of this _breaks_ the architecture; it's a version-refresh pass.
 
 **Verdict:** Architecturally sound and faithful to PHILOSOPHY.md. Approve with a version-bump sweep on all pinned actions, plus two "still-works-but-no-longer-required" notes (Vercel now auto-skips unaffected monorepo builds so `turbo-ignore` is optional; and a Sentry Metro-config detail the guides omit). The Fly scheduled-machine and Sentry-package choices — the things this review was asked to confirm hardest — are both correct.
 
@@ -20,6 +20,7 @@
 ## Findings
 
 ### 1. `actions/checkout@v4`
+
 - **Location:** `docs/phase-8-cicd-obs.md` — every workflow (`ci.yml`, `deploy-api.yml`, `eas-build.yml`, `eas-update.yml`, `e2e-nightly.yml`, `electron-release.yml`) pins `actions/checkout@v4`.
 - **Claim:** `actions/checkout@v4` is the current major.
 - **Status:** ⚠️ Outdated (works, but behind).
@@ -28,14 +29,16 @@
 - **Source(s):** https://github.com/actions/checkout ; https://raw.githubusercontent.com/jdx/mise-action/main/README.md
 
 ### 2. `jdx/mise-action@v2`
+
 - **Location:** `docs/phase-8-cicd-obs.md` — `ci.yml`, `eas-build.yml`, `eas-update.yml`, `e2e-nightly.yml`, `electron-release.yml`; also "Workflows" bullet in PHILOSOPHY.md ("mise-action").
 - **Claim:** `jdx/mise-action@v2` installs Node 22 / pnpm 10 / Python 3.13 / uv from `mise.toml`.
 - **Status:** ⚠️ Outdated (works, but two majors behind).
-- **Finding:** Latest is **v4 (v4.1.0)**. v4 bumped the action runtime from Node 20 → Node 24 (GitHub deprecated Node 20 for Actions) and added automatic locked installs when a `mise.lock` is present. The README recommends `@v4`. The *behavior* the plan relies on (reads tool versions from `mise.toml`) is unchanged, so v2 still functions.
+- **Finding:** Latest is **v4 (v4.1.0)**. v4 bumped the action runtime from Node 20 → Node 24 (GitHub deprecated Node 20 for Actions) and added automatic locked installs when a `mise.lock` is present. The README recommends `@v4`. The _behavior_ the plan relies on (reads tool versions from `mise.toml`) is unchanged, so v2 still functions.
 - **Recommended change:** Bump `jdx/mise-action@v2` → `@v4`. Optionally commit a `mise.lock` to get v4's reproducible locked installs (complements the existing pnpm/uv frozen-lockfile stance).
 - **Source(s):** https://github.com/jdx/mise-action ; https://github.com/jdx/mise-action/releases ; https://raw.githubusercontent.com/jdx/mise-action/main/README.md
 
 ### 3. `dorny/paths-filter@v3`
+
 - **Location:** `docs/phase-8-cicd-obs.md` — `deploy-api.yml`, `eas-update.yml` `changes` jobs; PHILOSOPHY.md "Workflows" bullet ("paths-filter").
 - **Claim:** `dorny/paths-filter@v3` is current.
 - **Status:** ⚠️ Outdated (works, but a major behind).
@@ -44,6 +47,7 @@
 - **Source(s):** https://github.com/dorny/paths-filter ; https://raw.githubusercontent.com/dorny/paths-filter/master/README.md ; https://github.com/dorny/paths-filter/releases/tag/v3.0.0
 
 ### 4. `expo/expo-github-action@v8` + `eas-version: latest` + `EXPO_TOKEN`
+
 - **Location:** `docs/phase-8-cicd-obs.md` — `eas-build.yml`, `eas-update.yml`.
 - **Claim:** `expo/expo-github-action@v8` with `eas-version: latest` and `token: ${{ secrets.EXPO_TOKEN }}` is the correct EAS-in-CI setup.
 - **Status:** ✅ Correct.
@@ -52,6 +56,7 @@
 - **Source(s):** https://github.com/expo/expo-github-action ; https://raw.githubusercontent.com/expo/expo-github-action/main/README.md ; https://docs.expo.dev/eas-update/github-actions/
 
 ### 5. EAS-cli pnpm-workspace detection workaround (`.npmrc` `node-linker=hoisted` + root `packageManager` field)
+
 - **Location:** `docs/phase-8-cicd-obs.md` — `eas-build.yml` note + "Gotchas"; PHILOSOPHY.md "Workflows" bullet.
 - **Claim:** `eas build`/`eas update` misdetect the package manager in a pnpm workspace unless BOTH the committed `.npmrc` (`node-linker=hoisted`) AND a `"packageManager": "pnpm@10.x"` field in the **root** `package.json` are present.
 - **Status:** ✅ Correct (real, current issue) — ⚠️ one caveat.
@@ -60,14 +65,16 @@
 - **Source(s):** https://github.com/expo/eas-cli/issues/2978 ; https://github.com/expo/eas-cli/issues/3247 ; https://docs.expo.dev/guides/monorepos/ ; https://pnpm.io/settings
 
 ### 6. Fly scheduled machines as the cron primitive (`fly machine run --schedule`)
+
 - **Location:** PHILOSOPHY.md "Background/scheduled jobs" bullet + ruling, directory tree (`tasks.py`); `docs/phase-8-cicd-obs.md` step (d) + DoD + Verify; `docs/phase-3-api.md` Step 18.
 - **Claim:** "Fly scheduled machines running a lightweight `tasks` module (no queue infra)"; `fly machine run --schedule daily … python -m template_api.tasks prune-push-tokens` is the right primitive in June 2026.
 - **Status:** ✅ Correct (with a precision caveat).
-- **Finding:** Confirmed against official Fly docs. `fly machine run --schedule` sets the Machine's `config.schedule` and starts the Machine on a **fuzzy hourly / daily / weekly / monthly** cycle — exactly the "no queue infra, run a finite job then exit" model the plan wants. The plan's `--schedule daily` example uses a **valid keyword**. **Caveat:** `--schedule` accepts *only* those four interval keywords — it does **not** accept cron expressions, and scheduling is "fuzzy/approximate" (not guaranteed at an exact minute). For prune-stale-push-tokens, daily-ish is fine. If a product ever needs precise cron (e.g. "0 4 * * *"), Fly's own task-scheduling blueprint points to **Cron Manager** (per-job isolated machines) or **Supercronic**, not `--schedule`. The plan's "heavier products can add a worker later" already leaves room for this.
+- **Finding:** Confirmed against official Fly docs. `fly machine run --schedule` sets the Machine's `config.schedule` and starts the Machine on a **fuzzy hourly / daily / weekly / monthly** cycle — exactly the "no queue infra, run a finite job then exit" model the plan wants. The plan's `--schedule daily` example uses a **valid keyword**. **Caveat:** `--schedule` accepts _only_ those four interval keywords — it does **not** accept cron expressions, and scheduling is "fuzzy/approximate" (not guaranteed at an exact minute). For prune-stale-push-tokens, daily-ish is fine. If a product ever needs precise cron (e.g. "0 4 * * *"), Fly's own task-scheduling blueprint points to **Cron Manager** (per-job isolated machines) or **Supercronic**, not `--schedule`. The plan's "heavier products can add a worker later" already leaves room for this.
 - **Recommended change:** None to the primitive choice. Optionally add one sentence: "`--schedule` takes interval keywords only (hourly/daily/weekly/monthly), runs are approximate; for exact-time cron use Fly's Cron Manager / Supercronic blueprint." Note: the one-off Verify run (`fly machine run … <image> python -m …` with no `--schedule`) is correct as a one-shot.
 - **Source(s):** https://fly.io/docs/machines/flyctl/fly-machine-run/ ; https://fly.io/docs/flyctl/machine-run/ ; https://community.fly.io/t/new-feature-scheduled-machines/7398 ; https://fly.io/docs/blueprints/task-scheduling/
 
 ### 7. `flyctl deploy -c fly.<env>.toml` + `[deploy] release_command` for Alembic
+
 - **Location:** PHILOSOPHY.md ruling #4, "Hosting"; `docs/phase-8-cicd-obs.md` `deploy-api.yml`; `docs/phase-3-api.md` Step 22.
 - **Claim:** Deploy via `flyctl deploy -c fly.staging.toml --remote-only`; Alembic runs as `[deploy] release_command = "alembic upgrade head"`.
 - **Status:** ✅ Correct.
@@ -76,22 +83,25 @@
 - **Source(s):** https://fly.io/docs/launch/continuous-deployment-with-github-actions/ ; https://fly.io/docs/flyctl/integrating/
 
 ### 8. `superfly/flyctl-actions/setup-flyctl@master`
+
 - **Location:** `docs/phase-8-cicd-obs.md` — `deploy-api.yml`.
 - **Claim:** `uses: superfly/flyctl-actions/setup-flyctl@master` installs flyctl.
 - **Status:** ⚠️ Works, but `@master` is an unpinned moving target.
-- **Finding:** This is the action Fly's own docs use, and `@master` is what Fly's README shows — so the claim is *faithful to upstream*. However, the action supports pinning (e.g. `with: version: <flyctl version>`), and pinning to a released tag (latest is v1.5) is recommended for production to avoid edge-release surprises. The `FLY_API_TOKEN` secret name is correct.
+- **Finding:** This is the action Fly's own docs use, and `@master` is what Fly's README shows — so the claim is _faithful to upstream_. However, the action supports pinning (e.g. `with: version: <flyctl version>`), and pinning to a released tag (latest is v1.5) is recommended for production to avoid edge-release surprises. The `FLY_API_TOKEN` secret name is correct.
 - **Recommended change:** Acceptable as-is given the "placeholders until real infra" stance, but consider pinning `setup-flyctl` to a tag and `version:` to a known-good flyctl for reproducible deploys.
 - **Source(s):** https://github.com/superfly/flyctl-actions ; https://github.com/superfly/flyctl-actions/issues/24 ; https://fly.io/docs/launch/continuous-deployment-with-github-actions/
 
 ### 9. Vercel: one project per product, root dir = `products/<name>/app`, build via turbo filter, output `dist`, `npx turbo-ignore` ignored build step
+
 - **Location:** PHILOSOPHY.md "Hosting" + generator step 6 + ruling #1; `docs/phase-8-cicd-obs.md` step (f) "web has NO workflow" note.
 - **Claim:** Per-product Vercel project; build via turbo filter; output `dist`; `npx turbo-ignore` as the ignored build step; no `web-deploy.yml`.
-- **Status:** ⚠️ Correct but `turbo-ignore` is no longer *required* (now optional).
+- **Status:** ⚠️ Correct but `turbo-ignore` is no longer _required_ (now optional).
 - **Finding:** The architecture (one project/product, root dir at the app, Vercel git integration instead of a workflow, `expo export --platform web` → `dist/`) is sound and current. `npx turbo-ignore` is **still supported and not deprecated** (README documents it, defaults to comparing against the last successful deployment on the branch; `--fallback=HEAD^` fixes the first-commit-of-a-branch "always deploys" gotcha). **However**, Vercel now ships an **"Automatically skip unnecessary deployments in monorepos"** project setting (Turborepo-powered) that skips unchanged projects with **no** manual ignored-build-step config. So the manual `turbo-ignore` step is now an optional/legacy approach rather than the required one.
-- **Recommended change:** Update the generator checklist + the "web has NO workflow" note to: "enable Vercel's *Automatically skip unnecessary deployments* setting (preferred); `npx turbo-ignore --fallback=HEAD^` remains a valid manual alternative." Add the `--fallback=HEAD^` flag wherever `npx turbo-ignore` is shown bare, to avoid the new-branch always-deploy gotcha.
+- **Recommended change:** Update the generator checklist + the "web has NO workflow" note to: "enable Vercel's _Automatically skip unnecessary deployments_ setting (preferred); `npx turbo-ignore --fallback=HEAD^` remains a valid manual alternative." Add the `--fallback=HEAD^` flag wherever `npx turbo-ignore` is shown bare, to avoid the new-branch always-deploy gotcha.
 - **Source(s):** https://vercel.com/changelog/automatically-skip-unnecessary-deployments-in-monorepos ; https://vercel.com/changelog/intelligent-ignored-builds-using-turborepo ; https://raw.githubusercontent.com/vercel/turborepo/main/packages/turbo-ignore/README.md ; https://vercel.com/docs/monorepos/turborepo
 
 ### 10. Sentry RN package: `@sentry/react-native` current, `sentry-expo` deprecated
+
 - **Location:** PHILOSOPHY.md "Cross-cutting" + Key rulings; `docs/phase-8-cicd-obs.md` step (a) `core/sentry.ts` + "Why" + Gotchas; root CLAUDE.md gotcha.
 - **Claim:** Sentry = `@sentry/react-native`, NOT the deprecated `sentry-expo`.
 - **Status:** ✅ Correct (this is the headline confirmation).
@@ -100,6 +110,7 @@
 - **Source(s):** https://docs.sentry.io/platforms/react-native/migration/sentry-expo/ ; https://github.com/expo/fyi/blob/main/sentry-expo-migration.md ; https://docs.expo.dev/guides/using-sentry/ ; https://github.com/getsentry/sentry-react-native/issues/5859
 
 ### 11. Sentry Expo config-plugin / Metro wiring (completeness)
+
 - **Location:** `docs/phase-8-cicd-obs.md` step (a) — only shows `core/sentry.ts` `Sentry.init`.
 - **Claim:** (Implicit) the Sentry init in `packages/core/src/sentry.ts` is the full RN Sentry setup.
 - **Status:** ⚠️ Incomplete (not wrong, but missing the build-time half).
@@ -108,6 +119,7 @@
 - **Source(s):** https://docs.expo.dev/guides/using-sentry/ ; https://docs.sentry.io/platforms/react-native/manual-setup/expo/ ; https://docs.sentry.io/platforms/react-native/manual-setup/metro/
 
 ### 12. Python Sentry init: `sentry-sdk[fastapi]`
+
 - **Location:** PHILOSOPHY.md config-essentials Python deps; `docs/phase-8-cicd-obs.md` step (a) `api/.../sentry.py`; `docs/phase-3-api.md` deps.
 - **Claim:** `sentry-sdk[fastapi]`; init with `FastApiIntegration()` + `StarletteIntegration()`.
 - **Status:** ✅ Correct (one redundancy note).
@@ -116,6 +128,7 @@
 - **Source(s):** https://docs.sentry.io/platforms/python/integrations/fastapi/
 
 ### 13. `actions/setup-*` majors
+
 - **Location:** Not used — the workflows use `jdx/mise-action` instead of `actions/setup-node`/`setup-python`.
 - **Claim:** (Domain item to verify) current `actions/setup-*` majors.
 - **Status:** ✅ N/A — correctly avoided.
@@ -124,6 +137,7 @@
 - **Source(s):** https://github.com/actions/setup-node/releases
 
 ### 14. `workflow_dispatch` / `schedule` triggers
+
 - **Location:** `docs/phase-8-cicd-obs.md` — `e2e-nightly.yml` (`schedule: cron "0 4 * * *"` + `workflow_dispatch: {}`); `eas-build.yml` (`workflow_dispatch` with `inputs`).
 - **Claim:** Nightly schedule + manual dispatch with typed inputs.
 - **Status:** ✅ Correct.
@@ -132,14 +146,16 @@
 - **Source(s):** https://docs.github.com/actions/using-workflows/events-that-trigger-workflows
 
 ### 15. Reusable-workflow syntax
+
 - **Location:** N/A — no `workflow_call` / reusable workflows are used.
 - **Claim:** (Domain item to verify) reusable workflow syntax.
 - **Status:** ✅ N/A.
-- **Finding:** The plan uses six independent top-level workflows with matrix fan-out (over products / OS), not `workflow_call` reusable workflows. There's mild duplication (checkout + mise-action + pnpm install repeated across files) that *could* be factored into a composite action or reusable workflow, but nothing is incorrect.
+- **Finding:** The plan uses six independent top-level workflows with matrix fan-out (over products / OS), not `workflow_call` reusable workflows. There's mild duplication (checkout + mise-action + pnpm install repeated across files) that _could_ be factored into a composite action or reusable workflow, but nothing is incorrect.
 - **Recommended change:** Optional DRY-up via a composite action for the "checkout + mise + pnpm install" preamble; not required.
 - **Source(s):** https://docs.github.com/actions/using-workflows/reusing-workflows
 
 ### 16. CI Postgres service container (`postgres:16`)
+
 - **Location:** `docs/phase-8-cicd-obs.md` — `ci.yml` + `e2e-nightly.yml` `services.postgres`; `docs/phase-3-api.md` Testing strategy.
 - **Claim:** `postgres:16` service container with `pg_isready` health check for API integration tests.
 - **Status:** ✅ Correct (minor freshness note).
@@ -148,6 +164,7 @@
 - **Source(s):** https://docs.github.com/actions/using-containerized-services/creating-postgresql-service-containers
 
 ### 17. `pnpm install --frozen-lockfile` in CI
+
 - **Location:** `docs/phase-8-cicd-obs.md` — all workflows.
 - **Claim:** `pnpm install --frozen-lockfile`.
 - **Status:** ✅ Correct.
@@ -156,6 +173,7 @@
 - **Source(s):** https://pnpm.io/cli/install
 
 ### 18. `turbo run … --affected` in CI
+
 - **Location:** `docs/phase-8-cicd-obs.md` — `ci.yml`; PHILOSOPHY.md "Quality"/"Workflows".
 - **Claim:** `pnpm turbo run lint typecheck test build openapi --affected` with `fetch-depth: 0`.
 - **Status:** ✅ Correct (OPEN base-ref item resolved below).
@@ -164,6 +182,7 @@
 - **Source(s):** https://turbo.build/repo/docs/reference/run ; https://turbo.build/repo/docs/crafting-your-repository/constructing-ci
 
 ### 19. `electron-builder --publish always` + GitHub Releases provider + per-product releases repo
+
 - **Location:** `docs/phase-8-cicd-obs.md` — `electron-release.yml`; PHILOSOPHY.md ruling #3 + "Desktop".
 - **Claim:** 3-OS matrix, `electron-builder --publish always`, per-product `<org>/<product>-desktop-releases` repo to dodge the electron-updater "latest release of the repo" collision; `GH_TOKEN` for publishing.
 - **Status:** ✅ Correct.
@@ -172,6 +191,7 @@
 - **Source(s):** https://www.electron.build/configuration/publish ; https://www.electron.build/auto-update
 
 ### 20. macOS code-signing/notarization gate (`CSC_LINK`/`CSC_KEY_PASSWORD`)
+
 - **Location:** `docs/phase-8-cicd-obs.md` — `electron-release.yml` env + Gotchas; PHILOSOPHY.md Electron essentials.
 - **Claim:** macOS auto-update needs signing/notarization; gate mac publish until certs exist (`CSC_LINK`/`CSC_KEY_PASSWORD` placeholders; drop `macos-latest` or build unsigned in the interim).
 - **Status:** ✅ Correct (OPEN item resolved below).
@@ -180,6 +200,7 @@
 - **Source(s):** https://www.electron.build/code-signing ; https://www.electron.build/auto-update
 
 ### 21. Expo Push API endpoint + `send_push()` via httpx
+
 - **Location:** `docs/phase-8-cicd-obs.md` step (b) (`EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"`); `docs/phase-3-api.md` Step 7 + settings `expo_push_url`.
 - **Claim:** POST messages to `https://exp.host/--/api/v2/push/send`.
 - **Status:** ✅ Correct.
@@ -188,6 +209,7 @@
 - **Source(s):** https://docs.expo.dev/push-notifications/sending-notifications/
 
 ### 22. Supabase Realtime HTTP broadcast endpoint (service-role)
+
 - **Location:** `docs/phase-8-cicd-obs.md` step (c) `api/.../services/realtime.py` (`POST {SUPABASE_URL}/realtime/v1/api/broadcast`).
 - **Claim:** Broadcast invalidation via `POST {SUPABASE_URL}/realtime/v1/api/broadcast` with `apikey` + service-role bearer; clients subscribe via `supabase.channel(...).on("broadcast", ...)`.
 - **Status:** ❓ Mostly correct; endpoint path worth a live check.
@@ -196,6 +218,7 @@
 - **Source(s):** https://supabase.com/docs/guides/realtime/broadcast (verify on live project)
 
 ### 23. Tag-trigger globs (`"*-api-v*"`, `"*-app-v*"`, `"*-ota-v*"`, `"*-desktop-v*"`) + tag→product parsing
+
 - **Location:** `docs/phase-8-cicd-obs.md` — all tag-triggered workflows; PHILOSOPHY.md "Releases".
 - **Claim:** Push tags matching `<product>-<surface>-v*` trigger production; `<product>` is parsed from the tag (`PARSE-FROM-TAG` placeholder).
 - **Status:** ✅ Correct (OPEN parsing item resolved below).
@@ -204,6 +227,7 @@
 - **Source(s):** https://docs.github.com/actions/using-workflows/workflow-syntax-for-github-actions#onpushpull_requestpull_request_targetpathstagsbranches
 
 ### 24. `playwright install --with-deps chromium` + nightly E2E/VR jobs
+
 - **Location:** `docs/phase-8-cicd-obs.md` step (e) + `e2e-nightly.yml`.
 - **Claim:** `pnpm exec playwright install --with-deps chromium`; two independent jobs (web-e2e, visual-regression).
 - **Status:** ✅ Correct.
@@ -220,11 +244,13 @@ Resolution: With `fetch-depth: 0`, Turborepo 2.x auto-detects the base — on `p
 
 **OPEN — tag→product parsing (`PARSE-FROM-TAG`).**
 Resolution: Add a step before the build that derives the product token from the tag and exposes it as an output, e.g.:
+
 ```yaml
 - id: tag
   if: startsWith(github.ref, 'refs/tags/')
   run: echo "product=${GITHUB_REF_NAME%%-app-v*}" >> "$GITHUB_OUTPUT"
 ```
+
 Then `working-directory: products/${{ github.event.inputs.product || steps.tag.outputs.product }}/app`. For `_template` map the literal `template` → `_template` as the existing matrix expression already does (`matrix.product == 'template' && '_template' || matrix.product`). Use `%%-desktop-v*` / `%%-api-v*` / `%%-ota-v*` for the other surfaces. This is plain bash parameter expansion (no extra action needed). Source: https://docs.github.com/actions/learn-github-actions/variables
 
 **OPEN — macOS signing.**

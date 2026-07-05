@@ -7,7 +7,7 @@
 ## TL;DR
 
 - **Can the template support it?** Yes — cleanly, as an **additive tier**. The template gives
-  the *product shell* (4-target RN client, auth, layered FastAPI control plane, Postgres
+  the _product shell_ (4-target RN client, auth, layered FastAPI control plane, Postgres
   metadata, Storage, typed client, CI/CD). Audio streaming is a **media plane** bolted on
   alongside — the same "Dockerized service on Fly, autoscaled, behind a LB" shape the template
   already uses.
@@ -18,7 +18,7 @@
   - **V1 — live (grow into it):** add an ingest + live-packaging tier (SRS / LiveKit /
     nginx-rtmp) as a **separate Fly app** — autoscaled, LB'd, UDP — or a managed provider
     (Mux / Cloudflare Stream / LiveKit Cloud). The FastAPI control plane and the client player
-    carry over **unchanged**; only the media *source* changes.
+    carry over **unchanged**; only the media _source_ changes.
 - **"Adaptive" = multi-bitrate HLS + client ABR.** You get a real adaptive pipeline in V0
   without any live media servers.
 
@@ -26,13 +26,13 @@
 
 ## Why it fits (and where it doesn't)
 
-| Concern | Verdict |
-|---|---|
-| VOD (podcasts / music / voice notes) | **Fits well** — object storage + CDN + HLS/AAC + a transcode job; pure additive build |
-| Control plane (upload, signed URLs, playlists, metadata) | **Free** — exactly the layered-CRUD FastAPI the template is built for |
-| Live / real-time (rooms, low-latency broadcast, voice) | **Not out of the box** — needs a media-server tier (SFU/RTMP/WebRTC). Supabase Realtime here is *broadcast-only cache invalidation*, not a media transport |
-| Infra | Fly.io + Supabase + Vercel — **not** Kubernetes. Fly does container autoscaling / scale-to-zero / multi-region / **UDP** / dedicated IPs, which covers media-server hosting. k8s is a *deliberate* deviation, only if you specifically want it |
-| Media load-balancing | **Special** — WebRTC/RTMP are sticky/stateful (session-affinity, UDP), not round-robin HTTP. A CDN only fronts the HLS/HTTP leg. LiveKit-style coordinators handle node selection; true on any platform, not a Fly limitation |
+| Concern                                                  | Verdict                                                                                                                                                                                                                                        |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| VOD (podcasts / music / voice notes)                     | **Fits well** — object storage + CDN + HLS/AAC + a transcode job; pure additive build                                                                                                                                                          |
+| Control plane (upload, signed URLs, playlists, metadata) | **Free** — exactly the layered-CRUD FastAPI the template is built for                                                                                                                                                                          |
+| Live / real-time (rooms, low-latency broadcast, voice)   | **Not out of the box** — needs a media-server tier (SFU/RTMP/WebRTC). Supabase Realtime here is _broadcast-only cache invalidation_, not a media transport                                                                                     |
+| Infra                                                    | Fly.io + Supabase + Vercel — **not** Kubernetes. Fly does container autoscaling / scale-to-zero / multi-region / **UDP** / dedicated IPs, which covers media-server hosting. k8s is a _deliberate_ deviation, only if you specifically want it |
+| Media load-balancing                                     | **Special** — WebRTC/RTMP are sticky/stateful (session-affinity, UDP), not round-robin HTTP. A CDN only fronts the HLS/HTTP leg. LiveKit-style coordinators handle node selection; true on any platform, not a Fly limitation                  |
 
 Fly scaling knobs you get for the media tier: horizontal scale to N machines, `fly-autoscaler`
 (metrics-based), `autostart/autostop` (scale-to-zero), Fly Proxy LB (TCP/HTTP/TLS + UDP),
@@ -46,15 +46,15 @@ The reference gist is a classic **AWS VOD adaptive pipeline** (S3 → Elastic Tr
 bitrate HLS+DASH → CloudFront → Video.js, iOS→HLS / else→DASH), done by hand in the console
 (no backend, no auth, no metadata). Our V0 is the same architecture, **strictly better**:
 
-| Gist (AWS, manual) | Our analogue |
-|---|---|
-| 3 S3 buckets (`-in`/`-out`/`-thumbs`) | Supabase Storage buckets `media-in` / `media-out` / `media-thumbs` (or S3) |
-| **Elastic Transcoder** (deprecated → MediaConvert) | **ffmpeg** transcode worker on a Fly Machine (template's Fly-job pattern), or managed (MediaConvert / Mux / Transloadit) |
-| HLS **+** DASH, 10s segments | **HLS only** for V0 — multi-bitrate AAC (64/128/256 kbps) + `master.m3u8`. HLS plays native on iOS/Android + `hls.js` on web/desktop → DASH unnecessary (optional add) |
-| **CloudFront** (origin `-out`, CORS, forward headers) | CDN over `media-out`: Supabase Storage CDN or Cloudflare/CloudFront. Same CORS; **signed playback URLs minted by FastAPI** |
-| Video.js + contrib-hls + dash.js (iOS→HLS/else→DASH) | Cross-platform RN player: `react-native-track-player`/`expo-video` (native, background + lock-screen) + `hls.js`/Video.js on web — behind `.native/.web` extensions. One component, 4 targets |
-| `-thumbs` bucket + 2nd CloudFront | `media-thumbs` bucket on same CDN; poster URL in metadata |
-| *(nothing — manual console)* | **FastAPI control plane**: `assets` table, upload presign, enqueue transcode, status, signed URLs, RLS deny-all, problem+json |
+| Gist (AWS, manual)                                    | Our analogue                                                                                                                                                                                  |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3 S3 buckets (`-in`/`-out`/`-thumbs`)                 | Supabase Storage buckets `media-in` / `media-out` / `media-thumbs` (or S3)                                                                                                                    |
+| **Elastic Transcoder** (deprecated → MediaConvert)    | **ffmpeg** transcode worker on a Fly Machine (template's Fly-job pattern), or managed (MediaConvert / Mux / Transloadit)                                                                      |
+| HLS **+** DASH, 10s segments                          | **HLS only** for V0 — multi-bitrate AAC (64/128/256 kbps) + `master.m3u8`. HLS plays native on iOS/Android + `hls.js` on web/desktop → DASH unnecessary (optional add)                        |
+| **CloudFront** (origin `-out`, CORS, forward headers) | CDN over `media-out`: Supabase Storage CDN or Cloudflare/CloudFront. Same CORS; **signed playback URLs minted by FastAPI**                                                                    |
+| Video.js + contrib-hls + dash.js (iOS→HLS/else→DASH)  | Cross-platform RN player: `react-native-track-player`/`expo-video` (native, background + lock-screen) + `hls.js`/Video.js on web — behind `.native/.web` extensions. One component, 4 targets |
+| `-thumbs` bucket + 2nd CloudFront                     | `media-thumbs` bucket on same CDN; poster URL in metadata                                                                                                                                     |
+| _(nothing — manual console)_                          | **FastAPI control plane**: `assets` table, upload presign, enqueue transcode, status, signed URLs, RLS deny-all, problem+json                                                                 |
 
 What we gain over the gist: **auth + ownership + signed URLs** (gist is wide-open public),
 **real metadata + status** in Postgres, a **typed cross-platform client** (not one web `<video>`
@@ -125,13 +125,13 @@ A normal product feature — slots into the locked patterns:
 
 ## Scale, performance & caching (per the architect Step 5b lens)
 
-- **Storage/CDN, not the API, serves the media.** The API only serves *signed manifest URLs* —
+- **Storage/CDN, not the API, serves the media.** The API only serves _signed manifest URLs_ —
   bytes go Storage→CDN→client. The API stays a thin, stateless control plane (scales out on Fly).
 - **Transcode is off the request path** — always a job (Fly Machine), never inline. Heavy /
   batch transcode → a worker fleet (PHILOSOPHY defers a real queue+worker to "heavier products").
 - **`list_assets`** — cursor keyset on the UUIDv7 PK (time-ordered), bounded page size, index on
   `(owner_id, created_at)`; no N+1 (join poster/rendition metadata in one query).
-- **Payload** — DTO returns metadata + a *signed URL*, not rendition blobs.
+- **Payload** — DTO returns metadata + a _signed URL_, not rendition blobs.
 - **Client cache** — TanStack Query for asset lists/metadata (persisted); the **player** relies on
   HLS segment caching at the CDN + the native player's buffer, not the query cache.
 - **CDN cache** — long `Cache-Control` on immutable segments; short/none on the manifest if you
@@ -170,20 +170,20 @@ A normal product feature — slots into the locked patterns:
 
 Use the `ptfm-*` pipeline — this is a genuine multi-phase feature, so run the architect:
 
-1. **`/ptfm-product <product> <TICKET>`** *(optional — for the real product brief: who/why/scope,
-   VOD-vs-live, catalog size, latency target, monetisation).* 
+1. **`/ptfm-product <product> <TICKET>`** _(optional — for the real product brief: who/why/scope,
+   VOD-vs-live, catalog size, latency target, monetisation)._
 2. **`/ptfm-architect <product> <TICKET>`** — it will phase this. Expected phases:
    - **Phase 1 — VOD happy path (thin slice):** `assets` table + Alembic migration (RLS deny-all,
      UUIDv7) → `MediaService.create_upload`/`sign_playback` → `routers/media.py` → typegen →
      upload + list + a single-rendition play screen on web+iOS. (Even single-bitrate first.)
    - **Phase 2 — adaptive transcode:** the `<product>-transcoder` Fly app (ffmpeg → multi-bitrate
-     HLS) + `enqueue_transcode` + worker callback (`mark_ready`) + status UX. Now it's *adaptive*.
+     HLS) + `enqueue_transcode` + worker callback (`mark_ready`) + status UX. Now it's _adaptive_.
    - **Phase 3 — CDN + signed URLs + poster/thumbs + cross-platform player polish** (background
      audio, lock-screen, offline cache of downloaded tracks).
    - **Phase 4+ (optional) — live:** the ingest/media-server tier (Fly app or managed) → live HLS
      → same player.
-   Each phase carries the **Scale & extensibility** section (Step 5b): index/pagination/fan-out,
-   transcode-off-request-path, Redis-when-multi-instance, the V0→V1 seam.
+     Each phase carries the **Scale & extensibility** section (Step 5b): index/pagination/fan-out,
+     transcode-off-request-path, Redis-when-multi-instance, the V0→V1 seam.
 3. **Per phase:** `/ptfm-plan <product> <PHASE-TICKET>` → `/ptfm-implement <product> <PHASE-TICKET>`
    → `/ptfm-audit` → `/ptfm-simplify` → `/ptfm-commonify` → `/ptfm-review` → `/ptfm-test-ui`.
 4. **Infra to provision** (outside the code): the 3 Storage buckets + CORS + CDN, the
@@ -200,7 +200,7 @@ player streams and switches renditions under a throttled network.
 
 - **`react-native-track-player` ↔ current Expo SDK** — confirm the version pairing (native module;
   needs a dev build, not Expo Go). Web player is separate (`hls.js`).
-- **Signed-URL ↔ HLS segment auth** — a signed *manifest* doesn't auto-sign the *segments*; decide
+- **Signed-URL ↔ HLS segment auth** — a signed _manifest_ doesn't auto-sign the _segments_; decide
   segment-level signing vs CDN tokenised auth vs a short-lived signed prefix.
 - **Transcode cost/time at catalog scale** — self-hosted ffmpeg fleet vs managed; a real queue if
   volume is high.

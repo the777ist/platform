@@ -38,13 +38,7 @@ const buttonTextVariants = cva("text-sm font-medium", {
 export type ButtonProps = React.ComponentProps<typeof Pressable> &
   VariantProps<typeof buttonVariants> & { children?: React.ReactNode };
 
-export function Button({
-  className,
-  variant,
-  size,
-  children,
-  ...props
-}: ButtonProps) {
+export function Button({ className, variant, size, children, ...props }: ButtonProps) {
   return (
     <Pressable
       className={cn(buttonVariants({ variant, size }), className)}

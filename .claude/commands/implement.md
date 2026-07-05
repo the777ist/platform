@@ -71,7 +71,7 @@ instructions**:
    skeletons. Adapt a skeleton only where the guide tells you to (e.g. port math, product
    tokens).
 5. Run the guide's `## Verification` commands and satisfy every item in `## Definition of
-   done`. Fix failures and show the **real** output. Do not claim done if a step failed —
+done`. Fix failures and show the **real** output. Do not claim done if a step failed —
    report it honestly.
 6. Apply `## Gotchas & pitfalls` proactively as you build.
 7. Commit per the guide's `## Commits` section (and the repo git rules), then push.
