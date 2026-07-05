@@ -64,6 +64,32 @@ def test_bad_signature_raises_401() -> None:
     assert exc.value.status == 401
 
 
+def test_jwks_url_derivation_and_override() -> None:
+    # NOTE: fields left unset would fall back to the api/.env file (pydantic-settings
+    # env_file) — every auth field is passed explicitly so the test is hermetic.
+    derived = Settings(
+        database_url="postgresql+psycopg://x",
+        database_migration_url="postgresql+psycopg://x",
+        supabase_url=AnyHttpUrl("http://localhost:54321"),
+        supabase_jwks_url=None,
+    )  # pyright: ignore[reportCallIssue]
+    assert derived.jwks_url == "http://localhost:54321/auth/v1/.well-known/jwks.json"
+    overridden = Settings(
+        database_url="postgresql+psycopg://x",
+        database_migration_url="postgresql+psycopg://x",
+        supabase_url=AnyHttpUrl("http://localhost:54321"),
+        supabase_jwks_url="https://jwks.example.test/keys",
+    )  # pyright: ignore[reportCallIssue]
+    assert overridden.jwks_url == "https://jwks.example.test/keys"
+    neither = Settings(
+        database_url="postgresql+psycopg://x",
+        database_migration_url="postgresql+psycopg://x",
+        supabase_url=None,
+        supabase_jwks_url=None,
+    )  # pyright: ignore[reportCallIssue]
+    assert neither.jwks_url is None
+
+
 def test_missing_aud_raises_401() -> None:
     # Supabase access tokens carry aud="authenticated"; a token WITHOUT the claim must be
     # rejected (PyJWT raises MissingRequiredClaimError when audience= is enforced).

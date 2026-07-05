@@ -21,8 +21,8 @@ def _decode(token: str, settings: Settings) -> dict[str, object]:
     # Supabase projects sign asymmetrically by default, and the local CLI now ALSO issues
     # ES256 by default (since CLI v2.71.1) — so point SUPABASE_URL at http://localhost:54321
     # locally and let PyJWKClient hit the local /auth/v1/.well-known/jwks.json too. (Ruling #5)
-    if settings.supabase_url is not None:
-        jwks_url = f"{str(settings.supabase_url).rstrip('/')}/auth/v1/.well-known/jwks.json"
+    jwks_url = settings.jwks_url  # explicit SUPABASE_JWKS_URL override, else derived
+    if jwks_url is not None:
         try:
             signing_key = _jwks_client(jwks_url).get_signing_key_from_jwt(token)
             return jwt.decode(

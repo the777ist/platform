@@ -725,3 +725,46 @@ package.json` (guide skeleton has no author field; harmless for --dir and irrele
 - **Fix applied:** plain-string children in login/signup/avatar-uploader (this is the
   guide's own ⚠️ OPEN "reconcile against what Phase 2 actually exported").
 - **Template change needed:** Phase 6 guide steps 7/10 skeletons use string children.
+
+## Phase 6 deep audit (post-implementation verification pass)
+
+### 1. Two DoD items were satisfied in spirit but not to the letter — now literal
+
+- **Symptom:** the DoD names the route-guard hooks "`useProtectedRoute` / `useRequireAuth`"
+  but the step-4 skeleton only defines `useProtectedRoute` (built as such); and the DoD says
+  "`settings.py` carries the JWKS URL (derived from `supabase_url`)" with an explicit
+  per-env override field in the step-12 skeleton (`supabase_jwks_url` + `jwks_url`
+  property), while Phase 3's kept shape derived the URL inline in `auth.py` with no
+  override capability.
+- **Fix applied:** added `useRequireAuth()` to `core/auth.tsx` (screen-level guard variant:
+  redirects a single protected screen, returns the session; same loading gate) + export;
+  added `supabase_jwks_url` field + resolved `jwks_url` property to `settings.py`,
+  `auth.py._decode` now consumes it, `SUPABASE_JWKS_URL=` documented in `.env.example`,
+  plus a hermetic derivation/override/none test (pydantic-settings reads api/.env for
+  UNSET fields — tests must pass every auth field explicitly). Live JWKS path re-proven
+  after the refactor (fresh password-grant ES256 token → /v1/me 200; bad token → 401).
+- **Template change needed:** Phase 6 guide — either add a `useRequireAuth` skeleton to
+  step 4 or drop the name from the DoD line, so the checklist and skeleton agree.
+
+### 2. Everything else verified present-and-correct
+
+- **DoD sweep:** config.toml (`project_id example-template`, `[auth] enabled`, site/redirect
+  URLs incl. `app://-/`, email confirmations off, analytics off, major_version 17,
+  portIndex-0 ports); stack up with bucket + 3 RLS policies live; core exports complete;
+  platform-adapter/pkce/detectSessionInUrl-web-only client; store + actions + guards;
+  uploadAvatar/signedAvatarUrl; product-local screens; thin routes; provider order;
+  settings demo; committed .env.development (origin-only API URL); protected /v1/me.
+- **Gotchas:** all 10 applied (JWKS-primary proven with NO HS256 secret set; audience
+  enforced + tested; supabase-js used only for auth/storage; loading gates; bucket policy;
+  offset ports; publishable anon key; web-only URL detection; cache-bust proven live;
+  `app://-/` in redirect allowlist).
+- **Fidelity deltas (all deliberate + documented in the Phase 6 section):** useShallow,
+  auth.tsx extension, string Button children, MediaType array, origin-only API URL,
+  init-then-delta config.toml.
+- **Gates:** the full build graph re-proven — exported web bundle AND desktop renderer
+  copy contain the Phase 6 login code; typegen drift clean; turbo typecheck/test/lint
+  17/17; pytest 14/14; pyright strict 0; format clean; no checkout-dir/username leaks in
+  tracked files; api/.env untracked; exactly the four intended env files tracked.
+- **Prerequisite claim checked:** `scripts/bootstrap.mjs` is data-driven (scans
+  `products/*/supabase/config.toml`) — it now automatically starts the Phase 6 stack; no
+  change needed.

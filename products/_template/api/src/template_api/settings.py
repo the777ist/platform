@@ -19,6 +19,9 @@ class Settings(BaseSettings):
 
     # --- Auth (Supabase) ---
     supabase_url: AnyHttpUrl | None = Field(default=None)  # JWKS discovery base
+    # JWKS endpoint for asymmetric (ES256/RS256) verification — the PRIMARY path on ALL
+    # environments. Derived from supabase_url; kept explicit so it can be overridden per env.
+    supabase_jwks_url: str | None = Field(default=None)
     supabase_jwt_secret: str | None = Field(default=None)  # HS256 genuine fallback only
     jwt_audience: str = Field(default="authenticated")
 
@@ -37,6 +40,15 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def jwks_url(self) -> str | None:
+        """Resolved JWKS endpoint: explicit override first, else derived from supabase_url."""
+        if self.supabase_jwks_url is not None:
+            return self.supabase_jwks_url
+        if self.supabase_url is not None:
+            return f"{str(self.supabase_url).rstrip('/')}/auth/v1/.well-known/jwks.json"
+        return None
 
 
 @lru_cache

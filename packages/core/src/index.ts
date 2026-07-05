@@ -9,6 +9,7 @@ export {
   signOut,
   signUp,
   useProtectedRoute,
+  useRequireAuth,
   useSession,
   useSessionStore,
 } from "./auth";

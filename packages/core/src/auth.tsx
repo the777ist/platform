@@ -95,3 +95,21 @@ export function useProtectedRoute() {
 
   return { loading };
 }
+
+/**
+ * Screen-level guard variant: protects a SINGLE screen outside the guarded (tabs)
+ * group (a standalone route that needs auth without group-level redirection logic).
+ * Redirects to (auth)/login when the hydrated session is missing; returns the
+ * session so the screen can render user data.
+ */
+export function useRequireAuth() {
+  const { session, user, loading } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (loading) return; // same flicker gate as useProtectedRoute
+    if (!session) router.replace("/(auth)/login");
+  }, [session, loading, router]);
+
+  return { session, user, loading };
+}
