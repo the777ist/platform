@@ -73,8 +73,12 @@ step-by-step build instructions live in **[`docs/`](docs/)** (`phase-1` … `pha
 
 - **[mise](https://mise.jdx.dev/)** — pins the toolchain: **Node 24 LTS · pnpm 11 · Python
   3.13 · uv**. Run `mise install` to get them all.
-- **[Supabase CLI](https://supabase.com/docs/guides/local-development)** — runs the full
-  backend stack (Postgres, auth, storage) locally.
+- **[Supabase CLI](https://supabase.com/docs/guides/local-development)** + **Docker** — the
+  local backend stack (Postgres, auth, storage) runs in Docker, so **Docker must be running**
+  for `supabase start` / `pnpm bootstrap`.
+- **Agentic workflow (optional but recommended):** the `/implement` build and the `ptfm-*`
+  pipeline drive MCP servers — connect **Supabase, GitHub, Figma, Linear, Notion, Playwright**
+  in Claude Code before running them (see the **Operational stack** section below).
 - The git repo name is irrelevant — nothing derives from it (app/infra ids come from *product*
   names).
 
