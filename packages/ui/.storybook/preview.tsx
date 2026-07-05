@@ -1,4 +1,6 @@
 import * as React from "react";
+import { View } from "react-native";
+import { vars } from "nativewind";
 import type { Preview, Decorator } from "@storybook/react-native-web-vite";
 import "../src/global.css";
 import { ThemeProvider } from "../src/theme-provider";
@@ -26,15 +28,30 @@ function ThemeGlobals({
   children: React.ReactNode;
 }) {
   React.useEffect(() => {
+    // Keep the DOM in sync for any plain-CSS consumers (and devtools inspection)…
     const root = document.documentElement;
     root.classList.toggle("dark", theme === "dark");
-    const overrides = BRAND_VARS[brand] ?? {};
-    Object.entries(overrides).forEach(([k, v]) => root.style.setProperty(k, v));
+    const effectOverrides = BRAND_VARS[brand] ?? {};
+    Object.entries(effectOverrides).forEach(([k, v]) =>
+      root.style.setProperty(k, v),
+    );
     return () =>
-      Object.keys(overrides).forEach((k) => root.style.removeProperty(k));
+      Object.keys(effectOverrides).forEach((k) => root.style.removeProperty(k));
   }, [theme, brand]);
 
-  return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
+  const overrides = BRAND_VARS[brand] ?? {};
+
+  // …but the override that actually re-themes components is the NativeWind vars()
+  // OVERLAY: css-interop resolves semantic tokens through its own vars() context, NOT
+  // the CSS cascade — root.style.setProperty alone never reaches component styles.
+  // This mirrors exactly how a product overrides token VALUES (Key ruling #8/#11).
+  return (
+    <ThemeProvider theme={theme}>
+      <View style={vars(overrides)} className="flex-1">
+        {children}
+      </View>
+    </ThemeProvider>
+  );
 }
 
 const withTheme: Decorator = (Story, ctx) => (
