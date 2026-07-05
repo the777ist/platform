@@ -108,6 +108,7 @@ For EACH phase, specify:
 - **What's explicitly OUT** — capabilities deferred to a later phase (forecloses scope creep during `/ptfm-plan` and `/ptfm-implement`).
 - **The seam to the next phase** — the architectural interface that lets the next phase extend without rewriting this one (e.g. "Phase 2 adds threaded replies; Phase 1's flat `comment.body` + `comment.post_id` schema gains a nullable `parent_id` column and the service's `list_comments` cursor query gains a tree assembly — the DTO and the generated hook stay backward-compatible").
 - **Success criterion** — what does "this phase is done and shippable" look like? (e.g. "10 internal users can run the happy path end-to-end on iOS + web without escalation; the broadcast invalidation refetches the list on a second device").
+- **Scale & extensibility deltas** — the phase's non-functional shape (see Step 5b): which indexes / pagination bounds / caching this phase's queries need, any N+1 or broadcast-fan-out risk it introduces, and the extension points it leaves for plausible *next use cases* (not just the next phase).
 
 ---
 
@@ -123,6 +124,22 @@ Defer per-test enumeration to `/ptfm-plan`; here, name the CATEGORIES the per-ph
 - Which **cross-target / visual-regression** surfaces each phase adds (Storybook stories × {light,dark} × brand for new `@platform/ui` variants; Playwright web screenshots, nightly).
 
 (There is **no AI eval category** — this template has no locked AI layer. If a product happens to use AI, that's product-specific, not a template-locked pattern, and it gets tested as ordinary service logic.)
+
+---
+
+## Step 5b — Scale, performance & extensibility (the design's non-functional shape)
+
+Functional slices ship value; this step makes sure they don't fall over as usage grows or box the product in. The architecture MUST take an explicit position on each of these (name the decision, or state "N/A because…"):
+
+- **Expected load & growth** — rough read/write volumes today and at **10× / 100×**; the dominant access pattern (read-heavy list? write-heavy feed? fan-out?); which paths are **hot**.
+- **Data-layer scale shape** — for every query the feature adds: the **index** its filter/sort needs (UUIDv7 PKs are time-ordered — lean on that for cursor keyset), **N+1 avoidance**, **cursor-pagination bounds** (max page size, no unbounded scans), and any denormalization/materialization a large-table read would need. Flag any query that scans without an index.
+- **Caching & payload** — TanStack Query `gcTime`/`staleness` for the new queries, response payload size (don't over-fetch columns the surface doesn't need), and whether a hot read wants an edge/CDN or app-cache layer.
+- **Broadcast fan-out** — the broadcast-and-invalidate events this feature fires: how many clients/channels they hit, whether a high-frequency mutation would storm invalidations, and whether it should debounce/coalesce.
+- **Sync vs. async** — what runs **inline** in the request vs. what belongs on a **background job / Fly scheduled machine** (heavy transcode, large fan-out, third-party calls). Inline work that can block the request path at scale is a design smell.
+- **Horizontal-scale fit** — the FastAPI tier is **stateless** (scale out on Fly); call out anything that would break that (in-process state, sticky sessions, local file writes) and route it to Postgres/Storage/a job instead.
+- **Extensibility for future use cases** — beyond the next-phase seam: name the plausible *next 1–2 use cases* the product will want, and the **extension points** (nullable columns, a `type`/`kind` discriminator, a strategy seam, an interface on a service) that let them land **without a rewrite** — while staying additive (no speculative abstraction; add the knob when the second use case is real, but leave the door where it'll be needed).
+
+Keep it proportional — a thin CRUD feature gets a few lines; a feed/search/media/real-time feature gets real analysis. This is design-time scale thinking, **not** load-testing or benchmarking (those stay out of scope).
 
 ---
 
@@ -150,6 +167,7 @@ Use the Linear MCP (`mcp__Linear__save_issue`) to create the sub-issues. For EAC
    - **Pattern adherence** — name the SPECIFIC patterns this phase carries (e.g. layered service `CommentService.create` returning a DTO ≠ ORM; problem+json `type: comment/not-found`; cursor pagination on `list_comments`; slowapi key `comment:create`; broadcast event `comments:invalidate` on the product channel; semantic tokens for the new card variant; cross-target coverage iOS/Android/web/desktop + light/dark + brand; Alembic migration for the new table incl. RLS deny-all; typegen regenerated after the contract change). Be load-bearing-specific; this is what the implementer will check against.
    - **Seam to next phase** — what hook / abstraction / extension point lets Phase N+1 extend without rewriting this phase. Explain enough that the future-Phase engineer knows where to plug in.
    - **Success criterion** — measurable, demonstrable (e.g. "10 internal users post + see a comment end-to-end on iOS + web; rate limit triggers correctly at the configured slowapi threshold; the error UI renders the translated problem+json message on a 429; a second device refetches via the broadcast within ~1s").
+   - **Scale & extensibility** — the phase's non-functional shape: expected load / growth + hot paths, the indexes / pagination bounds / N+1 stance / broadcast fan-out for its queries, what runs inline vs. on a background job, and the extension points it leaves for the plausible next use case.
    - **Test categories** — for each layer (RNTL unit + component / pytest API unit / pytest integration / cross-target + visual regression), name the specific surfaces that get covered this phase. The full case enumeration lands in `/ptfm-plan`; here, the categories.
    - **Risks & open questions** — anything still ambiguous about this phase that the planner / implementer will need to resolve.
    - **Run** — `/ptfm-plan <product> <PHASE-TICKET-ID> "<short focus from handoff brief>"` so the next step is obvious.
@@ -216,9 +234,13 @@ A subsection per phase (`### Phase 1 — <title>`, `### Phase 2 — <title>`, �
 
 Per-phase test-category checklist (from Step 5). Names categories (RNTL unit/component, pytest API unit, pytest integration incl. the broadcast-and-invalidate seam, cross-target + visual regression); defers case enumeration to `/ptfm-plan`.
 
+### `## Scale, performance & extensibility`
+
+The non-functional shape from Step 5b: expected load + 10×/100× growth and hot paths; the data-layer scale shape (indexes, N+1 avoidance, cursor-pagination bounds, denormalization); caching + payload; broadcast fan-out; sync-vs-async / what goes to a background job; horizontal-scale fit (stateless FastAPI); and the extension points left for the plausible next use cases (additive, no speculative abstraction). Proportional to the feature.
+
 ### `## Risks & open questions`
 
-Anything ambiguous in the ticket, tradeoffs considered (e.g. sync vs. async, build vs. buy, optimistic vs. pessimistic UI, broadcast granularity), production failure modes, blockers, dependencies on external teams.
+Anything ambiguous in the ticket, tradeoffs considered (e.g. sync vs. async, build vs. buy, optimistic vs. pessimistic UI, broadcast granularity), production failure modes, **what breaks first at scale**, blockers, dependencies on external teams.
 
 ### `## Handoff brief to /ptfm-plan`
 
@@ -247,6 +269,7 @@ After saving the doc, report to the user in chat:
 - **PHASED DELIVERY IS MANDATORY** — every architecture is at least 2 phases. A single-phase "ship it all at once" is a rule violation and must be re-decomposed.
 - **VERTICAL SLICES ONLY** — every phase is end-to-end (backend + frontend + tests + docs), spanning the `model → service → schema → router → openapi → typegen → hook → screen` recipe. Horizontal phases ("Phase 1: all backend; Phase 2: all frontend") are FORBIDDEN.
 - **FAST TIME-TO-MARKET IS THE TIE-BREAKER** — when two phasings are otherwise equal, pick the one that puts a usable surface in front of users sooner, even if Phase 1 looks embarrassingly thin.
+- **DESIGN FOR SCALE & EXTENSIBILITY (Step 5b is mandatory).** Every architecture takes an explicit position on load/growth, the data-layer scale shape (indexes, pagination bounds, N+1/fan-out), sync-vs-async, stateless horizontal-scale fit, and the extension points for plausible next use cases. Fast TTM does NOT excuse a Phase-1 design that scans unindexed, blocks the request path, or paints the product into a corner — thin is fine, *unscalable-by-construction* is not. (Additive only: leave the seam, don't build speculative abstraction.)
 - **EVERY PHASE INDEPENDENTLY SHIPPABLE AND REVERSIBLE.** Phase N cannot strand Phase N-1. If Phase 1 can't be shipped without Phase 2, the decomposition is wrong.
 - **DESIGN SYSTEM ADHERENCE IS NON-NEGOTIABLE** — `@platform/ui` primitives + **NativeWind semantic tokens ONLY** (`bg-background`, `text-foreground`, `border-border`, …); **NEVER raw hex**, never hand-named colors (token values come from the Figma pipeline). Every UI surface covers **iOS / Android / web / desktop** + **light/dark** + **brand modes** + responsive — "web only" / "light only" is INCOMPLETE. If a primitive needed for the architecture doesn't exist, call it out as a `@platform/ui` addition that lands in Phase 1 (or extend an existing one with a `cva` variant).
 - **BACKEND ADHERENCE IS NON-NEGOTIABLE** — strict **layered services** (`schemas → routers → services → models`, no repository layer); **DTOs ≠ ORM models**; **RFC 9457 problem+json** for every user-facing error; **cursor pagination** on lists; the generated client **never hand-edited** (typegen on every contract change); **Alembic migration for every schema change**; **RLS deny-all** + UUIDv7 on every table; **broadcast-only** realtime (no Postgres-Changes / RLS holes); **slowapi** on paid / public endpoints; **Pydantic v2 strict** + **pyright strict**.
@@ -262,7 +285,7 @@ What `/ptfm-architect` does NOT mean:
 - **Not modifying the parent Linear ticket** — only reading the parent + creating sub-issues under it. The parent ticket's title, description, status, etc. stay untouched. (Sub-issues are additive, not edits.)
 - **Not auditing existing code quality** — that's `/ptfm-audit`. Adherence assessment here is forward-looking ("the new work will conform to X"), not backward-looking.
 - **Not commonifying or simplifying existing code** — those are `/ptfm-simplify` and `/ptfm-commonify` after the feature ships.
-- **Not load testing, performance benchmarking, or security review** — those are separate disciplines, not architecture concerns at the slash-command level.
+- **Not load testing, performance benchmarking, or security review** — those are separate disciplines. But the architecture DOES own the **scale shape and extension points** (Step 5b): designing the indexes, pagination bounds, N+1/fan-out avoidance, sync-vs-async split, stateless-scale fit, and future-use-case seams is squarely the architect's job — only the *measuring* (benchmarks, load tests) is out of scope.
 
 ## Available MCPs / CLIs (use as needed)
 
