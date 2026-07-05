@@ -23,6 +23,8 @@ preferFrozenLockfile: true
 allowBuilds:
   esbuild: true # postinstall places the platform esbuild binary (vite/storybook toolchain)
   lefthook: true # postinstall places the lefthook binary (needed for `pnpm prepare` hook install)
+  electron: true # postinstall downloads the Electron binary (desktop shell)
+  electron-winstaller: true # electron-builder dep; postinstall fetches its Squirrel tooling
 
 # --- workspace globs ---
 packages:
@@ -32,3 +34,6 @@ packages:
   - "products/*/desktop"
   - "products/*/api" # script-shim package.json → uv run (PHILOSOPHY "Package management model")
   - "products/*/api-client" # generated + committed (hey-api)
+
+patchedDependencies:
+  app-builder-lib@26.15.6: patches/app-builder-lib@26.15.6.patch

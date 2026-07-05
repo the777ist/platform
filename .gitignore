@@ -7,7 +7,8 @@ node_modules/
 dist/
 build/
 storybook-static/
-renderer/            # electron copies app/dist here at build time
+# electron copies app/dist into desktop/renderer at build time
+renderer/
 
 # ---- Expo / RN ----
 .expo/

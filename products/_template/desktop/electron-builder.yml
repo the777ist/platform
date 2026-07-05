@@ -1,0 +1,55 @@
+# electron-builder configuration for @platform/template-desktop.
+# appId / publish repo are LOCKED placeholders — the generator whole-word-replaces
+# `template` and the `<org>` owner is a marked placeholder until a real org exists.
+appId: com.example.template.desktop
+productName: Template
+copyright: Copyright © example
+
+directories:
+  output: release # electron-builder --dir / installers land here
+  buildResources: build-resources # icons etc. (see Open questions)
+
+# What gets packaged into the app. The compiled main/preload + the copied SPA.
+files:
+  - build/**/* # compiled main.js + preload.js
+  - renderer/**/* # the exported Expo web SPA (copied by copy-renderer.mjs)
+  - package.json
+  # electron + electron-builder are devDeps and excluded automatically;
+  # electron-updater is a runtime dep and IS bundled.
+
+# --- Targets per OS --------------------------------------------------------
+win:
+  target:
+    - nsis # installer
+    - zip # update artifact electron-updater can consume
+linux:
+  target:
+    - AppImage # self-contained + electron-updater friendly
+    - deb
+  category: Utility
+mac:
+  target:
+    - dmg
+    - zip
+  category: public.app-category.productivity
+  # macOS auto-update REQUIRES signing + notarization. Until certs exist, mac is
+  # built locally/unsigned only and is NOT published (gated in `publish` + CI matrix).
+  # Leave identity null to skip signing for `--dir` / unsigned local builds.
+  identity: null # PLACEHOLDER: set to "Developer ID Application: …" when certs exist
+  hardenedRuntime: false # PLACEHOLDER: true together with notarization once signed
+
+# --- Auto-update publish target -------------------------------------------
+# PLACEHOLDER until a real releases repo exists (Key ruling #3): each product
+# publishes to its OWN repo so electron-updater's "latest release of the repo"
+# resolution does not collide across products in the monorepo.
+publish:
+  provider: github
+  owner: example # PLACEHOLDER org
+  repo: template-desktop-releases # <org>/template-desktop-releases (per-product)
+  # `releaseType` left default; electron-release.yml runs `--publish always` only
+  # on a real tag, and only win/linux are published until mac is signed.
+  # FORWARD-LOOKING (electron-builder v27): implicit publishing (auto-publish on CI/tag
+  # detection) is deprecated and will be REMOVED in v27 — publish intent must be explicit
+  # (`--publish always`/`onTag`). The guide already uses explicit `--publish always` in
+  # `electron-release.yml`, so it is ALREADY compliant; this is only a note for a future
+  # bump off the pinned 26.15.3. (v27 is still alpha — do not adopt yet.)

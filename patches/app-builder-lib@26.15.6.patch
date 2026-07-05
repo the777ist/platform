@@ -1,0 +1,24 @@
+diff --git a/out/util/appFileCopier.js b/out/util/appFileCopier.js
+index 230f5bcd04697279ad8b43f406c9112637065c98..4794129e994ab5cd4facd67f680cbe2172e6c54a 100644
+--- a/out/util/appFileCopier.js
++++ b/out/util/appFileCopier.js
+@@ -214,7 +214,18 @@ async function resolveFirstMatchingCollection(options) {
+     for (const pm of pmApproaches) {
+         for (const dir of searchDirectories) {
+             builder_util_1.log.info({ pm, searchDir: dir }, "searching for node modules");
+-            const deps = await run(pm, dir);
++            // PATCH(platform): a collector failure (e.g. `pnpm list` dying with EMFILE on a
++            // large hoisted workspace) must fall through to the next approach — notably
++            // PM.TRAVERSAL — instead of aborting the whole build. Mirrors the documented
++            // intent of this loop ("retained only as a last-resort fallback").
++            let deps;
++            try {
++                deps = await run(pm, dir);
++            }
++            catch (error) {
++                builder_util_1.log.warn({ pm, searchDir: dir, error: error == null ? "unknown" : String(error.message || error) }, "node module collection failed, trying next search directory/approach");
++                continue;
++            }
+             if (deps.nodeModules.length === 0) {
+                 builder_util_1.log.info({ pm, searchDir: dir }, "no node modules found in collection, trying next search directory");
+                 continue;
