@@ -1,7 +1,4 @@
 {
   "extends": "@platform/config/tsconfig/expo",
-  "compilerOptions": {
-    "paths": { "@/*": ["./src/*"] }
-  },
   "include": ["src", ".storybook"]
 }

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { View } from "react-native";
 import { colorScheme } from "nativewind";
-import { themes, type Theme } from "@/lib/theme";
+import { themes, type Theme } from "./lib/theme";
 
 export function ThemeProvider({
   theme,
