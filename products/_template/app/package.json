@@ -13,8 +13,11 @@
   "dependencies": {
     "@expo/metro-runtime": "~56.0.16",
     "@platform/core": "workspace:*",
+    "@platform/template-api-client": "workspace:*",
     "@platform/ui": "workspace:*",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@tanstack/react-query": "5.101.2",
+    "@tanstack/react-query-persist-client": "5.101.2",
     "expo": "~56.0.14",
     "expo-constants": "~56.0.20",
     "expo-linking": "~56.0.15",
