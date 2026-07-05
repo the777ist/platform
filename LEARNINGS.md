@@ -250,3 +250,12 @@ Observed on npm, 2026-07-05 — no action taken (locked versions respected), rec
   Phase 8), but the prerequisite is unsatisfiable as written.
 - **Template change needed:** drop the bullet from the guide's Prerequisites (or move
   workflow-skeleton creation into a phase that actually runs before 2).
+
+### 16. `test: jest` fails test-less workspaces; `.turbo/` missing from .gitignore
+
+- **Symptom:** the pre-push affected gate failed: `@platform/core#test` exits 1 ("no tests
+  found") — the guide's core/app package.json skeletons ship `"test": "jest"` with no test
+  files; separately, `.turbo/` appeared untracked once turbo ran.
+- **Fix applied:** `jest --passWithNoTests` in core + app scripts; `.turbo/` gitignored.
+- **Template change needed:** guide steps (g)/(h) skeletons should use `--passWithNoTests`
+  until each workspace grows tests; Phase-1 `.gitignore` skeleton should include `.turbo/`.
