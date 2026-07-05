@@ -768,3 +768,132 @@ package.json` (guide skeleton has no author field; harmless for --dir and irrele
 - **Prerequisite claim checked:** `scripts/bootstrap.mjs` is data-driven (scans
   `products/*/supabase/config.toml`) — it now automatically starts the Phase 6 stack; no
   change needed.
+
+## Phase 7 — generator & stamping demo (`docs/phase-7-generator.md`) — run 2026-07-05
+
+### 1. `products/_template` self-references silently survive the whole-word replace — AND the verify grep
+
+- **Symptom:** 5 template files reference their own path (`products/_template/api`, …) in
+  comments (`.env.example`, `export_openapi.py`, `copy-renderer.mjs`). The guide's three
+  replacers can't touch them: `_` is a word character, so `\btemplate\b` cannot match
+  inside `_template` — and the headline check `git grep -iw template` uses the same word
+  rules, so the stale paths would pass verification undetected.
+- **Root cause:** guide replacer list only covers kebab/Pascal/snake variants of the bare
+  token; the underscore-prefixed directory name is a fourth variant it never considers.
+- **Fix applied:** added a fourth, first-ordered replacer
+  `/products\/_template\b/g → products/<name>` in `buildReplacers()`; verified zero
+  `_template` occurrences in the stamped tree with a dedicated grep.
+- **Template change needed:** add the replacer (and a `_template`-specific grep to the
+  Verification section) to the Phase 7 guide.
+
+### 2. `uv.lock` MUST be token-rewritten — `.lock` is missing from the guide's `TEXT_EXT`
+
+- **Symptom:** `uv.lock` carries the project name (`name = "template-api"`, the lock's
+  root-package entry). With the guide's `TEXT_EXT` it is classified binary and copied
+  verbatim, so the stamped api's lock names a package (`template-api`) that its renamed
+  `pyproject.toml` (`demo-api`) no longer declares — `uv sync --frozen`/`uv run` fail.
+- **Fix applied:** added `.lock` (plus `.sql` for migrations and `.mako` for the alembic
+  template) to `TEXT_EXT`. Verified `uv.lock:870 name = "demo-api"` after stamping and
+  that demo's `uv run` works (openapi export builds).
+- **Template change needed:** guide's `TEXT_EXT` skeleton needs `.lock`, `.sql`, `.mako`.
+
+### 3. The guide's 5-entry SKIP set copies secrets and caches from a live working tree
+
+- **Symptom:** `SKIP = {node_modules, .venv, dist, .expo, release}` was written for a
+  pristine checkout. A real post-Phase-6 tree also contains `api/.env` (**local secrets** —
+  the guide even asserts ".env … never exist[s] in the template to copy", which is false
+  after Phase 3 local dev), `.turbo/` caches, desktop `build/` + `renderer/` outputs,
+  `__pycache__`/`.pytest_cache`/`.ruff_cache`, supabase `.temp`/`.branches` CLI state, and
+  stray `openapi-ts-error-*.log` files — all of which would be stamped into the new product.
+- **Fix applied:** extended SKIP with the artifact/cache/CLI-state names, exact-name
+  skips for `.env` / `.env.local` (committed `.env.example`/`.env.development` etc. still
+  travel), and a `*.log` skip. Demo tree verified free of all of them.
+- **Template change needed:** guide SKIP set + the "never exists" gotcha need updating.
+
+### 4. `[edge_runtime] inspector_port = 8083` sits OUTSIDE the 543xx block (guide's own ⚠️ TO CONFIRM)
+
+- **Symptom:** the port-offset regex `\b543\d\d\b` covers every Supabase port except the
+  edge-runtime inspector (8083).
+- **Verified reality:** `supabase start` does NOT bind 8083 on the host (only
+  `functions serve --inspect` does), so simultaneous stacks don't collide today — but two
+  products could never debug functions at the same time.
+- **Fix applied:** generator additionally shifts `inspector_port` by `+10·portIndex`
+  (demo = 8093; can never collide with API ports `8000+10j` since 83 ≢ 0 mod 10).
+- **Template change needed:** add the inspector_port rule to the guide's `applyPorts`.
+
+### 5. Placeholder-convention + shape drift against Phase 2's real `tokens.config.json`
+
+- **Symptom:** the guide's `addFigmaMode` writes `"TODO-FIGMA-MODE-ID"`, but Phase 2's
+  committed `tokens.config.json` already uses `TODO-MODE-ID-<NAME>` — and had **already
+  pre-registered the `demo` mode** (so the DoD item "gains a demo entry" was satisfied
+  before the generator ran; the generator's add is a no-op for demo, exercised as
+  idempotent).
+- **Fix applied:** generator writes `TODO-MODE-ID-<NAME-UPPERCASE>` to match the Phase 2
+  convention; checklist text updated accordingly. `figma.config.json` confirmed untouched.
+- **Template change needed:** align the guide's placeholder string with Phase 2's, and
+  note that Phase 2 seeds the demo mode.
+
+### 6. Stamp-safe comments: literal ports in template prose go stale in stamped products
+
+- **Symptom:** `config.toml`'s header ("Ports are base values for portIndex 0…") and
+  `.env.development`'s comment ("API on 8000, Supabase local on 54321…") carry literal
+  base numbers that the port pass (which only rewrites `host:port` values) leaves behind —
+  a stamped demo would read "API on 8000" while actually using 8010.
+- **Fix applied:** reworded both template comments to formula form ("API 8000+10i /
+  Supabase 54321+100i, from product.json's portIndex") so they stay true after stamping.
+- **Template change needed:** guide should warn that template prose must never hardcode
+  base ports.
+
+### 7. Stamping EXPOSED a latent template defect: `openapi` export required the gitignored `api/.env`
+
+- **Symptom:** first `turbo run build --affected` after stamping failed on
+  `@platform/demo-api#openapi` — `Settings()` demands `database_url`/`database_migration_url`,
+  which the template's export only ever got from the gitignored `api/.env` on the dev
+  machine (a clean CI checkout would fail identically for the TEMPLATE — Phases 3–6 never
+  noticed because `.env` was always present locally and turbo then cached the task).
+- **Root cause:** `export_openapi.py` imports `template_api.main` at module level, which
+  builds the app (and reads Settings) at import time; schema export needs no DB at all.
+- **Fix applied:** made the export hermetic — `os.environ.setdefault(...)` inert
+  placeholder URLs, `main` imported inside `main()` after they exist (same pattern as
+  `tests/__init__.py`; the engine is NullPool and never connects). Byte-identical
+  openapi.json confirmed (`git diff` clean), lint/pyright clean, then demo re-stamped.
+- **Template change needed:** Phase 3/4 guides — the `export_openapi.py` skeleton must set
+  placeholder env before importing `main` (this also unblocks Phase 8's CI drift check).
+
+### 8. HEADLINE: whole-word replace CORRUPTS supabase config.toml — TOML keys are literally named `template`
+
+- **Symptom:** the stamped demo stack refused to start:
+  `'auth.mfa.phone' has invalid keys: demo · 'auth.sms' has invalid keys: demo`. The
+  CLI-generated config carries `template = "Your code is …"` keys (the SMS/phone-MFA OTP
+  message template) in `[auth.sms]` and `[auth.mfa.phone]` — the whole-word `\btemplate\b`
+  pass rewrote the config-SCHEMA key itself, producing an invalid config. The guide's
+  "whole-word only" gotcha claims whole-word matching is safe; empirically it is not.
+- **Fix applied (both layers):** (a) generator: `.toml` contents get the `template =` key
+  masked before the token pass and restored after (`rewriteContents`); (b) template:
+  removed the two default `template = …` lines from disabled sections (CLI falls back to
+  its defaults) — with the keys present, the stamped product would carry
+  `template = …` lines and the headline verify `git grep -iw template products/demo`
+  could never be empty. Demo re-stamped; stack starts; grep literally empty.
+- **Template change needed:** Phase 7 guide — add the TOML-key guard to the skeleton and
+  note the config.toml key collision in the whole-word gotcha; Phase 6 guide — drop the
+  `template` OTP keys in the init-then-delta step.
+
+### 9. Smaller confirmations & environment notes
+
+- **`expo install expo-splash-screen` "fails" by design with a TS config** — it installs
+  the package, then exits 1 because it "Cannot automatically write to dynamic config at:
+  app.config.ts"; the plugin entry must be added by hand. Not a real failure.
+- **sharp 0.35.3** installed as the rasterizer (pinned exact per the guide) — no
+  `allowBuilds` entry needed (prebuilt `@img/sharp-*` binaries ship as optional deps).
+- **`app.config.ts` had NO asset wiring before this phase** — icon/adaptive-icon/
+  favicon/splash-plugin were all added here (the guide's size matrix is now literally
+  "the exact set wired into app.config.ts").
+- **`git grep -iw template products/demo` only scans TRACKED files** — a freshly stamped
+  (untracked) tree trivially passes. Use `git grep --untracked` (or stage first) for the
+  verify to mean anything.
+- **Expo dev-server port is NOT offset** (both apps default `--port 8081`) — per spec
+  (port math covers API + Supabase only); Expo auto-detects a busy port and offers 8082,
+  so simultaneous dev servers still work interactively.
+- **English-word collateral accepted per ruling #7:** whole-word replace turns prose like
+  ".env.example's "secrets template"" into "secrets demo" and config.toml's "# Template
+  for sending OTP" into "# Demo for sending OTP" — harmless, documented tradeoff.
