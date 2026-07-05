@@ -1,4 +1,7 @@
 {
   "extends": "@platform/config/tsconfig/expo",
-  "include": ["src", ".storybook"]
+  "include": ["src", ".storybook"],
+  "compilerOptions": {
+    "types": ["expo", "react", "react-native", "jest"]
+  }
 }
