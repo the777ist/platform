@@ -8,7 +8,8 @@
     "export:web": "expo export --platform web",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "jest --passWithNoTests"
+    "test": "jest --passWithNoTests",
+    "brand:gen": "node assets/brand/gen-brand.mjs"
   },
   "dependencies": {
     "@expo/metro-runtime": "~56.0.16",
@@ -23,6 +24,7 @@
     "expo-image-picker": "~56.0.19",
     "expo-linking": "~56.0.15",
     "expo-router": "~56.2.13",
+    "expo-splash-screen": "~56.0.12",
     "expo-status-bar": "~56.0.4",
     "nativewind": "4.2.6",
     "react": "19.2.3",
@@ -39,6 +41,7 @@
   "devDependencies": {
     "@platform/config": "workspace:*",
     "@types/react": "~19.2.0",
+    "sharp": "0.35.3",
     "tailwindcss": "3.4.19"
   }
 }
