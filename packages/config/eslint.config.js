@@ -21,12 +21,15 @@ export default tseslint.config(
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
-  // Node-context files: repo scripts (bootstrap.mjs, new-product.mjs, …) and CJS/ESM config
-  // files (tailwind-preset.cjs, eslint.config.mjs). Gives them node globals (console, module,
-  // process, …) so js.configs.recommended's no-undef doesn't flag runtime built-ins.
+  // Node-context files: repo scripts (bootstrap.mjs, new-product.mjs, …), CJS/ESM config
+  // files (tailwind-preset.cjs, eslint.config.mjs), and tool configs that the ecosystem
+  // requires as CommonJS .js (tailwind.config.js, metro.config.js, babel.config.js,
+  // postcss.config.js). Gives them node+commonjs globals (console, module, require, …) and
+  // allows require() — these files run in Node, not the app bundle.
   {
-    files: ["**/*.{mjs,cjs}", "scripts/**"],
-    languageOptions: { globals: { ...globals.node } },
+    files: ["**/*.{mjs,cjs}", "**/*.config.js", "scripts/**"],
+    languageOptions: { globals: { ...globals.node, ...globals.commonjs } },
+    rules: { "@typescript-eslint/no-require-imports": "off" },
   },
   {
     files: ["**/*.{ts,tsx}"],

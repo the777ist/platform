@@ -21,6 +21,7 @@ preferFrozenLockfile: true
 #   allowBuilds:
 #     esbuild: true
 allowBuilds:
+  esbuild: true # postinstall places the platform esbuild binary (vite/storybook toolchain)
   lefthook: true # postinstall places the lefthook binary (needed for `pnpm prepare` hook install)
 
 # --- workspace globs ---

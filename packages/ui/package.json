@@ -30,11 +30,19 @@
   },
   "devDependencies": {
     "@platform/config": "workspace:*",
+    "@storybook/react-native-web-vite": "9.1.20",
     "@types/react": "~19.2.0",
+    "autoprefixer": "10.5.2",
     "expo": "56.0.14",
     "nativewind": "4.2.6",
-    "react": "19.2.7",
+    "postcss": "8.5.16",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-native": "0.85.3",
-    "react-native-css-interop": "0.2.6"
+    "react-native-css-interop": "0.2.6",
+    "react-native-web": "0.21.2",
+    "storybook": "9.1.20",
+    "tailwindcss": "3.4.19",
+    "vite": "7.3.6"
   }
 }
