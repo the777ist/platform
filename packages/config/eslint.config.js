@@ -15,6 +15,10 @@ export default tseslint.config(
       "**/.expo/**",
       "**/node_modules/**",
       "**/storybook-static/**",
+      // Desktop shell build artifacts: compiled main/preload, copied SPA, packed output.
+      "**/build/**",
+      "**/renderer/**",
+      "**/release/**",
       // Generated hey-api client is committed but never linted (PHILOSOPHY: never-edit-generated-client).
       "products/*/api-client/src/**",
     ],

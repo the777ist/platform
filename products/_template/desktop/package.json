@@ -10,6 +10,7 @@
     "build": "pnpm run copy:renderer && pnpm run compile",
     "start": "electron .",
     "dev": "pnpm run build && electron .",
+    "lint": "eslint .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "release": "electron-builder --publish always",

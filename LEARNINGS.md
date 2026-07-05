@@ -608,3 +608,37 @@ Observed on npm, 2026-07-05 — no action taken (locked versions respected), rec
   updater double-gate silent in packed exe (no repo configured, no dialog, no crash).
 - Windows quirk (verification harness, not template): killing `electron .` via the pnpm/.bin
   shim leaves electron.exe orphans holding the CDP port — kill the exe, not the shim.
+
+---
+
+## Phase 4+5 deep audit (`/implement 4-and-5` verification pass) — run 2026-07-05
+
+### 1. Desktop workspace had no `lint` script — and the shared ESLint config would have choked on its artifacts
+
+- **Symptom:** `turbo run lint` ran 16 tasks with desktop silently absent; `main.ts`/
+  `preload.ts`/`copy-renderer.mjs` had zero lint coverage. Exact sibling of the Phase-1-audit
+  `@platform/config` finding: the guide's package.json skeleton omits `lint`, and every
+  non-generated workspace in the repo lints by convention.
+- Adding the script alone would have failed: the shared flat-config ignores lacked the
+  desktop artifact dirs (`**/build/**`, `**/renderer/**`, `**/release/**`) — `eslint .` in
+  desktop would lint the compiled main, the copied SPA bundle, and the packed output.
+- **Fix applied:** ignores added to `@platform/config` eslint config + `"lint": "eslint ."`
+  in desktop; `turbo run lint` now 17 tasks, desktop clean.
+- **Template change needed:** Phase 5 guide step 1 skeleton should carry the lint script;
+  Phase 1 guide's eslint skeleton should ship the three artifact ignores.
+
+### 2. Everything else in Phases 4 and 5 verified present-and-correct
+
+- **Phase 4:** all 13 DoD items re-pass — `@hey-api/client-fetch` absent from the entire
+  lockfile (plugin string only); openapi-ts 0.99.0 the sole hey-api dep, exact, dev;
+  generated `src/` committed (18 files) + prettier-exempt; graph re-verified
+  (`api#openapi → api-client#build → app#build`, edges from real deps); drift check exit 0;
+  regen byte-stable; no `verify_probe` remnants; operationIds unique.
+- **Phase 5:** all DoD items re-pass — skeletons byte-faithful (documented deltas: builder
+  26.15.6 + collector patch); `turbo run pack` graph resolves the full
+  `openapi → client → export:web → desktop#build → desktop#pack` chain; updater gating,
+  CORS `app://-`, SPA fallback, sandbox/bridge all evidenced live earlier this run.
+- **Cosmetic, deliberately not changed:** electron-builder warns `author is missed in the
+package.json` (guide skeleton has no author field; harmless for --dir and irrelevant until
+  real publishing); `build-resources/` referenced but absent → default Electron icon
+  (deferred to the Phase 7 brand-asset pipeline per the guide's ⚠️ REVIEW).
