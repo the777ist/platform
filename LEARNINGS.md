@@ -90,9 +90,14 @@ Observed on npm, 2026-07-05 — no action taken (locked versions respected), rec
   on it — the pre-commit globs are `*.{ts,tsx,js,jsx,...}`, which match neither `.mjs` nor
   `.cjs`, yet the repo's own scripts (`bootstrap.mjs`, `new-product.mjs`, `figma-tokens.mjs`)
   and the root `eslint.config.mjs` are `.mjs` files.
-- **Fix applied:** none (stayed faithful to the guide's literal globs).
-- **Template change needed:** widen the `lefthook.yml` prettier/eslint globs to
-  `*.{ts,tsx,js,jsx,mjs,cjs}` in `docs/phase-1-root-tooling.md` Step 9.
+- **Fix applied:** widened both `lefthook.yml` globs to include `mjs,cjs` and formatted the
+  files that had slipped through. **Follow-on gap this exposed:** the shared flat config
+  defines no runtime globals, so Node-context files fail `no-undef` on `console`/`module` —
+  fixed by adding the `globals` package to `@platform/config` and a config block giving
+  `**/*.{mjs,cjs}` + `scripts/**` node globals.
+- **Template change needed:** in `docs/phase-1-root-tooling.md` Step 9 widen the globs to
+  `*.{ts,tsx,js,jsx,mjs,cjs}`; in Step 7b add the `globals` devDep + node-globals block to
+  the ESLint flat config skeleton.
 
 ### 7. Guide assumes POSIX; run happened on Windows — worked with minor adaptations
 

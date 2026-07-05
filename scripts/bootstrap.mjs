@@ -11,8 +11,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PRODUCTS = join(ROOT, "products");
 const run = (cmd, cwd = ROOT) => execSync(cmd, { cwd, stdio: "inherit" });
 
-run("mise install");          // pin & install Node 24 / pnpm 11 / Python 3.13 / uv
-run("pnpm install");          // single JS dependency universe (one lockfile)
+run("mise install"); // pin & install Node 24 / pnpm 11 / Python 3.13 / uv
+run("pnpm install"); // single JS dependency universe (one lockfile)
 
 // supabase start per product — each reads its own config.toml (offset ports), so all
 // stacks run simultaneously without colliding. Data-driven: a no-op until products exist,
