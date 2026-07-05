@@ -1,0 +1,33 @@
+# pnpm-workspace.yaml — the JS dependency universe (PHILOSOPHY "Package management model":
+# ONE root pnpm workspace, ONE pnpm-lock.yaml, hoisted node_modules, single pnpm install).
+#
+# Under pnpm 11 this file ALSO holds the pnpm settings that used to live in .npmrc
+# (relocated as camelCase keys — see .npmrc). Auth/registry lines stay in .npmrc.
+
+# --- pnpm settings (pnpm 11; camelCase) ---
+# Key design ruling #6: pnpm + Expo/Metro requires the HOISTED node-linker (flat node_modules
+# is the documented Expo happy path). Never set disableHierarchicalLookups — metro's
+# nodeModulesPaths walk depends on hierarchical lookup working.
+nodeLinker: hoisted
+
+# Keep the lockfile authoritative + installs reproducible across machines and CI. (pnpm also
+# auto-enables frozen-lockfile in CI, and pnpm 11 fails a CI install if the lockfile was written
+# by a NEWER pnpm major — so keep the pnpm major aligned across dev/CI.)
+preferFrozenLockfile: true
+
+# Build-script allowlist. pnpm blocks dependency lifecycle (build) scripts by default; pnpm 11
+# replaced the old `only-built-dependencies` API with this `allowBuilds` map (package → boolean).
+# Empty in Phase 1; add entries as Phase 2+ introduces native tooling that needs a build step:
+#   allowBuilds:
+#     esbuild: true
+allowBuilds:
+  lefthook: true # postinstall places the lefthook binary (needed for `pnpm prepare` hook install)
+
+# --- workspace globs ---
+packages:
+  - "packages/*"
+  # Each product is THREE JS workspaces + a generated client (PHILOSOPHY ruling #1):
+  - "products/*/app"
+  - "products/*/desktop"
+  - "products/*/api" # script-shim package.json → uv run (PHILOSOPHY "Package management model")
+  - "products/*/api-client" # generated + committed (hey-api)
