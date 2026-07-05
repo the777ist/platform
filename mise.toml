@@ -1,0 +1,11 @@
+# mise.toml — single source of truth for the repo toolchain.
+# PHILOSOPHY.md Decision Sheet: "mise pins Node 24 LTS / pnpm 11 / Python 3.13 / uv".
+[tools]
+node = "24"      # Node 24 'Krypton' Active LTS (recommended 2026 runtime; pnpm 11 needs Node >= 22.13)
+pnpm = "11"
+python = "3.13"
+uv = "latest"
+
+[env]
+# Keep tool-managed shims first on PATH for child processes (turbo, lefthook).
+_.path = ["{{config_root}}/node_modules/.bin"]
