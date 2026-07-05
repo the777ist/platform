@@ -642,3 +642,86 @@ Observed on npm, 2026-07-05 — no action taken (locked versions respected), rec
 package.json` (guide skeleton has no author field; harmless for --dir and irrelevant until
   real publishing); `build-resources/` referenced but absent → default Electron icon
   (deferred to the Phase 7 brand-asset pipeline per the guide's ⚠️ REVIEW).
+
+## Phase 6 — Supabase auth, route guards & storage
+
+### 1. `useSession()` skeleton infinite-loops under zustand v5 (object-returning selector)
+
+- **Symptom:** the guide's `useSessionStore((s) => ({ session, user, loading }))` selector
+  returns a fresh object every call; zustand v5's `useSyncExternalStore` compares snapshots
+  with `Object.is` → always unequal → "getSnapshot should be cached" / infinite re-render.
+- **Root cause:** guide skeleton predates (or ignores) the zustand v5 selector-stability
+  contract; v4's deprecated shallow-equality overload is gone.
+- **Fix applied:** wrapped the selector in `useShallow` from `zustand/react/shallow`.
+- **Template change needed:** Phase 6 guide step 4 skeleton should import and use
+  `useShallow` in `useSession()`.
+
+### 2. `core/auth` must be `.tsx`, not `.ts`
+
+- **Symptom:** guide names the file `auth.ts` but the `AuthProvider` skeleton returns JSX
+  (`<>{children}</>`) — tsc refuses JSX in `.ts`.
+- **Fix applied:** created `packages/core/src/auth.tsx`.
+- **Template change needed:** guide step 4 file path → `auth.tsx`.
+
+### 3. `[inbucket]` config section no longer exists — CLI 2.109 renamed it `[local_smtp]`
+
+- **Symptom:** guide's config.toml skeleton carries `[inbucket]`; the CLI-2.109-generated
+  default has `[local_smtp]` (Mailpit) on the same port 54324, plus new sections
+  (`[db.migrations]`, `[storage.s3_protocol]`, `[edge_runtime]`, `[experimental.pgdelta]`).
+- **Fix applied:** followed the guide's own resolved-note procedure — `supabase init` to
+  materialize the installed CLI's default, then applied ONLY the deltas (project_id
+  `example-template`, auth site/redirect URLs incl. `app://-/`, ES256 signing comment,
+  analytics off). `major_version = 17` confirmed as the generated default.
+- **Template change needed:** Phase 6 guide step 1 skeleton should stop naming `[inbucket]`
+  and defer to init-then-delta (it already says to); generator note: `[edge_runtime]`
+  `inspector_port = 8083` is NOT portIndex-offset by the `+100·portIndex` rule — Phase 7
+  must handle it (or disable edge_runtime) for stack coexistence.
+
+### 4. Guide's `.env.development` API URL carries `/v1` — would double the prefix
+
+- **Symptom:** guide step 11 shows `EXPO_PUBLIC_API_URL=http://localhost:8000/v1`, but the
+  generated client's operation paths already include `/v1` (FastAPI routers use
+  `prefix="/v1"`) → requests would hit `/v1/v1/items`.
+- **Fix applied:** origin-only `http://localhost:8000` (matches Phase 4's working setup and
+  the committed `.env.staging`/`.env.production` shape).
+- **Template change needed:** guide step 11 skeleton drop the `/v1`.
+
+### 5. `ImagePicker.MediaTypeOptions` is deprecated in expo-image-picker ~56
+
+- **Symptom:** guide step 10 uses `mediaTypes: ImagePicker.MediaTypeOptions.Images`; the
+  installed SDK-56 picker deprecates the enum in favor of `MediaType` arrays.
+- **Fix applied:** `mediaTypes: ["images"]`. Version resolved via `expo install` →
+  `expo-image-picker ~56.0.19` (kept the expo-conventional tilde range consistent with every
+  other `expo-*` dep, rather than the pin-exact stance — these are SDK-coupled, not pre-1.0).
+- **Template change needed:** guide step 10 skeleton use the array form.
+
+### 6. Phase 3 reconciliation (guide's ⚠️ OPEN): api auth was already authoritative
+
+- Phase 3 had already shipped `auth.py` (JWKS primary + HS256 genuine fallback,
+  `audience="authenticated"`), `settings.py` auth fields, `routers/me.py` (mounted), and
+  `schemas/user.MeRead` — all matching Key ruling #5, with `_decode` deriving the JWKS URL
+  from `supabase_url` (equivalent to the guide's `jwks_url` property). Kept Phase 3's shape;
+  added the missing V7 coverage: missing-aud 401, ES256/JWKS-path unit (stubbed JWK set —
+  matches what the live local stack emits), and `/v1/me` HTTP round-trips (valid HS256 token,
+  bad token → problem+json 401, missing header → 401). Verified LIVE against the real local
+  stack: the CLI 2.109 access token header is `alg: ES256`, and `/v1/me` 200s with **no**
+  `SUPABASE_JWT_SECRET` set — pure JWKS verification, exactly as ruled.
+
+### 7. Prettier doesn't see the CLI-generated NESTED supabase/.gitignore
+
+- **Symptom:** `format:check` failed on `products/_template/supabase/.temp/...` runtime
+  artifacts even though git ignores them — `supabase init` writes a nested
+  `supabase/.gitignore`, but Prettier 3 only reads the ROOT `.gitignore`/`.prettierignore`.
+- **Fix applied:** added `products/*/supabase/.temp/` + `products/*/supabase/.branches/` to
+  the root `.prettierignore`.
+- **Template change needed:** Phase 1 guide's `.prettierignore` skeleton (or Phase 6) should
+  carry the supabase runtime-artifact entries.
+
+### 8. Button children: guide skeletons wrap labels in `<Text>` — loses variant text color
+
+- **Symptom:** the owned Phase 2 `Button` styles STRING children with `buttonTextVariants`
+  (per-variant contrast, e.g. `text-primary-foreground` on `bg-primary`); the guide's
+  `<Button><Text>…</Text></Button>` bypasses that and renders default `text-foreground`.
+- **Fix applied:** plain-string children in login/signup/avatar-uploader (this is the
+  guide's own ⚠️ OPEN "reconcile against what Phase 2 actually exported").
+- **Template change needed:** Phase 6 guide steps 7/10 skeletons use string children.

@@ -5,3 +5,8 @@
 pnpm-lock.yaml
 products/*/api/openapi.json
 products/*/api-client/src/
+# Supabase CLI runtime artifacts. Git-ignored via the CLI-generated NESTED
+# products/*/supabase/.gitignore — but Prettier only reads the ROOT .gitignore/
+# .prettierignore, so nested git ignores don't reach it; list them here explicitly.
+products/*/supabase/.temp/
+products/*/supabase/.branches/
