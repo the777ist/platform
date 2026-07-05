@@ -410,3 +410,57 @@ Observed on npm, 2026-07-05 — no action taken (locked versions respected), rec
   device remains the only unverified surface.
 - **`tasks.py` (Phase 3 Step 18):** `prune-stale-tokens` runs ("pruned 0 stale push
   tokens"); bare invocation prints usage and exits 2.
+
+---
+
+## Phase 1 deep audit (`/implement 1` verification pass) — run 2026-07-05
+
+### 1. The shared Prettier config was never WIRED — hooks formatted with defaults for three phases
+
+- **Symptom:** `prettier --find-config-path <any file>` → "can not find configure file".
+  Every pre-commit format since Phase 1 ran with Prettier DEFAULTS (printWidth 80, no
+  tailwind class sorting) — `@platform/config/prettier` (width 100 +
+  prettier-plugin-tailwindcss) existed but nothing consumed it.
+- **Root cause:** the guide's Step 7c says "downstream `.prettierrc` files extend this via
+  `@platform/config/prettier`" but never creates ANY consumer — root included. Exact sibling
+  of Phase-1 finding #1 (missing root eslint.config.mjs): the root workspace is a consumer
+  too, and the lefthook jobs run from the repo root.
+- **Fix applied:** root `package.json` `"prettier": "@platform/config/prettier"`; repo-wide
+  `pnpm format` sweep (53 files) to the intended style. Generated theme.ts/global.css
+  verified byte-identical under the token pipeline after the sweep.
+- **Template change needed:** guide Step 7c must add the root wiring (and DoD-check that
+  `prettier --find-config-path` resolves).
+
+### 2. Prettier was mangling COMMITTED GENERATED artifacts — a Phase-4 drift-check time bomb
+
+- **Symptom:** regenerating `openapi.json` from Python produced a **1480-line diff** against
+  the committed file — the pre-commit prettier hook had reformatted it at commit time
+  (json.dumps form → prettier form). Phase 4's contract check (regen + `git diff
+--exit-code`) would have failed on its first run. `pnpm-lock.yaml` was also being
+  quote-churned by the hook's yml glob.
+- **Fix applied:** root `.prettierignore` covering `pnpm-lock.yaml`,
+  `products/*/api/openapi.json`, and `products/*/api-client/src/` (the future generated
+  client); committed `openapi.json` restored to the generator-exact bytes. (Prettier 3
+  respects `.gitignore` for build outputs, so only committed generated files need entries.)
+- **Template change needed:** add `.prettierignore` to guide Step 8 (alongside .gitignore);
+  Phase 3/4 guides should note their generated outputs are prettier-exempt.
+
+### 3. `@platform/config` lint task — the guide's own open-questions item was never done
+
+- "Wire a real `lint` script into @platform/config … from Phase 2 onward" (Step 7 open
+  question). Added `"lint": "eslint ."`; `turbo run lint` now runs 12 tasks (was 11,
+  config silently skipped).
+- **Template change needed:** put the script in the Step-7a skeleton instead of an open
+  question.
+
+### 4. Everything else verified present-and-correct
+
+- mise.toml / .npmrc / pnpm-workspace.yaml / turbo.json / tsconfig.base.json / .gitignore
+  match the skeletons byte-for-byte-in-substance (plus the previously recorded deviations:
+  turbo pinned 2.9.18, packageManager pnpm@11.9.0, tailwind-preset.cjs, allowBuilds
+  lefthook+esbuild, widened hook globs, fixed ruff project derivation, root
+  eslint.config.mjs). All 10 DoD items re-pass: toolchain pins (node 24.18.0 / pnpm 11.9.0 /
+  python 3.13.14 / uv 0.11.26), single lockfile + lefthook shims, turbo lint exit 0,
+  6 config files resolvable, strict base OK, env boundary OK (per-env tracked), pre-commit +
+  pre-push firing on every commit/push this session, hooks auto-installed via prepare only,
+  `pnpm bootstrap` → "✅ bootstrap complete".
