@@ -47,3 +47,9 @@ release/
 
 # Playwright MCP scratch artifacts
 .playwright-mcp/
+
+# ---- Playwright (E2E + Storybook VR) run artifacts ----
+# (VR BASELINES under .storybook/visual-regression.spec.ts-snapshots/ ARE committed.)
+test-results/
+playwright-report/
+blob-report/

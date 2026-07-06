@@ -43,7 +43,9 @@
   },
   "devDependencies": {
     "@platform/config": "workspace:*",
+    "@playwright/test": "1.61.1",
     "@types/react": "~19.2.0",
+    "serve": "14.2.6",
     "sharp": "0.35.3",
     "tailwindcss": "3.4.19"
   }
