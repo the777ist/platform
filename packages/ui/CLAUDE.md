@@ -24,8 +24,10 @@ as source (no build step). Designer-facing Figma conventions live in [FIGMA.md](
 3. Write `src/components/ui/<name>.stories.tsx` — **one story per cva variant**.
 4. Write `src/components/ui/<name>.figma.tsx` — Code Connect map (Figma props → cva variants).
 5. Export from `src/index.ts`.
-6. Commit a VR baseline (light + dark): `pnpm --filter @platform/ui build-storybook` +
-   Playwright snapshot (nightly wiring lands in Phase 8).
+6. Commit a VR baseline (light + dark): `pnpm --filter @platform/ui build-storybook` then
+   `pnpm --filter @platform/ui exec playwright test --update-snapshots` (baselines live in
+   `.storybook/visual-regression.spec.ts-snapshots/`; the nightly `e2e-nightly.yml` VR job
+   diffs every story × light/dark against them).
 
 ## Theming (how it works)
 

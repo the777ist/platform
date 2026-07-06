@@ -237,10 +237,10 @@ than update from stale knowledge.
 
 ## Where to read more
 
-| Doc                                              | What it is                                                            |
-| ------------------------------------------------ | --------------------------------------------------------------------- |
-| [`PHILOSOPHY.md`](PHILOSOPHY.md)                 | Architecture, locked decisions, conventions, repo spec                |
-| [`docs/phase-*.md`](docs/)                       | Literal step-by-step build guides (one per phase)                     |
-| [`docs/research/`](docs/research/)               | The fact-check behind every stack choice, with sources                |
-| [`packages/ui/FIGMA.md`](packages/ui/FIGMA.md)   | Design-system / token contract (also the designer handover doc)       |
-| `CLAUDE.md` (root / `packages/ui` / per-product) | The authoritative add-a-thing recipes — _built during implementation_ |
+| Doc                                              | What it is                                                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| [`PHILOSOPHY.md`](PHILOSOPHY.md)                 | Architecture, locked decisions, conventions, repo spec                                                              |
+| [`docs/phase-*.md`](docs/)                       | Literal step-by-step build guides (one per phase)                                                                   |
+| [`docs/research/`](docs/research/)               | The fact-check behind every stack choice, with sources                                                              |
+| [`packages/ui/FIGMA.md`](packages/ui/FIGMA.md)   | Design-system / token contract (also the designer handover doc)                                                     |
+| `CLAUDE.md` (root / `packages/ui` / per-product) | The authoritative add-a-thing recipes (root map/conventions · design-system runbook · product + nested api recipes) |
