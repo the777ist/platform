@@ -1,0 +1,57 @@
+# PHILOSOPHY Testing strategy: web E2E (full stack) + Storybook visual regression,
+# both NIGHTLY + workflow_dispatch. Two independent jobs so a VR diff doesn't mask
+# an E2E failure (and vice versa). VR baselines are committed; a diff fails the job.
+name: E2E Nightly
+on:
+  schedule:
+    - cron: "0 4 * * *" # nightly 04:00 UTC
+  workflow_dispatch: {} # on-demand (the Verify path)
+jobs:
+  web-e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres: # the API's DB (auth/realtime come from the Supabase CLI stack below)
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      # The playwright global-setup starts the product's local Supabase stack (auth +
+      # realtime on the 54321 block) and the api webServer reads these (no .env in CI).
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
+      DATABASE_MIGRATION_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
+      SUPABASE_URL: http://localhost:54321
+      # The Supabase CLI's shared LOCAL demo service_role JWT (public by design).
+      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v4
+      - uses: supabase/setup-cli@v1 # global-setup runs `supabase start`
+        with: { version: latest }
+      - run: pnpm install --frozen-lockfile
+      - run: uv sync --frozen --project products/_template/api
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Web E2E (signup → login → CRUD → realtime)
+        run: pnpm --filter @platform/template-app exec playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: web-e2e-report
+          path: products/_template/app/test-results/
+  visual-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v4
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Build Storybook
+        run: pnpm --filter @platform/ui build-storybook
+      - name: Visual regression (each story × light/dark vs committed baselines)
+        run: pnpm --filter @platform/ui exec playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-regression-diffs
+          path: packages/ui/test-results/

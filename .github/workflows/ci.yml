@@ -1,0 +1,46 @@
+# PHILOSOPHY Workflows: mise-action → pnpm frozen install → uv sync (affected apis) →
+# turbo lint/typecheck/test/build/openapi --affected → typegen drift check.
+# The drift check is the contract guard: a stale openapi.json or generated client
+# makes `git diff --exit-code` non-zero and fails CI.
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres: # real Postgres for API integration tests (testing strategy)
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready" --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # turbo --affected needs history for the base diff
+      - uses: jdx/mise-action@v4 # installs Node 24 / pnpm 11 / Python 3.13 / uv from mise.toml
+        # v4 = Node-24 action runtime (Node 20 is EOL on GH runners)
+      - run: pnpm install --frozen-lockfile
+      - name: uv sync (affected APIs)
+        run: |
+          for api in products/*/api; do
+            uv sync --frozen --project "$api"
+          done
+      - name: Lint / typecheck / test / build / openapi (affected only)
+        env:
+          # Explicit base/head so `--affected` scopes correctly regardless of squash-merge
+          # histories: PR base sha on pull_request, the pushed-from sha on push to main.
+          TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          TURBO_SCM_HEAD: ${{ github.sha }}
+        run: pnpm turbo run lint typecheck test build openapi --affected
+      - name: Typegen drift check
+        run: |
+          git diff --exit-code products/*/api-client products/*/api/openapi.json

@@ -1,0 +1,42 @@
+# PHILOSOPHY Workflows / Releases (trunk-based): main → staging, tag <product>-api-v* →
+# that product's production. Alembic runs as the Fly release_command over the direct
+# 5432 DATABASE_MIGRATION_URL (Key ruling #4) — NOT a CI step. All secrets/app names
+# are clearly-marked placeholders (org placeholder `example`) until real infra exists.
+name: Deploy API
+on:
+  push:
+    branches: [main] # → staging
+    tags: ["*-api-v*"] # <product>-api-v* → production
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      products: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            template: ['products/_template/api/**', 'packages/**']
+            demo: ['products/demo/api/**', 'packages/**']
+  deploy:
+    needs: changes
+    if: ${{ needs.changes.outputs.products != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        product: ${{ fromJSON(needs.changes.outputs.products) }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy (staging on main, production on tag)
+        working-directory: products/${{ matrix.product == 'template' && '_template' || matrix.product }}/api
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }} # PLACEHOLDER secret
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            flyctl deploy -c fly.production.toml --remote-only
+          else
+            flyctl deploy -c fly.staging.toml --remote-only
+          fi

@@ -1,0 +1,44 @@
+# PHILOSOPHY Releases: mobile = OTA for JS-only changes. main push affecting a
+# product's app → `eas update --channel staging`; tag <product>-ota-v* → production.
+# Channels are EXACTLY staging/production. OTA only reaches installed builds because
+# app.config.ts sets updates.url + a runtimeVersion policy (projectId alone delivers
+# nothing) — cross-reference the Phase 2/8 app.config.ts.
+name: EAS Update (OTA)
+on:
+  push:
+    branches: [main] # JS-only OTA → staging channel
+    tags: ["*-ota-v*"] # <product>-ota-v* → production channel
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      products: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            template: ['products/_template/app/**', 'packages/**']
+            demo: ['products/demo/app/**', 'packages/**']
+  update:
+    needs: changes
+    if: ${{ needs.changes.outputs.products != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        product: ${{ fromJSON(needs.changes.outputs.products) }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v4
+      - run: pnpm install --frozen-lockfile
+      - uses: expo/expo-github-action@v8
+        with: { eas-version: latest, token: "${{ secrets.EXPO_TOKEN }}" } # PLACEHOLDER secret
+      - name: OTA (staging on main, production on tag)
+        working-directory: products/${{ matrix.product == 'template' && '_template' || matrix.product }}/app
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            eas update --channel production --non-interactive --auto
+          else
+            eas update --channel staging --non-interactive --auto
+          fi
