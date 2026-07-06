@@ -1,4 +1,4 @@
-# Multi-Product Cross-Platform Monorepo — Philosophy
+# the777incident — Multi-Product Cross-Platform Monorepo Philosophy
 
 > **What this document is.** The architecture, the locked decisions, and the _why_ behind
 > them — the enduring rationale for the whole monorepo. It is the **gospel**: while the
