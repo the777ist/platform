@@ -24,10 +24,14 @@ as source (no build step). Designer-facing Figma conventions live in [FIGMA.md](
 3. Write `src/components/ui/<name>.stories.tsx` — **one story per cva variant**.
 4. Write `src/components/ui/<name>.figma.tsx` — Code Connect map (Figma props → cva variants).
 5. Export from `src/index.ts`.
-6. Commit a VR baseline (light + dark): `pnpm --filter @platform/ui build-storybook` then
-   `pnpm --filter @platform/ui exec playwright test --update-snapshots` (baselines live in
-   `.storybook/visual-regression.spec.ts-snapshots/`; the nightly `e2e-nightly.yml` VR job
-   diffs every story × light/dark against them).
+6. Commit VR baselines (light + dark, PER PLATFORM — font rendering differs across OSes):
+   `pnpm --filter @platform/ui build-storybook` then
+   `pnpm --filter @platform/ui exec playwright test --update-snapshots` produces YOUR
+   platform's set (e.g. `*-win32.png`); the CI runner's `*-linux.png` set comes from
+   dispatching `e2e-nightly.yml` with `update-vr-baselines: true` and committing the
+   downloaded `vr-baselines-linux` artifact. Both live in
+   `.storybook/visual-regression.spec.ts-snapshots/`; the nightly VR job diffs every
+   story × light/dark against the linux set.
 
 ## Theming (how it works)
 
