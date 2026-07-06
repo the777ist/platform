@@ -15,6 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }} # PLACEHOLDER (empty until certs exist)
+      DESKTOP_RELEASES_TOKEN: ${{ secrets.DESKTOP_RELEASES_TOKEN }} # PLACEHOLDER (empty → build-only, no publish)
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v4
@@ -26,6 +27,8 @@ jobs:
       - name: Build the web bundle the desktop wraps
         run: pnpm turbo run export:web --filter=*-app
       # macOS: sign+publish only when certs are present; empty placeholders → build-but-don't-publish.
+      # Publishing also needs DESKTOP_RELEASES_TOKEN (the <org>/<product>-desktop-releases
+      # repo PAT) — without it, build the artifacts but skip the publish (green, not red).
       - name: electron-builder — signed publish (mac when certs exist; win/linux always)
         if: runner.os != 'macOS' || env.MAC_CSC_LINK != ''
         working-directory: products/${{ steps.tag.outputs.product == 'template' && '_template' || steps.tag.outputs.product }}/desktop
@@ -33,7 +36,7 @@ jobs:
           GH_TOKEN: ${{ secrets.DESKTOP_RELEASES_TOKEN }} # PLACEHOLDER (token for <org>/<product>-desktop-releases)
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }} # electron-builder reads CSC_LINK
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }} # PLACEHOLDER
-        run: pnpm electron-builder --publish always
+        run: pnpm electron-builder --publish ${{ env.DESKTOP_RELEASES_TOKEN != '' && 'always' || 'never' }}
       - name: electron-builder — macOS build-only (no certs yet)
         if: runner.os == 'macOS' && env.MAC_CSC_LINK == ''
         working-directory: products/${{ steps.tag.outputs.product == 'template' && '_template' || steps.tag.outputs.product }}/desktop
