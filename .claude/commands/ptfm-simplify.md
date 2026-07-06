@@ -33,7 +33,7 @@ Reference docs (read these first, in full):
 - @products/<product>/docs/plans/<TICKET-ID>-<slug>\_plan.md
 - @products/<product>/docs/implementation/<TICKET-ID>-<slug>\_implementation.md
 
-(If a `CLAUDE.md` is absent because the monorepo is mid-build, fall back to `PHILOSOPHY.md`.)
+(If a `CLAUDE.md` is absent, fall back to `PHILOSOPHY.md` — product-level ones are stamped from `products/_template`.)
 
 What you are looking for:
 
@@ -65,7 +65,7 @@ Process:
 2. Walk every file in the feature surface — `products/<product>/app/features/<FEATURE>/**`, every component / hook / store (Zustand) / generated-client hook it touches, every `@platform/ui` primitive (`packages/ui/src/components/ui/*`) and `packages/core` helper it depends on, the Expo Router route/screen files, and across the API every `schemas/` / `routers/` / `services/` / `models/` file the endpoint chain touches (plus any `products/<product>/api-client/` endpoints the feature consumes — NEVER hand-edited). Do not skim.
 3. Build a duplication/consolidation inventory as a to-do list — one entry per simplification, each tagged with: files affected, what's duplicated, the canonical home (WITHIN the feature), and the risk (low/med/high) of regression. Anything whose right home is a SHARED package or a cross-product utility → flag for `/ptfm-commonify`, do not act on it here.
 4. Execute simplifications smallest-blast-radius first. After each change run `turbo run test --filter=...<product>...` (JS) and/or `pytest` (API), and confirm green before moving on. When a simplification touches an API endpoint, regenerate the typed client (typegen) and confirm no unintended drift.
-5. Update both docs in the same pass (per the "Docs + tests are part of every change" rule in `CLAUDE.md`):
+5. Update both docs in the same pass (docs + tests are part of every change — the pipeline's rule):
    - Plan doc: add a `## Post-ship deltas` entry per consolidated decision.
    - Implementation doc: update the file inventory, note deletions/relocations-within-feature, log behaviour-preserving refactors with their rationale.
 6. Final gate: for JS — `turbo run lint typecheck test build --filter=...<product>...` (+ `export:web` where web changed); for API changes — `ruff check && pyright && pytest`; plus the typegen drift check — all green. Report what shrank — file count, LOC, duplicated symbols eliminated, primitives composed/extended.

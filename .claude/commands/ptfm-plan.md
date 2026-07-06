@@ -30,7 +30,7 @@ Reference docs (read these first, in full, in this order):
 - the nested **API** `CLAUDE.md` under `products/<product>/api/` — the add-an-endpoint recipe.
 - @packages/ui/CLAUDE.md + @packages/ui/FIGMA.md — design-system runbook + token contract.
 
-(These CLAUDE.md files are produced as the monorepo is built; if one is absent, fall back to `PHILOSOPHY.md`.)
+(These CLAUDE.md files are stamped into every product from `products/_template`; if one is absent, fall back to `PHILOSOPHY.md`.)
 
 ---
 
@@ -79,7 +79,7 @@ For every existing file you'll touch: read it before planning to change it. Arch
 
 ## Step 3 — Define the test strategy (CRITICAL — TDD-first; tests come before implementation)
 
-Per `PHILOSOPHY.md`'s TDD philosophy, the plan must define the tests BEFORE the implementation sequence. The tests ARE the spec. The implementation agent writes them first, watches them go red, then builds to green.
+Per this pipeline's TDD-first discipline, the plan must define the tests BEFORE the implementation sequence. The tests ARE the spec. The implementation agent writes them first, watches them go red, then builds to green.
 
 For every surface the plan touches:
 
@@ -94,7 +94,7 @@ Per-surface test layers (per `PHILOSOPHY.md`):
 - **Broadcast / realtime seam** — assert the **broadcast-and-invalidate** path: a mutation fires the invalidation event on the product channel, and the client's subscribe-and-invalidate helper calls `invalidateQueries`.
 - **UI (RNTL)** — every form (validation + happy submit), every error display (the **problem+json**-translated message renders, NOT a raw string), every non-trivial component interaction.
 
-**Test cases in the plan must be meaningful** (per `PHILOSOPHY.md` § testing rules that matter). Every test you list must verify **functionality, business logic, or a contract** — never just text presence, "renders without crashing", or snapshots. Banned patterns to flag and replace: renders-without-crashing, snapshot-only, `getByText`-as-only-assertion, asserting class names / inline styles / internal state. For each test case in the plan, state explicitly what it asserts: which **service method** is called with what payload; which **problem+json `type`/error code** surfaces in the error path; which **TanStack Query** state transition fires (idle → loading → success/error); which side effect (DB row content, **broadcast fired**, navigation, toast, autosave) is verified; the data shape after a Pydantic / Zod round-trip or a generated-client call. Before listing a test, ask "what real bug would this test catch?" — if the answer is "nothing", do not list it.
+**Test cases in the plan must be meaningful** (the pipeline's meaningful-test rules). Every test you list must verify **functionality, business logic, or a contract** — never just text presence, "renders without crashing", or snapshots. Banned patterns to flag and replace: renders-without-crashing, snapshot-only, `getByText`-as-only-assertion, asserting class names / inline styles / internal state. For each test case in the plan, state explicitly what it asserts: which **service method** is called with what payload; which **problem+json `type`/error code** surfaces in the error path; which **TanStack Query** state transition fires (idle → loading → success/error); which side effect (DB row content, **broadcast fired**, navigation, toast, autosave) is verified; the data shape after a Pydantic / Zod round-trip or a generated-client call. Before listing a test, ask "what real bug would this test catch?" — if the answer is "nothing", do not list it.
 
 ### Edge cases are AS IMPORTANT as test cases — enumerate them ALL
 
@@ -200,7 +200,7 @@ Ambiguities, tradeoffs, production failure modes, dependencies, blockers.
 
 ### `## Definition of Done`
 
-Lift the checklist from `PHILOSOPHY.md` so the executing agent has it inline:
+The pipeline's Definition-of-Done checklist, inline so the executing agent has it:
 
 - [ ] Plan doc updated (this file)
 - [ ] Implementation log created (`products/<product>/docs/implementation/<TICKET-ID>-<slug>_implementation.md`)

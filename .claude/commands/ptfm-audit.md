@@ -37,7 +37,7 @@ Reference docs (read these first, in full):
 - @products/<product>/docs/plans/<TICKET-ID>-<slug>\_plan.md
 - @products/<product>/docs/implementation/<TICKET-ID>-<slug>\_implementation.md
 
-(If a `CLAUDE.md` is absent because the monorepo is mid-build, fall back to `PHILOSOPHY.md`.)
+(If a `CLAUDE.md` is absent, fall back to `PHILOSOPHY.md` — product-level ones are stamped from `products/_template`.)
 
 Discover the file surface yourself — do not ask the user to paste files:
 
@@ -87,7 +87,7 @@ Rules for the inventory:
     - pytest API integration (`tests/test_*.py` — routers over HTTP, problem+json shapes, DTO/ORM separation, broadcast seam)
 - **Format as Markdown tables** (`| File | Purpose |`) per group — match the style already used in the doc's "Platform primitives" / "What got built" tables. One sentence per row describing the file's role in this feature.
 - **Mark explicitly** anything that is feature-shared-with-other-code (e.g. a `packages/core` helper or `@platform/ui` primitive originally built for this feature but now reused) so the next commonification pass has a head start.
-- **Exclude**: anything under `legacy.<FEATURE>/` or `legacy-*` files (per the legacy-prefix rule in `CLAUDE.md`); anything that's plainly project-wide infrastructure (the root layout, `request_id` middleware, the global error boundary — unless this feature actually changed it). NEVER list anything inside `api-client/` as hand-editable.
+- **Exclude**: anything explicitly marked legacy (e.g. a `legacy-` filename prefix); anything that's plainly project-wide infrastructure (the root layout, `request_id` middleware, the global error boundary — unless this feature actually changed it). NEVER list anything inside `api-client/` as hand-editable.
 - **Keep it current**: if the inventory section already exists from a prior audit, UPDATE it in place rather than appending a duplicate. Removed files come out, renamed files get their new path, new files go in.
 
 The inventory section is the artifact future devs (and future Claude sessions) will read first to understand "what is this feature actually made of". Treat it as load-bearing documentation.
@@ -98,7 +98,7 @@ Output: every doc section that was edited gets called out in your final report, 
 
 ## Deliverable 2 — Comprehensive test coverage
 
-For every file in the discovered surface, ensure tests exist at the correct layer with meaningful assertions. Use the project's test conventions in `CLAUDE.md` — single Jest runner (jest-expo preset) + RNTL for ALL JS tests (colocated in `__tests__/` beside source; `render`/`fireEvent`/`renderHook` are **async**, await them; `jest.mock()` at the module boundary; NEVER vitest, NEVER `vi.mock`); pytest for the API (against a real Postgres, polyfactory factories, httpx `ASGITransport`).
+For every file in the discovered surface, ensure tests exist at the correct layer with meaningful assertions. Use the project's test conventions (PHILOSOPHY.md's testing strategy) — single Jest runner (jest-expo preset) + RNTL for ALL JS tests (colocated in `__tests__/` beside source; `render`/`fireEvent`/`renderHook` are **async**, await them; `jest.mock()` at the module boundary; NEVER vitest, NEVER `vi.mock`); pytest for the API (against a real Postgres, polyfactory factories, httpx `ASGITransport`).
 
 **a) API unit tests** (pytest, `tests/test_*.py`) — required for:
 
@@ -123,7 +123,7 @@ For every file in the discovered surface, ensure tests exist at the correct laye
 - Every error display: the translated user message from the API's problem+json renders (not a raw `error.message` / raw string).
 - Every non-trivial component: at least one test exercising its primary user interaction.
 
-**Coverage standards (no exceptions) — tests must be meaningful** (per `CLAUDE.md` § "Testing rules that matter"):
+**Coverage standards (no exceptions) — tests must be meaningful** (the pipeline's meaningful-test rules):
 
 - **Tests verify functionality, business logic, and contracts — NEVER trivia.** A test that doesn't fail when the implementation is wrong is noise, not coverage. Optimise for tests that catch real regressions, not coverage-percentage padding.
 - **Banned patterns to FLAG and DELETE during the audit**: `expect(screen.getByText("X"))` as the only assertion, "renders without crashing", snapshot tests, asserting on constant / default / hardcoded values, wrapper-prop pass-through, "button is visible" without testing what happens on press, asserting on className / NativeWind utility strings / inline styles, asserting on internal component state. If you find these in the existing suite, surface them in the report as "low-value tests that should be replaced" and replace them with meaningful assertions.
@@ -140,7 +140,7 @@ For every file in the discovered surface, ensure tests exist at the correct laye
 
 A feature isn't audit-clean unless it lints, typechecks, tests, and builds on BOTH sides. These are first-class deliverables on equal footing with docs and tests:
 
-- **`turbo run lint`** — ESLint flat config + Prettier; zero errors. Warnings should be minimized; any new warnings (max-lines, max-function-lines, complexity-ceiling, raw `<button>`/`<input>` instead of `@platform/ui`, banned raw hex, banned `sm:`/`md:`/`lg:` breakpoints) get fixed or explicitly justified.
+- **`turbo run lint`** — ESLint flat config + Prettier; zero errors. Warnings should be minimized; any new warnings get fixed or explicitly justified — and hand-check the conventions the linter does NOT enforce (raw RN primitives instead of `@platform/ui`, raw hex instead of semantic tokens).
 - **`turbo run typecheck`** — `tsc` strict; zero TypeScript errors. No new `any`, no new `!` non-null-assertions, no new `// @ts-expect-error` without a one-line rationale.
 - **`turbo run test`** — the RNTL suite green (jest-expo). Zero `.only`, zero `.skip`.
 - **`turbo run build`** (+ `export:web` where the change touches web) — the Expo **web export / app build** must succeed. This is the "production build" gate — it catches RN-web resolution failures, New-Arch / Hermes issues, dynamic-import failures, and other production-only errors lint and tests miss. Slow but load-bearing.
@@ -181,7 +181,7 @@ Process:
    - **Test gaps**: target file, layer, gap type (missing test / weak assertions / dead branch), risk (low/med/high).
    - **Quality-gate findings**: command (turbo lint/typecheck/build, ruff, pyright, pytest, typegen), error, file:line, severity, pre-existing vs introduced, proposed fix.
 6. Execute fixes smallest-blast-radius first. After each meaningful batch, run the relevant gate (`turbo run test`, `turbo run lint`, `turbo run typecheck`, `turbo run build` / `export:web`, or `pytest` / `ruff check` / `pyright` for API changes) and confirm green.
-7. After every fix that adds new tests, updates docs, or addresses a quality-gate finding, you MUST emit the Definition-of-Done checklist from `CLAUDE.md` for that change (plan/impl docs updated; RNTL unit + component tests; pytest API unit + integration tests; typegen regenerated with no drift; the turbo + Ruff/pyright/pytest gates green).
+7. After every fix that adds new tests, updates docs, or addresses a quality-gate finding, you MUST emit the pipeline's Definition-of-Done checklist for that change (plan/impl docs updated; RNTL unit + component tests; pytest API unit + integration tests; typegen regenerated with no drift; the turbo + Ruff/pyright/pytest gates green).
 8. Final report: number of doc edits made (per doc section), number of tests added per layer (RNTL unit/component, pytest unit/integration), files now at full coverage, exit status of every gate (turbo lint/typecheck/test/build, ruff, pyright, pytest, typegen drift), any open gaps explicitly justified.
 
 Final gate: for JS — `turbo run lint typecheck test build --filter=...<product>...` (+ `export:web` where web changed); for API changes — `ruff check && pyright && pytest`; plus the typegen drift check — all green.
