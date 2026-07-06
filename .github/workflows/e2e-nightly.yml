@@ -5,7 +5,12 @@ name: E2E Nightly
 on:
   schedule:
     - cron: "0 4 * * *" # nightly 04:00 UTC
-  workflow_dispatch: {} # on-demand (the Verify path)
+  workflow_dispatch: # on-demand (the Verify path)
+    inputs:
+      update-vr-baselines:
+        description: "Regenerate the linux VR baselines on this runner and upload them as an artifact (instead of asserting)"
+        type: boolean
+        default: false
 jobs:
   web-e2e:
     runs-on: ubuntu-latest
@@ -39,6 +44,7 @@ jobs:
         with:
           name: web-e2e-report
           path: products/_template/app/test-results/
+          if-no-files-found: ignore # a pre-test failure produces no results dir
   visual-regression:
     runs-on: ubuntu-latest
     steps:
@@ -49,9 +55,22 @@ jobs:
       - name: Build Storybook
         run: pnpm --filter @platform/ui build-storybook
       - name: Visual regression (each story × light/dark vs committed baselines)
+        if: ${{ !inputs.update-vr-baselines }}
         run: pnpm --filter @platform/ui exec playwright test
+      # Baselines are per-platform (font rendering differs across OSes) — the linux set
+      # must be generated on THIS runner: dispatch with `update-vr-baselines: true`,
+      # download the artifact, commit it under the snapshots dir.
+      - name: Regenerate linux VR baselines (dispatch opt-in)
+        if: ${{ inputs.update-vr-baselines }}
+        run: pnpm --filter @platform/ui exec playwright test --update-snapshots
+      - uses: actions/upload-artifact@v4
+        if: ${{ inputs.update-vr-baselines }}
+        with:
+          name: vr-baselines-linux
+          path: packages/ui/.storybook/visual-regression.spec.ts-snapshots/*-linux.png
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: visual-regression-diffs
           path: packages/ui/test-results/
+          if-no-files-found: ignore # a pre-test failure produces no results dir

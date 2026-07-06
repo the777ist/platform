@@ -6,10 +6,13 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: ".storybook",
   testMatch: "visual-regression.spec.ts",
-  // Baselines live next to the spec and are committed. Platform/browser suffixes are
-  // dropped from the template so the names stay stable; regenerate ON THE CI PLATFORM
-  // (pnpm exec playwright test --update-snapshots) if font rendering drifts locally.
-  snapshotPathTemplate: "{testDir}/visual-regression.spec.ts-snapshots/{arg}{ext}",
+  // Baselines live next to the spec and are committed, one set PER PLATFORM — font
+  // rendering differs across OSes, so a shared baseline can't satisfy both a local
+  // Windows/mac run and the Linux CI runner (proved by the first nightly CI run).
+  // Local: `pnpm --filter @platform/ui exec playwright test --update-snapshots`.
+  // Linux (CI runner): dispatch e2e-nightly with `update-vr-baselines: true` and
+  // commit the uploaded `vr-baselines-linux` artifact.
+  snapshotPathTemplate: "{testDir}/visual-regression.spec.ts-snapshots/{arg}-{platform}{ext}",
   use: { baseURL: "http://localhost:6006" },
   webServer: {
     command: "npx http-server storybook-static -p 6006 -s",

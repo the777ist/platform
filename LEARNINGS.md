@@ -1109,3 +1109,35 @@ package.json` (guide skeleton has no author field; harmless for --dir and irrele
   SUBSTRING grep (`git grep -i template products/<name>`), whose only acceptable hits are
   Supabase's own commented email-template examples in `config.toml`. Root CLAUDE.md
   gotcha added.
+
+### 3. Playwright launches `webServer` BEFORE `globalSetup` — the export can't live in global-setup
+
+- First nightly CI run: web-e2e timed out after 60s waiting on `config.webServer` with
+  ZERO global-setup output — empirical proof that webServer processes start before
+  globalSetup. The serve entry (`npx serve dist`) answered 404 forever because `dist/`
+  is produced by the export... which lived in global-setup. Locally this never failed
+  because a `dist/` from earlier runs always existed (and reuseExistingServer masked
+  ordering).
+- Fix: the export moved into the serve webServer's own command chain
+  (`node e2e/export-web.mjs && npx --yes serve dist -s -l 8081`, readiness timeout
+  300s) — readiness now genuinely awaits the export; global-setup keeps only backend
+  prep (supabase up, migrate, seed). `npx --yes` because CI's cold npx cache must not
+  prompt.
+- **Lesson:** anything a webServer's readiness depends on must be produced by that
+  webServer's own command (or before `playwright test`), never by global-setup.
+
+### 4. VR baselines are PER-PLATFORM — a shared set cannot satisfy Windows-local AND Linux-CI
+
+- All 44 committed baselines were rendered on Windows; ubuntu-latest renders different
+  font antialiasing → every `toHaveScreenshot` failed on the nightly's first CI run.
+  The Phase 8 choice to drop the `{platform}` suffix from `snapshotPathTemplate`
+  ("names stay stable") was structurally wrong — one baseline set can't pass on two
+  render platforms.
+- Fix: `snapshotPathTemplate` gains `-{platform}`; the win32 set is committed from
+  local runs, and the linux set is generated ON the actual runner via the new
+  e2e-nightly `update-vr-baselines: true` dispatch input (uploads a
+  `vr-baselines-linux` artifact to download + commit). Generating linux baselines in a
+  local Docker container was rejected: the playwright image's font set is not
+  guaranteed to match the GitHub runner's.
+- **Lesson:** `/add-component`'s VR step ships TWO baseline sets per story×theme
+  (local platform + linux-from-CI); packages/ui CLAUDE.md documents the dispatch flow.
