@@ -10,14 +10,14 @@
 > recipes. Change a decision here only deliberately, and propagate it into the affected
 > `CLAUDE.md`/guides in the same change.
 
-> **Naming conventions:** package scope `@platform/*`; bundle ids `com.example.*`
-> (placeholder until a real reverse-domain is chosen); infra names follow
-> `<org>-<product>-<env>` (org placeholder `example`); products are `template` (the
+> **Naming conventions:** package scope `@platform/*`; bundle ids `com.the777incident.*`
+> (the org reverse-domain); infra names follow
+> `<org>-<product>-<env>` (org `the777incident`); products are `template` (the
 > working template at `products/_template`) + `demo` (stamped proof). Product names —
 > never the monorepo's name — drive all app ids, slugs, and infra naming, so the scaffold
-> stays portable and products stay independently brandable. Keep placeholders
-> (`example`, `com.example.*`, `TODO-EAS-PROJECT-ID`, releases-repo owner) clearly
-> marked; swap them for real org values when infra accounts exist.
+> stays portable and products stay independently brandable. Keep the remaining
+> placeholders (`TODO-EAS-PROJECT-ID` and friends) clearly marked; the org
+> `the777incident` is baked in — create its infra accounts on infra day.
 
 ## Context
 
@@ -47,7 +47,7 @@ stamp one `demo` product to prove the generator.
 - **Hosting:** web → Vercel (one project/product, turbo-ignore); per-env separate Supabase projects; local dev via Supabase CLI stack
 - **Quality:** ESLint flat config + Prettier; Ruff; **pyright strict** + Pydantic strict mode (Python); **single Jest runner** (jest-expo preset) + RNTL for ALL JS tests; Playwright (web E2E, **nightly CI**); Maestro (mobile E2E, **local-only initially**); pytest + httpx against **real Postgres**; typegen drift check; GitHub Actions (affected-only) — full inventory in “Testing strategy”
 - **Cross-cutting:** Sentry (`@sentry/react-native` — NOT deprecated `sentry-expo`; the **Expo config plugin is `@sentry/react-native/expo`** + Metro `getSentryExpoConfig` wiring for production source maps; pin a release that lists SDK 56 / RN 0.85 support), Expo Push, Supabase Storage/CDN
-- **Multi-product:** `products/<name>/` consuming shared `packages/{ui,core,config}`; `pnpm new-product <name>` generator; infra naming `<org>-<product>-<env>`
+- **Multi-product:** `products/<name>/` consuming shared `packages/{ui,core,config}`; `pnpm new-product <name>` generator; infra naming `<org>-<product>-<env>` (org `the777incident`)
 - **Git hooks (Lefthook, repo-level + affected-scoped):** `lefthook.yml` at root. **pre-commit** (fast, staged files only): Prettier + ESLint on staged JS/TS, Ruff check+format on staged `.py` (scoped to the touched product's api). **pre-push:** `turbo run typecheck test build --affected` + (for affected APIs) pyright strict + pytest — i.e. ONLY the product(s) actually touched run (plus all dependents when `packages/*` change, which is the co-evolve guard moved before the push). Builds are turbo-cached so repeat pushes are fast
 - **Design system workbench:** **Storybook 9 (9.1.x)** (web, **`@storybook/react-native-web-vite`** — renders the SAME RN components through react-native-web that ship to every target; NOT on-device `@storybook/react-native`; chose 9 over ESM-only 10 for the broadest RN-web-vite + NativeWind compat) as a SINGLE shared workbench in `packages/ui` — `.storybook/main.ts` sets `jsxImportSource: "nativewind"` and runs the Tailwind/NativeWind step on `global.css`; the framework already aliases `react-native`→`react-native-web` (no manual alias needed) — stories colocated (`*.stories.tsx`, one story per cva variant), run with `pnpm --filter @platform/ui storybook`. Global decorator imports `global.css` + wraps in the theme provider so `className`/NativeWind utilities resolve identically to the app; toolbar exposes a **light/dark toggle AND a brand switcher** (template ↔ demo) that swaps the active CSS-var set — so the workbench is also the live preview surface for the Figma token modes (below) and the demo-able "one component set, different brand" moment. Visual regression = Playwright screenshots of the static Storybook build (iterates the stories `index.json`, each story × {light,dark}), committed baselines, wired into the nightly E2E run. **Chromatic deliberately declined** — self-hosted Playwright keeps VR free + in-repo, consistent with the no-paid-SaaS stance elsewhere
 - **Component lifecycle (shadcn-ownership two-tier):** Tier-1 **owned primitives** in `packages/ui/src/components/ui/` (react-native-reusables components copied in via its CLI, then OWNED as source); Tier-2 **product compositions** start product-local in `app/features/<feature>/components/` and **promote down into `packages/ui` on 2nd use**. Primitives consume **semantic tokens ONLY** (`bg-primary`, never hex/brand values) so one set works on all targets + all products. Fixed **add-a-component recipe** (documented in `packages/ui` CLAUDE.md, enforced like the API's `model→service→schema→router`): `cli-add (or author) → pin @rn-primitives/* exact → write *.stories.tsx (one per variant) → write *.figma.tsx Code Connect map → export from index.ts → commit VR baseline (light+dark)`. Exposed as a `/add-component` command
@@ -77,7 +77,7 @@ stamp one `demo` product to prove the generator.
    Requires `web.output: "single"` (SPA) in `app.config.ts`.
 3. **electron-updater collision:** GitHub provider resolves "latest release of the repo" —
    multiple products in one monorepo collide. Each product's desktop publishes to its own
-   `<org>/<product>-desktop-releases` repo (placeholder until real org/repo exists).
+   `the777incident/<product>-desktop-releases` repo (created on infra day).
 4. **Supabase pooler reality:** Supavisor **deprecated session mode on the 6543 pooler
    (2025-02-28)** — 6543 is transaction-mode only (session mode and direct connections live
    on **5432**); asyncpg prepared statements break on the transaction pooler. Use **psycopg
@@ -205,9 +205,9 @@ that's a new architecture decision, not a default.
     │   ├── .claude/commands/      # /dev, /typegen, /migrate, /add-feature, /release <surface>
     │   ├── product.json           # {"name":"template","portIndex":0} generator metadata
     │   ├── .env.example           # server-side secrets template (api)
-    │   ├── supabase/{config.toml,migrations/}   # project_id example-template; ports from portIndex
+    │   ├── supabase/{config.toml,migrations/}   # project_id the777incident-template; ports from portIndex
     │   ├── app/                   # @platform/template-app (iOS+Android+WEB)
-    │   │   ├── app.config.ts      # web.output "single", scheme, com.example.template,
+    │   │   ├── app.config.ts      # web.output "single", scheme, com.the777incident.template,
     │   │   │                      #   extra.eas.projectId: "TODO-EAS-PROJECT-ID"
     │   │   ├── assets/brand/      # icon/splash/favicon (placeholders) + source + regen script
     │   │   ├── .env.development · .env.staging · .env.production   # committed, publishable only
@@ -228,13 +228,13 @@ that's a new architecture decision, not a default.
     │   │       ├── (auth)/{login,signup}.tsx
     │   │       └── (tabs)/{_layout,index,settings}.tsx
     │   ├── desktop/               # @platform/template-desktop
-    │   │   ├── electron-builder.yml             # appId com.example.template.desktop;
-    │   │   │                                    #   publish → <org>/template-desktop-releases
+    │   │   ├── electron-builder.yml             # appId com.the777incident.template.desktop;
+    │   │   │                                    #   publish → the777incident/template-desktop-releases
     │   │   └── src/{main.ts,preload.ts}         # app:// protocol + SPA fallback + autoUpdater
     │   ├── api/                   # FastAPI; ALSO a pnpm workspace (script shim → uv run)
     │   │   ├── package.json       # @platform/template-api; dev/lint/test/openapi via uv
     │   │   ├── pyproject.toml · uv.lock · Dockerfile
-    │   │   ├── fly.staging.toml   # app = "example-template-api-stg"; release_command alembic
+    │   │   ├── fly.staging.toml   # app = "the777incident-template-api-stg"; release_command alembic
     │   │   ├── fly.production.toml
     │   │   ├── alembic.ini · alembic/{env.py,versions/}   # initial migration incl. RLS deny-all
     │   │   ├── src/template_api/
@@ -366,7 +366,7 @@ Button/Input/Card → composites); per component run the add-a-component recipe 
 3. Whole-word replace `template`/`Template`/`template_api` in contents AND paths → kebab/Pascal/snake variants (covers package names, slug/scheme/bundle ids, electron appId + releases repo, fly app names, pyproject module, alembic, supabase project_id, and the product's README.md / CLAUDE.md / `.claude/commands/*` — ports and infra names in those docs come from `product.json` so they stay accurate).
 4. Ports from portIndex: API `8000+10i`; Supabase block `54321+100i` → products' local stacks coexist. Applied everywhere ports appear: supabase `config.toml`, api dev script, AND the committed `app/.env.*` files (`EXPO_PUBLIC_API_URL`, supabase URL).
 5. Write `.env.example` + `product.json`; `pnpm install`.
-6. Print infra checklist: 2 Supabase projects (`<org>-<name>-stg|prod`), `fly apps create <org>-<name>-api-stg|prod` + secrets, Vercel project (root `products/<name>/app`, build via turbo filter, output `dist`, ignore step `npx turbo-ignore`), `eas init` → paste projectId, create `<name>-desktop-releases` repo + `GH_TOKEN`, 4 Sentry projects + DSNs, per-product GH Action secrets.
+6. Print infra checklist: 2 Supabase projects (`the777incident-<name>-stg|prod`), `fly apps create the777incident-<name>-api-stg|prod` + secrets, Vercel project (root `products/<name>/app`, build via turbo filter, output `dist`, ignore step `npx turbo-ignore`), `eas init` → paste projectId, create `<name>-desktop-releases` repo + `GH_TOKEN`, 4 Sentry projects + DSNs, per-product GH Action secrets.
 
 **Workflows:** pin **current action majors** (June 2026): `actions/checkout@v6`,
 `jdx/mise-action@v4`, `dorny/paths-filter@v4` (mise-action/paths-filter v4 are the Node-24
@@ -422,5 +422,5 @@ Each phase = one commit (or a few logical commits) on a feature branch.
 4. Multi-product proof: `_template` and `demo` dev stacks (Expo + API + Supabase local)
    running at the same time, distinct ports; `--affected` only rebuilds the touched product.
 5. Naming audit: all app ids/slugs/infra names derive from product names (`template`,
-   `demo`) with clearly marked `example` org placeholders — `git grep -inE 'example|TODO'`
-   surfaces exactly the intended swap-points and nothing else.
+   `demo`) with the org `the777incident` baked in — `git grep -inE 'TODO'` surfaces exactly the
+   remaining swap-points and nothing else.

@@ -10,7 +10,7 @@ git tag <product>-api-v1.2.0     && git push origin <product>-api-v1.2.0
 git tag <product>-app-v1.2.0     && git push origin <product>-app-v1.2.0
 # ota    → eas-update.yml     → eas update --channel production (JS-only changes)
 git tag <product>-ota-v1.2.0     && git push origin <product>-ota-v1.2.0
-# desktop → electron-release.yml → 3-OS matrix, publishes to <org>/<product>-desktop-releases
+# desktop → electron-release.yml → 3-OS matrix, publishes to the777incident/<product>-desktop-releases
 #           (tag MUST match desktop/package.json "version")
 git tag <product>-desktop-v1.2.0 && git push origin <product>-desktop-v1.2.0
 ```

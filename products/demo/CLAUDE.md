@@ -9,14 +9,14 @@ CLAUDE.md (loads hierarchically); this file is what's specific to THIS product.
   (`expo export --platform web` → `dist/`). Routes in `app/app/` are thin one-liners;
   real screens/logic live in `app/features/<feature>/` (auth, home, settings).
 - `desktop/` — `@platform/demo-desktop`: Electron shell serving the exported web
-  `dist/` over the privileged `app://` protocol. appId `com.example.demo.desktop`;
-  publishes to `<org>/demo-desktop-releases` (org placeholder `example`).
+  `dist/` over the privileged `app://` protocol. appId `com.the777incident.demo.desktop`;
+  publishes to `the777incident/demo-desktop-releases`.
 - `api/` — `@platform/demo-api`: FastAPI, its own uv universe (module
   `demo_api`). See [api/CLAUDE.md](api/CLAUDE.md) for the add-an-endpoint recipe.
 - `api-client/` — `@platform/demo-api-client`: GENERATED (hey-api) from
   `api/openapi.json`, committed, never hand-edited.
 - `supabase/` — this product's own local stack + migrations context
-  (project_id `example-demo`).
+  (project_id `the777incident-demo`).
 
 ## Ports & infra (derived from product.json — the single source of truth)
 
@@ -28,9 +28,9 @@ from portIndex, so every product's stack coexists:
   `supabase/config.toml`)
 - Expo dev server: 8081 for every product (Expo auto-offers the next port when busy)
 
-Infra names derive from the PRODUCT name: Fly `example-demo-api-stg|prod`,
-Supabase projects `example-demo-stg|prod`, Sentry `example-demo`, EAS project
-via `TODO-EAS-PROJECT-ID` in `app/app.config.ts`. (`example` = org placeholder.)
+Infra names derive from the PRODUCT name: Fly `the777incident-demo-api-stg|prod`,
+Supabase projects `the777incident-demo-stg|prod`, Sentry `the777incident-demo`, EAS project
+via `TODO-EAS-PROJECT-ID` in `app/app.config.ts`. (`the777incident` = the org.)
 
 ## Conventions that apply here
 

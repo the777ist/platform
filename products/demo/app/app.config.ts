@@ -10,9 +10,9 @@ const config: ExpoConfig = {
   // (`pnpm brand:gen`). Keep this set and the script's size matrix in sync.
   icon: "./assets/brand/icon.png",
   web: { output: "single", bundler: "metro", favicon: "./assets/brand/favicon.png" },
-  ios: { bundleIdentifier: "com.example.demo" },
+  ios: { bundleIdentifier: "com.the777incident.demo" },
   android: {
-    package: "com.example.demo",
+    package: "com.the777incident.demo",
     adaptiveIcon: {
       foregroundImage: "./assets/brand/adaptive-icon.png",
       backgroundColor: "#6366F1",
@@ -29,8 +29,8 @@ const config: ExpoConfig = {
       // var (EAS secret) — never committed.
       "@sentry/react-native/expo",
       {
-        organization: "example", // PLACEHOLDER org slug
-        project: "example-demo", // PLACEHOLDER Sentry project slug
+        organization: "the777incident", // the org (Sentry org created on infra day)
+        project: "the777incident-demo", // Sentry project slug (created on infra day)
       },
     ],
   ],

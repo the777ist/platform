@@ -4,8 +4,8 @@
 # project_id + auth URLs + analytics off. Ports derive from product.json's portIndex
 # (Supabase block = 54421 + 100·portIndex, applied by the generator when stamping —
 # Key ruling #7) so products' local stacks coexist.
-# project_id derives from the PRODUCT name (example-<product>), NOT the monorepo name.
-project_id = "example-demo"
+# project_id derives from the PRODUCT name (the777incident-<product>), NOT the monorepo name.
+project_id = "the777incident-demo"
 
 [api]
 enabled = true

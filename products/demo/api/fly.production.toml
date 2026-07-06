@@ -1,4 +1,4 @@
-app = "example-demo-api-prod"
+app = "the777incident-demo-api-prod"
 primary_region = "iad"
 
 [build]

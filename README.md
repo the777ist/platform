@@ -81,11 +81,11 @@ The generator copies `products/_template` → `products/blog`, whole-word-rename
 infrastructure checklist**. Work through that checklist (the external accounts it can't create
 for you):
 
-- **2 Supabase projects** (`<org>-blog-stg|prod`)
-- **Fly apps**: `fly apps create <org>-blog-api-stg|prod` + secrets
+- **2 Supabase projects** (`the777incident-blog-stg|prod`)
+- **Fly apps**: `fly apps create the777incident-blog-api-stg|prod` + secrets
 - **Vercel** project (root `products/blog/app`, output `dist`)
 - **EAS**: `eas init` → paste the `projectId` into `app.config.ts`
-- **`<org>/blog-desktop-releases`** repo + `GH_TOKEN` (Electron auto-update)
+- **`the777incident/blog-desktop-releases`** repo + `GH_TOKEN` (Electron auto-update)
 - **Sentry** projects + DSNs; per-product GitHub Action secrets
 
 Then run it locally:
