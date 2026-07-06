@@ -1021,3 +1021,16 @@ package.json` (guide skeleton has no author field; harmless for --dir and irrele
   the CI steps locally (full gate + drift check) as the evidence instead. Verify #7 (fly
   machine run) blocked on placeholder infra; the task module was run locally against the
   real local DB and emits the exact documented JSON line.
+
+### 11. Deep-audit probe: the STAMPED E2E harness works end-to-end on demo's own stack
+
+- Ran `products/demo/app` Playwright E2E as an audit probe: global-setup health-checked
+  demo's kong (54421 via port-derived config), migrated + seeded demo's DB (54422), the
+  export baked demo's `.env.development` (API 8010), uvicorn served `demo_api` on 8010,
+  and the two-client realtime proof ran over the `demo:realtime` channel with demo's
+  service-role key — **1 passed**. Both products' full stacks are now E2E-verified live
+  in the same session; the port-derivation fix (entry 7) is proven, not just typechecked.
+- Also re-evidenced during the audit: the 401 problem+json error response still carries
+  `X-Request-Id` and its access-log line carries a generated `request_id` (middleware
+  truly outermost); a leftover E2E `uvicorn` can squat port 8000 and silently serve a
+  second instance's curl checks — kill by PID from netstat before re-verifying servers.
