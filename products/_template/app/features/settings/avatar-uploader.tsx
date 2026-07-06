@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Image, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { uploadAvatar, useSession } from "@platform/core";
-import { Button, Text } from "@platform/ui";
+import { uploadAvatar, useSession } from "@the777incident/core";
+import { Button, Text } from "@the777incident/ui";
 
 export function AvatarUploader() {
   const { user } = useSession();

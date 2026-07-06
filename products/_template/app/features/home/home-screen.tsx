@@ -7,7 +7,7 @@
 // list in every subscribed client, which then refetches through the API.
 import { useState } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native";
-import { Button, Input, Text } from "@platform/ui";
+import { Button, Input, Text } from "@the777incident/ui";
 // Generated TanStack Query plugin exports (`{{name}}InfiniteOptions` /
 // `{{name}}Mutation` off the api's route-name operationIds). The infinite options
 // wire queryKey + a queryFn that maps pageParam onto the `cursor` query param — but
@@ -17,7 +17,7 @@ import {
   createItemMutation,
   listItemsInfiniteOptions,
   listItemsQueryKey,
-} from "@platform/template-api-client";
+} from "@the777incident/template-api-client";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useItemsRealtime } from "./use-items-realtime";

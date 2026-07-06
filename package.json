@@ -6,7 +6,7 @@
     "node": ">=22.13",
     "pnpm": ">=11"
   },
-  "prettier": "@platform/config/prettier",
+  "prettier": "@the777incident/config/prettier",
   "scripts": {
     "prepare": "lefthook install",
     "bootstrap": "node scripts/bootstrap.mjs",
@@ -19,7 +19,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\""
   },
   "devDependencies": {
-    "@platform/config": "workspace:*",
+    "@the777incident/config": "workspace:*",
     "lefthook": "^1.7.0",
     "prettier": "^3.3.0",
     "style-dictionary": "5.5.0",

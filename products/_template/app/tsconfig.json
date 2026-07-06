@@ -1,4 +1,4 @@
 {
-  "extends": "@platform/config/tsconfig/expo",
+  "extends": "@the777incident/config/tsconfig/expo",
   "include": ["app", "features", "*.ts", "*.tsx", "nativewind-env.d.ts"]
 }

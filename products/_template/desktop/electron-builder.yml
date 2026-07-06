@@ -1,4 +1,4 @@
-# electron-builder configuration for @platform/template-desktop.
+# electron-builder configuration for @the777incident/template-desktop.
 # appId / publish repo are LOCKED placeholders — the generator whole-word-replaces
 # `template` and the `<org>` owner is a marked placeholder until a real org exists.
 appId: com.the777incident.template.desktop

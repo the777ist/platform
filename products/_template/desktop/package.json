@@ -1,5 +1,5 @@
 {
-  "name": "@platform/template-desktop",
+  "name": "@the777incident/template-desktop",
   "version": "0.0.0",
   "private": true,
   "description": "Electron desktop shell for the template product (wraps the exported Expo web build)",
@@ -18,7 +18,7 @@
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('renderer',{recursive:true,force:true});require('node:fs').rmSync('release',{recursive:true,force:true})\""
   },
   "devDependencies": {
-    "@platform/template-app": "workspace:*",
+    "@the777incident/template-app": "workspace:*",
     "@types/node": "^24.3.0",
     "electron": "42.4.0",
     "electron-builder": "26.15.6",

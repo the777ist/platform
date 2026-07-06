@@ -1,7 +1,7 @@
 // Iterates the static Storybook build's index.json and screenshots EVERY story in
 // light AND dark (the preview's `theme` toolbar global), diffing against committed
-// baselines. Build first: pnpm --filter @platform/ui build-storybook
-// Author/refresh baselines: pnpm --filter @platform/ui exec playwright test --update-snapshots
+// baselines. Build first: pnpm --filter @the777incident/ui build-storybook
+// Author/refresh baselines: pnpm --filter @the777incident/ui exec playwright test --update-snapshots
 import fs from "node:fs";
 import path from "node:path";
 import { test, expect } from "@playwright/test";
@@ -9,7 +9,7 @@ import { test, expect } from "@playwright/test";
 const indexPath = path.resolve(__dirname, "../storybook-static/index.json");
 if (!fs.existsSync(indexPath)) {
   throw new Error(
-    "storybook-static/index.json not found — run `pnpm --filter @platform/ui build-storybook` first.",
+    "storybook-static/index.json not found — run `pnpm --filter @the777incident/ui build-storybook` first.",
   );
 }
 const index = JSON.parse(fs.readFileSync(indexPath, "utf8")) as {

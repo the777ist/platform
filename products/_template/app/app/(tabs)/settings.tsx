@@ -1,6 +1,6 @@
 import { View } from "react-native";
-import { signOut, useSession } from "@platform/core";
-import { Button, Text } from "@platform/ui";
+import { signOut, useSession } from "@the777incident/core";
+import { Button, Text } from "@the777incident/ui";
 import { AvatarUploader } from "../../features/settings/avatar-uploader";
 import { useThemeStore } from "../../features/settings/use-theme";
 
