@@ -7,6 +7,7 @@ from ..models import Item
 from ..pagination import Page, clamp_limit, decode_cursor, encode_cursor
 from ..schemas.item import ItemCreate, ItemRead, ItemUpdate
 from .base import BaseService
+from .realtime import broadcast_invalidate
 
 
 class ItemService(BaseService):
@@ -28,14 +29,17 @@ class ItemService(BaseService):
     def get(self, *, owner_id: str, item_id: UUID) -> ItemRead:
         return ItemRead.model_validate(self._require(owner_id, item_id))
 
-    def create(self, *, owner_id: str, data: ItemCreate) -> ItemRead:
+    async def create(self, *, owner_id: str, data: ItemCreate) -> ItemRead:
         item = Item(owner_id=owner_id, title=data.title, description=data.description)
         self.session.add(item)
         self.session.commit()
         self.session.refresh(item)
+        # Broadcast-only realtime (PHILOSOPHY): AFTER the commit, tell clients on the
+        # per-product channel to refetch through the API. Never blocks the write.
+        await broadcast_invalidate("items")
         return ItemRead.model_validate(item)
 
-    def update(self, *, owner_id: str, item_id: UUID, data: ItemUpdate) -> ItemRead:
+    async def update(self, *, owner_id: str, item_id: UUID, data: ItemUpdate) -> ItemRead:
         item = self._require(owner_id, item_id)
         if data.title is not None:
             item.title = data.title
@@ -44,11 +48,13 @@ class ItemService(BaseService):
         self.session.add(item)
         self.session.commit()
         self.session.refresh(item)
+        await broadcast_invalidate("items")
         return ItemRead.model_validate(item)
 
-    def delete(self, *, owner_id: str, item_id: UUID) -> None:
+    async def delete(self, *, owner_id: str, item_id: UUID) -> None:
         self.session.delete(self._require(owner_id, item_id))
         self.session.commit()
+        await broadcast_invalidate("items")
 
     def _require(self, owner_id: str, item_id: UUID) -> Item:
         item = self.session.get(Item, item_id)

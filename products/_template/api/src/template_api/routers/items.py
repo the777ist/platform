@@ -30,8 +30,8 @@ def list_items(
 
 
 @router.post("", response_model=ItemRead, status_code=status.HTTP_201_CREATED)
-def create_item(user: CurrentUser, data: ItemCreate, svc: ItemSvc) -> ItemRead:
-    return svc.create(owner_id=user.id, data=data)
+async def create_item(user: CurrentUser, data: ItemCreate, svc: ItemSvc) -> ItemRead:
+    return await svc.create(owner_id=user.id, data=data)
 
 
 @router.get("/{item_id}", response_model=ItemRead)
@@ -40,10 +40,10 @@ def get_item(user: CurrentUser, item_id: UUID, svc: ItemSvc) -> ItemRead:
 
 
 @router.patch("/{item_id}", response_model=ItemRead)
-def update_item(user: CurrentUser, item_id: UUID, data: ItemUpdate, svc: ItemSvc) -> ItemRead:
-    return svc.update(owner_id=user.id, item_id=item_id, data=data)
+async def update_item(user: CurrentUser, item_id: UUID, data: ItemUpdate, svc: ItemSvc) -> ItemRead:
+    return await svc.update(owner_id=user.id, item_id=item_id, data=data)
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_item(user: CurrentUser, item_id: UUID, svc: ItemSvc) -> None:
-    svc.delete(owner_id=user.id, item_id=item_id)
+async def delete_item(user: CurrentUser, item_id: UUID, svc: ItemSvc) -> None:
+    await svc.delete(owner_id=user.id, item_id=item_id)

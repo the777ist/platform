@@ -13,3 +13,7 @@ _TEST_DB_URL = os.environ.get(
 )
 os.environ.setdefault("DATABASE_URL", _TEST_DB_URL)
 os.environ.setdefault("DATABASE_MIGRATION_URL", _TEST_DB_URL)
+# Force-blank the broadcast credential (env vars BEAT .env in pydantic-settings):
+# unit tests must never hit the real Realtime endpoint — broadcast_invalidate skips
+# on a falsy key, and the dedicated realtime tests inject an httpx.MockTransport.
+os.environ["SUPABASE_SERVICE_ROLE_KEY"] = ""
