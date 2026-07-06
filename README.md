@@ -1,4 +1,4 @@
-# Cross-Platform Template
+# the777incident
 
 A multi-product, cross-platform monorepo. Each product ships to **iOS, Android, web, and
 desktop from one shared React Native codebase**, backed by its own **FastAPI** service and
