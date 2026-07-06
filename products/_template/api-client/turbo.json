@@ -1,0 +1,10 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^openapi", "^build"],
+      "inputs": ["openapi-ts.config.ts", "../api/openapi.json"],
+      "outputs": ["src/**"]
+    }
+  }
+}

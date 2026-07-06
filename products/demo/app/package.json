@@ -1,0 +1,52 @@
+{
+  "name": "@platform/demo-app",
+  "version": "0.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start --port 8081",
+    "export:web": "expo export --platform web",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --passWithNoTests",
+    "brand:gen": "node assets/brand/gen-brand.mjs"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~56.0.16",
+    "@platform/core": "workspace:*",
+    "@platform/demo-api-client": "workspace:*",
+    "@platform/ui": "workspace:*",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@sentry/react-native": "8.17.1",
+    "@tanstack/react-query": "5.101.2",
+    "@tanstack/react-query-persist-client": "5.101.2",
+    "expo": "~56.0.14",
+    "expo-constants": "~56.0.20",
+    "expo-device": "~56.0.4",
+    "expo-image-picker": "~56.0.19",
+    "expo-linking": "~56.0.15",
+    "expo-notifications": "~56.0.19",
+    "expo-router": "~56.2.13",
+    "expo-splash-screen": "~56.0.12",
+    "expo-status-bar": "~56.0.4",
+    "nativewind": "4.2.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.85.3",
+    "react-native-css-interop": "0.2.6",
+    "react-native-gesture-handler": "~2.31.1",
+    "react-native-reanimated": "4.3.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.25.2",
+    "react-native-web": "~0.21.0",
+    "zustand": "5.0.14"
+  },
+  "devDependencies": {
+    "@platform/config": "workspace:*",
+    "@playwright/test": "1.61.1",
+    "@types/react": "~19.2.0",
+    "serve": "14.2.6",
+    "sharp": "0.35.3",
+    "tailwindcss": "3.4.19"
+  }
+}

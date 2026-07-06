@@ -1,0 +1,13 @@
+{
+  "name": "@platform/template-api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "uv run uvicorn template_api.main:app --reload --host 0.0.0.0 --port 8000",
+    "lint": "uv run ruff check . && uv run ruff format --check . && uv run pyright",
+    "test": "uv run pytest",
+    "openapi": "uv run python -m template_api.export_openapi",
+    "migrate": "uv run alembic upgrade head",
+    "seed": "uv run python -m template_api.seed"
+  }
+}

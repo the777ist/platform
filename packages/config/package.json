@@ -1,0 +1,28 @@
+{
+  "name": "@platform/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "exports": {
+    "./eslint": "./eslint.config.js",
+    "./prettier": "./prettier.json",
+    "./tailwind-preset": "./tailwind-preset.cjs",
+    "./tsconfig/base": "./tsconfig/base.json",
+    "./tsconfig/expo": "./tsconfig/expo.json",
+    "./tsconfig/node": "./tsconfig/node.json"
+  },
+  "devDependencies": {
+    "eslint": "^9.10.0",
+    "@eslint/js": "^9.10.0",
+    "typescript-eslint": "^8.5.0",
+    "eslint-plugin-react": "^7.36.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-config-prettier": "^9.1.0",
+    "globals": "^16.0.0",
+    "prettier": "^3.3.0",
+    "prettier-plugin-tailwindcss": "^0.6.0"
+  }
+}

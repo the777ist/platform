@@ -12,7 +12,7 @@ This is the single designer-facing contract. Keep it open while building the lib
 ## The big idea (read this first)
 
 - **One global library, shared by every product.** We do **not** fork a new component library
-  per app. Per-product differentiation is a **brand mode** (a set of token *values*) — never a
+  per app. Per-product differentiation is a **brand mode** (a set of token _values_) — never a
   copied or edited component.
 - **Components own structure; tokens own looks.** A component (Button, Card, …) is built once.
   Its colors/spacing come entirely from **variables**. Swapping the brand mode restyles
@@ -189,10 +189,10 @@ Before handing the library over, confirm:
 
 Two different Figma tokens are used; they are **not** interchangeable:
 
-| Use | Env var | Header | Scopes | Availability |
-|---|---|---|---|---|
-| **Code Connect** CLI (publish component maps) | `FIGMA_ACCESS_TOKEN` | — (CLI flag/env) | `code_connect:write`, `file_content:read` | any plan |
-| **Variables REST** pull (token values) | `FIGMA_TOKEN` | `X-Figma-Token` | `file_variables:read` (+ file read) | **Enterprise only** |
+| Use                                           | Env var              | Header           | Scopes                                    | Availability        |
+| --------------------------------------------- | -------------------- | ---------------- | ----------------------------------------- | ------------------- |
+| **Code Connect** CLI (publish component maps) | `FIGMA_ACCESS_TOKEN` | — (CLI flag/env) | `code_connect:write`, `file_content:read` | any plan            |
+| **Variables REST** pull (token values)        | `FIGMA_TOKEN`        | `X-Figma-Token`  | `file_variables:read` (+ file read)       | **Enterprise only** |
 
 - Code Connect's CLI config file is **`figma.config.json` at the repo root** (next to
   `package.json`).

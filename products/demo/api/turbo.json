@@ -1,0 +1,14 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "openapi": {
+      "inputs": ["src/**/*.py", "pyproject.toml", "uv.lock"],
+      "outputs": ["openapi.json"]
+    },
+    "lint": { "inputs": ["src/**/*.py", "tests/**/*.py", "pyproject.toml"] },
+    "test": {
+      "inputs": ["src/**/*.py", "tests/**/*.py", "pyproject.toml", "uv.lock"]
+    },
+    "dev": { "cache": false, "persistent": true }
+  }
+}

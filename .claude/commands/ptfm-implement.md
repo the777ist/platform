@@ -14,7 +14,7 @@ Expected shape: `<product> <TICKET-ID> [slug-or-title] [primary user instruction
 
 ---
 
-We need to implement the full fix / feature for Linear ticket `<TICKET-ID>` (in product `<product>`) exactly as laid out in its plan doc. Fetch the ticket from Linear, load the plan doc, walk the relevant codebase in great depth, think hard, go step by step, create as many to-dos as needed, build the feature, then add comprehensive tests in the SAME pass, then keep the implementation log up to date.
+We need to implement the full fix / feature for Linear ticket `<TICKET-ID>` (in product `<product>`) exactly as laid out in its plan doc. Fetch the ticket from Linear, load the plan doc, walk the relevant codebase in great depth, think hard, go step by step, create as many to-dos as needed, build the feature with its comprehensive tests in the SAME pass (tests first per sequence step — Step 3), and keep the implementation log up to date.
 
 **Resolve `<product>`, `<TICKET-ID>` and `<slug>` BEFORE doing anything else.**
 
@@ -24,13 +24,13 @@ We need to implement the full fix / feature for Linear ticket `<TICKET-ID>` (in 
 
 Reference docs (read these first, in full, in this order):
 
-- @PHILOSOPHY.md — the architecture/decision GOSPEL: locked decisions, conventions, invariants, the layered-API contract, the design-system token contract, the build-then-test workflow, Definition-of-Done.
+- @PHILOSOPHY.md — the architecture/decision GOSPEL: locked decisions, conventions, invariants, the layered-API contract, the design-system token contract, the testing strategy.
 - @CLAUDE.md (repo root) — monorepo map + conventions.
 - @products/<product>/CLAUDE.md — the product's structure, ports, infra names.
 - the nested **API** `CLAUDE.md` under `products/<product>/api/` — the add-an-endpoint recipe.
 - @packages/ui/CLAUDE.md + @packages/ui/FIGMA.md — design-system runbook + token contract.
 
-(These CLAUDE.md/FIGMA.md files are produced when the monorepo is built; if one is absent, fall back to `PHILOSOPHY.md`.)
+(These CLAUDE.md/FIGMA.md files are stamped into every product from `products/_template`; if one is absent, fall back to `PHILOSOPHY.md`.)
 
 ---
 
@@ -46,7 +46,7 @@ Reference docs (read these first, in full, in this order):
 
 Before writing any code, internalise both the plan AND the codebase:
 
-1. Re-read `PHILOSOPHY.md` core principles in full, especially: the build-then-test workflow, Definition-of-Done, the design-system token contract, the layered-API contract (schemas → routers → services → models), the contracts/typegen pipeline, errors (RFC 9457 problem+json), realtime (broadcast-only), and rate limiting.
+1. Re-read `PHILOSOPHY.md` core principles in full, especially: the testing strategy, the design-system token contract, the layered-API contract (schemas → routers → services → models), the contracts/typegen pipeline, errors (RFC 9457 problem+json), realtime (broadcast-only), and rate limiting.
 2. For every file the plan touches (`## File-by-file changes` section): READ it before changing it. Architecture decisions made without reading current code usually go wrong.
 3. Walk every dependency the change pulls in, scoped to `products/<product>/`:
    - **Frontend** — primitives composed from **`@platform/ui`** (`packages/ui/src/components/ui/*`), shared plumbing from **`packages/core`** (the subscribe-and-invalidate helper, shared hooks/clients), the **generated typed client** at `products/<product>/api-client/` (+ its TanStack Query hooks), screens/features under `products/<product>/app/features/<feature>/`.
@@ -66,7 +66,8 @@ The plan's `## Implementation sequence` section is dependency-ordered — follow
    - **API integration** (`pytest`) — cross-layer seams: router → service → DB round-trips, the **broadcast-and-invalidate** seam (mutation fires the per-product channel event), cursor-pagination round-trips.
    - **UI** (RNTL, `*.test.tsx`) — every form (validation + happy submit), every error display (the problem+json **translated message** renders via the typed client, not a raw error string), every non-trivial component interaction. RNTL v14: `render` / `fireEvent` / `renderHook` are **async** — await them. Mock at module boundaries with **`jest.mock(...)`**. Do NOT use `@testing-library/jest-native` (deprecated; matchers are built into RNTL ≥ 12.4).
 
-   **Every test you write must be meaningful** (per `PHILOSOPHY.md` § testing discipline). NEVER write `expect(screen.getByText("X")).toBeTruthy()` as the only assertion. NEVER write "renders without crashing". NEVER write snapshot-only tests. NEVER assert on class names, inline styles, or internal component state. Each test MUST verify functionality, business logic, or a contract: which **service method** is called with what payload; which **problem+json `type` / error code** surfaces; which **TanStack Query** state transition fires (idle → loading → success / error / retry); which side effect happens (DB row content, **broadcast fired**, navigation, toast, autosave); the data shape after a Pydantic round-trip or a generated-client call. Before writing a test, ask "what real bug would this test catch?" — if the answer is "nothing", do not write it.
+   **Every test you write must be meaningful** (the pipeline's testing discipline). NEVER write `expect(screen.getByText("X")).toBeTruthy()` as the only assertion. NEVER write "renders without crashing". NEVER write snapshot-only tests. NEVER assert on class names, inline styles, or internal component state. Each test MUST verify functionality, business logic, or a contract: which **service method** is called with what payload; which **problem+json `type` / error code** surfaces; which **TanStack Query** state transition fires (idle → loading → success / error / retry); which side effect happens (DB row content, **broadcast fired**, navigation, toast, autosave); the data shape after a Pydantic round-trip or a generated-client call. Before writing a test, ask "what real bug would this test catch?" — if the answer is "nothing", do not write it.
+
 3. **Run the new tests and confirm the baseline:**
    - **New-feature tests** should go RED — proving the feature isn't there yet and giving the implementation a precise target.
    - **Bug-fix regression tests** should first run GREEN against today's broken code (proving the test captures current reality), then have their assertions edited to describe the corrected behaviour — they then go RED until the fix lands.
@@ -121,7 +122,7 @@ Update the log incrementally — every batch of changes, write what you just did
 
 ## Step 5 — Final gate
 
-Before reporting done, emit the Definition-of-Done checklist from `PHILOSOPHY.md` with each line ticked or explicitly marked `N/A — <reason>`:
+Before reporting done, emit the pipeline's Definition-of-Done checklist with each line ticked or explicitly marked `N/A — <reason>`:
 
 - [ ] Plan doc updated (`## Post-ship deltas` for any deviations)
 - [ ] Implementation log updated (`products/<product>/docs/implementation/<TICKET-ID>-<slug>_implementation.md`)
@@ -141,7 +142,7 @@ Run the final gate one last time and paste the output. Silent skips are rule vio
 - **Frontend STRICTLY conforms to the design system.** `@platform/ui` primitives only. NativeWind semantic tokens only (never hex). Never reskin a shared primitive for one feature — cva variant / opt-in prop / compose.
 - **Backend STRICTLY conforms to existing patterns.** Layered services (schemas → routers → services → models, no repository layer). DTO ≠ ORM. problem+json boundary (never a raw error). One Alembic migration per schema change. slowapi on paid / public endpoints. Pydantic-strict-validate everything. The generated client is regenerated, never hand-edited.
 - **Cross-target + theme coverage.** iOS, Android, web, desktop — plus light / dark — plus brand modes — plus responsive on web / tablet. Every visual surface has explicit decisions for each.
-- **Tests are MANDATORY in the same pass.** Build first, then test — but ship them together. "I'll add the tests in a follow-up" is forbidden.
+- **Tests are MANDATORY in the same pass.** Tests come first at every sequence step (Step 3's red → green cycle); code and tests ship together. "I'll add the tests in a follow-up" is forbidden.
 - **Honour approval gates.** Alembic migrations, env-var additions, anything the plan flagged for review — show, wait, then proceed. NEVER auto-apply destructive or production-affecting changes.
 - **Implementation log updated AS YOU GO.** Not at the end. Every meaningful batch records what changed.
 - **Final gate is non-skippable.** `turbo run lint typecheck test build --filter=...<product>...` (+ `ruff check && pyright && pytest` for API) — all green, plus a clean typegen-drift check. Lint, typecheck, tests, and the Expo web export / app build are first-class gates; a green test suite with a red build is not done. The Definition-of-Done checklist gets emitted with every line ticked or explicitly justified.

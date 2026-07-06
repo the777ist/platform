@@ -1,0 +1,12 @@
+# Committed GENERATED artifacts — never prettier-formatted (their generators own the
+# byte-exact form; reformatting poisons drift checks that regen + `git diff --exit-code`).
+# Build outputs (dist/, storybook-static/, …) need no entries here: Prettier 3 respects
+# .gitignore by default.
+pnpm-lock.yaml
+products/*/api/openapi.json
+products/*/api-client/src/
+# Supabase CLI runtime artifacts. Git-ignored via the CLI-generated NESTED
+# products/*/supabase/.gitignore — but Prettier only reads the ROOT .gitignore/
+# .prettierignore, so nested git ignores don't reach it; list them here explicitly.
+products/*/supabase/.temp/
+products/*/supabase/.branches/

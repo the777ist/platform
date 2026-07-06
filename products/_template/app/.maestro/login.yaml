@@ -1,0 +1,12 @@
+# Mobile E2E (PHILOSOPHY Testing strategy: Maestro, LOCAL-ONLY initially — CI via
+# EAS Workflows deferred). Needs a running simulator/emulator with a dev build:
+#   maestro test products/_template/app/.maestro/login.yaml
+appId: com.example.template
+---
+- launchApp
+- tapOn: "Email"
+- inputText: "demo@example.com"
+- tapOn: "Password"
+- inputText: "Passw0rd!"
+- tapOn: "Sign in"
+- assertVisible: "Home"

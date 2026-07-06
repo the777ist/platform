@@ -1,0 +1,55 @@
+# ---- JS / pnpm ----
+node_modules/
+.pnpm-store/
+*.tsbuildinfo
+
+# ---- Build outputs ----
+dist/
+build/
+storybook-static/
+# electron copies app/dist into desktop/renderer at build time
+renderer/
+
+# ---- Expo / RN ----
+.expo/
+.expo-shared/
+*.orig.*
+web-build/
+
+# ---- Python (per-product uv universes) ----
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# ---- Electron / packaging ----
+release/
+
+# ---- Logs / OS / editor ----
+*.log
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# ---- Env / secrets ----
+# PHILOSOPHY "Env/config": frontend config is publishable-only (EXPO_PUBLIC_*) in COMMITTED
+# per-env files. gitignore allows .env.development/.staging/.production, still ignores
+# .env + .env.local. Secrets never live in committed files.
+.env
+.env.local
+.env.*.local
+# (Intentionally NOT ignored: .env.development, .env.staging, .env.production — committed.)
+
+# Turborepo local cache/daemon state
+.turbo/
+
+# Playwright MCP scratch artifacts
+.playwright-mcp/
+
+# ---- Playwright (E2E + Storybook VR) run artifacts ----
+# (VR BASELINES under .storybook/visual-regression.spec.ts-snapshots/ ARE committed.)
+test-results/
+playwright-report/
+blob-report/

@@ -1,0 +1,40 @@
+# PHILOSOPHY Workflows / Key ruling #3: tag <product>-desktop-v* → 3-OS matrix,
+# electron-builder --publish always; each product's desktop publishes to its OWN
+# <org>/<product>-desktop-releases repo (avoids the electron-updater latest-release
+# collision). The tag must match desktop/package.json `version`. macOS auto-update
+# requires signing AND notarization — publish is gated until certs exist.
+name: Electron Release
+on:
+  push:
+    tags: ["*-desktop-v*"] # <product>-desktop-v* → 3-OS matrix
+jobs:
+  release:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }} # PLACEHOLDER (empty until certs exist)
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v4
+      - run: pnpm install --frozen-lockfile
+      - name: Resolve product token (from the desktop tag)
+        id: tag
+        shell: bash
+        run: echo "product=${GITHUB_REF_NAME%%-desktop-v*}" >> "$GITHUB_OUTPUT"
+      - name: Build the web bundle the desktop wraps
+        run: pnpm turbo run export:web --filter=*-app
+      # macOS: sign+publish only when certs are present; empty placeholders → build-but-don't-publish.
+      - name: electron-builder — signed publish (mac when certs exist; win/linux always)
+        if: runner.os != 'macOS' || env.MAC_CSC_LINK != ''
+        working-directory: products/${{ steps.tag.outputs.product == 'template' && '_template' || steps.tag.outputs.product }}/desktop
+        env:
+          GH_TOKEN: ${{ secrets.DESKTOP_RELEASES_TOKEN }} # PLACEHOLDER (token for <org>/<product>-desktop-releases)
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }} # electron-builder reads CSC_LINK
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }} # PLACEHOLDER
+        run: pnpm electron-builder --publish always
+      - name: electron-builder — macOS build-only (no certs yet)
+        if: runner.os == 'macOS' && env.MAC_CSC_LINK == ''
+        working-directory: products/${{ steps.tag.outputs.product == 'template' && '_template' || steps.tag.outputs.product }}/desktop
+        run: pnpm electron-builder --mac --publish never # builds unsigned; does NOT publish the mac artifact

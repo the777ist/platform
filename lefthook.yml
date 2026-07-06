@@ -1,0 +1,49 @@
+# lefthook.yml — repo-level git hooks (PHILOSOPHY Decision Sheet "Git hooks (Lefthook, repo-level +
+# affected-scoped)"). Installed by `pnpm prepare` → `lefthook install` (PHILOSOPHY Phase 1).
+
+# pre-commit: FAST, staged files ONLY.
+#   - Prettier + ESLint on staged JS/TS
+#   - Ruff check + format on staged .py (scoped to the touched product's api)
+pre-commit:
+  parallel: true
+  commands:
+    prettier:
+      glob: "*.{ts,tsx,js,jsx,mjs,cjs,json,md,yml,yaml,css}"
+      # {staged_files} = only what's staged; --no-error-on-unmatched-pattern so an all-.py
+      # commit doesn't fail prettier.
+      run: pnpm prettier --write --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true # re-stage files prettier reformatted
+    eslint:
+      glob: "*.{ts,tsx,js,jsx,mjs,cjs}"
+      # Lint only staged JS/TS; the @platform/config flat config ignores the generated client.
+      run: pnpm eslint --fix --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true
+    ruff-check:
+      glob: "*.py"
+      # Scoped to staged .py only. Each product api carries uv + ruff in its own venv (Phase 3).
+      # Project root = walk UP from the first staged file to the nearest pyproject.toml
+      # (a bare `dirname | head -1`/.. only worked for files exactly one level deep).
+      run: |
+        f=$(echo "{staged_files}" | cut -d' ' -f1); d=$(dirname "$f")
+        while [ "$d" != "." ] && [ ! -f "$d/pyproject.toml" ]; do d=$(dirname "$d"); done
+        uv run --project "$d" ruff check --fix {staged_files}
+      stage_fixed: true
+    ruff-format:
+      glob: "*.py"
+      run: |
+        f=$(echo "{staged_files}" | cut -d' ' -f1); d=$(dirname "$f")
+        while [ "$d" != "." ] && [ ! -f "$d/pyproject.toml" ]; do d=$(dirname "$d"); done
+        uv run --project "$d" ruff format {staged_files}
+      stage_fixed: true
+
+# pre-push: the AFFECTED gate (PHILOSOPHY: "turbo run typecheck test build --affected" +, for
+# affected APIs, pyright strict + pytest). Builds are turbo-cached so repeat pushes are fast.
+# Only product(s) actually touched run, PLUS all dependents when packages/* change
+# (the co-evolve guard, moved before the push).
+pre-push:
+  commands:
+    affected-gate:
+      run: pnpm turbo run typecheck test build --affected
+    # pyright + pytest for affected apis run THROUGH turbo's `typecheck`/`test` tasks in each
+    # api package (wired in Phase 3) so they are naturally affected-scoped and cached — no
+    # separate lefthook command needed.

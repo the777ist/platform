@@ -1,0 +1,21 @@
+{
+  // Node/Electron main-process build: emits CJS to build/.
+  // NOTE: does NOT extend tsconfig.base.json (which is noEmit + bundler resolution for the
+  // RN/web apps). Electron main is a plain Node CJS target, so it needs its own emit config.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "lib": ["ES2022"],
+    "types": ["node", "electron"],
+    "outDir": "build",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true,
+    "noEmitOnError": true
+  },
+  "include": ["src/**/*.ts"]
+}

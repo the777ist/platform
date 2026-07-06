@@ -30,12 +30,12 @@ Reference docs (read these first, in full):
 - @PHILOSOPHY.md — the architecture/decision GOSPEL (locked decisions, conventions, invariants). The **promote-on-2nd-use** rule and the `packages/{ui,core,config}` boundaries live here; when anything conflicts with it, it wins.
 - @CLAUDE.md (repo root) — monorepo map + conventions (the shared-package boundaries, semantic-tokens-only, broadcast-only realtime, problem+json, never-edit-generated-client, promote-on-2nd-use).
 - @products/<product>/CLAUDE.md — the product's structure, ports, infra names.
-- the nested **API** `CLAUDE.md` under `products/<product>/api/` — the layered-services recipe and where shared API helpers live (`core/` / `common/`).
+- the nested **API** `CLAUDE.md` under `products/<product>/api/` — the layered-services recipe. (The shared home for API helpers — a `core/`/`common/` module within the product's API — is defined by this command below.)
 - @packages/ui/CLAUDE.md + @packages/ui/FIGMA.md — design-system runbook + token contract (where a promoted primitive lands and how a `cva` variant is added).
 - @products/<product>/docs/plans/<TICKET-ID>-<slug>\_plan.md
 - @products/<product>/docs/implementation/<TICKET-ID>-<slug>\_implementation.md
 
-(If a `CLAUDE.md` is absent because the monorepo is mid-build, fall back to `PHILOSOPHY.md`.)
+(If a `CLAUDE.md` is absent, fall back to `PHILOSOPHY.md` — product-level ones are stamped from `products/_template`.)
 
 What you are looking for — logic currently sitting inside `products/<product>/app/features/<FEATURE>/**` (or duplicated inside the API aggregate) that is NOT genuinely feature-specific and should live in a shared home. Common candidate signals:
 

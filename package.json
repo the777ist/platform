@@ -1,0 +1,29 @@
+{
+  "name": "platform",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22.13",
+    "pnpm": ">=11"
+  },
+  "prettier": "@platform/config/prettier",
+  "scripts": {
+    "prepare": "lefthook install",
+    "bootstrap": "node scripts/bootstrap.mjs",
+    "new-product": "node scripts/new-product.mjs",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "build": "turbo run build",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\""
+  },
+  "devDependencies": {
+    "@platform/config": "workspace:*",
+    "lefthook": "^1.7.0",
+    "prettier": "^3.3.0",
+    "style-dictionary": "5.5.0",
+    "turbo": "2.9.18",
+    "typescript": "^5.6.0"
+  }
+}
