@@ -19,12 +19,12 @@ FastAPI service for the demo product (module `demo_api`, own uv universe —
 4. **router** — `src/demo_api/routers/<x>.py`: thin; depends on the service
    (Annotated form), maps schema↔domain; route function names must stay UNIQUE across
    all routers (they become the generated-client operation ids). Register in `main.py`.
-5. **openapi** — `pnpm turbo run openapi --filter=@platform/demo-api` (or
+5. **openapi** — `pnpm turbo run openapi --filter=@the777incident/demo-api` (or
    `uv run python -m demo_api.export_openapi`).
-6. **typegen** — `pnpm turbo run build --filter=@platform/demo-api-client`; commit
+6. **typegen** — `pnpm turbo run build --filter=@the777incident/demo-api-client`; commit
    the regenerated client. CI drift check fails a stale regen.
 7. **hook** — use the generated TanStack options/mutations from
-   `@platform/demo-api-client`.
+   `@the777incident/demo-api-client`.
 8. **screen** — wire it in `app/features/<x>/`.
 
 If clients must react to mutations in realtime: broadcast AFTER commit via

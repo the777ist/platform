@@ -44,7 +44,7 @@ Discover the file surface yourself — do not ask the user to paste files:
 1. Run `git status` to see currently staged + unstaged changes.
 2. Run `git diff main...HEAD --name-only` (or whatever the base branch is) to enumerate every file that's changed since the branch diverged.
 3. Glob `products/<product>/app/features/<FEATURE>/**` for the feature module itself.
-4. Walk imports outward — every Expo Router route/screen, component, hook, store, and generated-client hook the feature touches; every `@platform/ui` primitive and `packages/core` helper it depends on; and across the API: every `schemas/`, `routers/`, `services/`, `models/` file the endpoint chain touches.
+4. Walk imports outward — every Expo Router route/screen, component, hook, store, and generated-client hook the feature touches; every `@the777incident/ui` primitive and `packages/core` helper it depends on; and across the API: every `schemas/`, `routers/`, `services/`, `models/` file the endpoint chain touches.
 5. Also include any migrations under `products/<product>/api/.../alembic/versions/*` whose revisions reference the feature, and any regeneration of `products/<product>/api-client/`.
 
 ---
@@ -80,13 +80,13 @@ Rules for the inventory:
     - Models (SQLModel tables, persistence only): `models/*`
   - Alembic migrations (`products/<product>/api/.../alembic/versions/*`)
   - Generated client (`products/<product>/api-client/...` — list the endpoints/hooks this feature consumes; NEVER hand-edited)
-  - Shared primitives the feature DEPENDS ON (only those touched/added for this feature: `@platform/ui` components under `packages/ui/src/components/ui/*`; `packages/core` helpers — query client / persistence / auth guards / the subscribe-and-invalidate broadcast helper / env)
+  - Shared primitives the feature DEPENDS ON (only those touched/added for this feature: `@the777incident/ui` components under `packages/ui/src/components/ui/*`; `packages/core` helpers — query client / persistence / auth guards / the subscribe-and-invalidate broadcast helper / env)
   - Tests, grouped by layer:
     - RNTL unit/component (`*.test.tsx` / `*.test.ts`, colocated `__tests__/` beside source)
     - pytest API unit (`tests/test_*.py` — service classes, schema round-trips)
     - pytest API integration (`tests/test_*.py` — routers over HTTP, problem+json shapes, DTO/ORM separation, broadcast seam)
 - **Format as Markdown tables** (`| File | Purpose |`) per group — match the style already used in the doc's "Platform primitives" / "What got built" tables. One sentence per row describing the file's role in this feature.
-- **Mark explicitly** anything that is feature-shared-with-other-code (e.g. a `packages/core` helper or `@platform/ui` primitive originally built for this feature but now reused) so the next commonification pass has a head start.
+- **Mark explicitly** anything that is feature-shared-with-other-code (e.g. a `packages/core` helper or `@the777incident/ui` primitive originally built for this feature but now reused) so the next commonification pass has a head start.
 - **Exclude**: anything explicitly marked legacy (e.g. a `legacy-` filename prefix); anything that's plainly project-wide infrastructure (the root layout, `request_id` middleware, the global error boundary — unless this feature actually changed it). NEVER list anything inside `api-client/` as hand-editable.
 - **Keep it current**: if the inventory section already exists from a prior audit, UPDATE it in place rather than appending a duplicate. Removed files come out, renamed files get their new path, new files go in.
 
@@ -140,7 +140,7 @@ For every file in the discovered surface, ensure tests exist at the correct laye
 
 A feature isn't audit-clean unless it lints, typechecks, tests, and builds on BOTH sides. These are first-class deliverables on equal footing with docs and tests:
 
-- **`turbo run lint`** — ESLint flat config + Prettier; zero errors. Warnings should be minimized; any new warnings get fixed or explicitly justified — and hand-check the conventions the linter does NOT enforce (raw RN primitives instead of `@platform/ui`, raw hex instead of semantic tokens).
+- **`turbo run lint`** — ESLint flat config + Prettier; zero errors. Warnings should be minimized; any new warnings get fixed or explicitly justified — and hand-check the conventions the linter does NOT enforce (raw RN primitives instead of `@the777incident/ui`, raw hex instead of semantic tokens).
 - **`turbo run typecheck`** — `tsc` strict; zero TypeScript errors. No new `any`, no new `!` non-null-assertions, no new `// @ts-expect-error` without a one-line rationale.
 - **`turbo run test`** — the RNTL suite green (jest-expo). Zero `.only`, zero `.skip`.
 - **`turbo run build`** (+ `export:web` where the change touches web) — the Expo **web export / app build** must succeed. This is the "production build" gate — it catches RN-web resolution failures, New-Arch / Hermes issues, dynamic-import failures, and other production-only errors lint and tests miss. Slow but load-bearing.
@@ -198,7 +198,7 @@ What "audit" does NOT mean:
 
 - **Linear** (`mcp__Linear__*`) — re-read the ticket, comments, and any linked sub-issues for context the docs should reflect.
 - **Supabase** (`mcp__Supabase__*`) — read-only schema introspection: `list_tables`, `list_extensions`, `list_migrations` to verify the docs' schema inventory matches reality; `execute_sql` for read-only schema checks; `get_advisors` / `get_logs` to surface issues the audit should document. **Migrations go via Alembic, NOT `apply_migration`** — use the MCP only to introspect.
-- **Figma** (`mcp__Figma__*`) — this project has a deep Figma integration (Code Connect + token modes). Use it to corroborate a doc claim about a design surface, token mode (light/dark × brand), or that a touched `@platform/ui` primitive matches its Figma component. Full UI testing is `/ptfm-test-ui`'s job.
+- **Figma** (`mcp__Figma__*`) — this project has a deep Figma integration (Code Connect + token modes). Use it to corroborate a doc claim about a design surface, token mode (light/dark × brand), or that a touched `@the777incident/ui` primitive matches its Figma component. Full UI testing is `/ptfm-test-ui`'s job.
 - **Notion** (`mcp__Notion__*`) — fetch related docs the plan / implementation log references.
 - **Playwright** (`mcp__playwright__*`) — rare; only when a doc claim about UI behaviour needs a quick live web corroboration. Full UI testing is `/ptfm-test-ui`'s job.
 - **Deployment context** (light mention, not a workflow pillar) — the product ships to four surfaces (Fly = api, EAS = mobile, Vercel = web, Electron = desktop). When the audit needs to validate the verification block's env-var/runtime claims, cross-check the relevant surface; don't treat any one as the central pillar.

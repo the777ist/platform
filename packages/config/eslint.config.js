@@ -1,5 +1,5 @@
-// @platform/config — shared ESLint FLAT config (PHILOSOPHY "Quality": ESLint flat config + Prettier).
-// Consumed by downstream workspaces: `export { default } from "@platform/config/eslint";`
+// @the777incident/config — shared ESLint FLAT config (PHILOSOPHY "Quality": ESLint flat config + Prettier).
+// Consumed by downstream workspaces: `export { default } from "@the777incident/config/eslint";`
 import js from "@eslint/js";
 import globals from "globals";
 import tseslint from "typescript-eslint";

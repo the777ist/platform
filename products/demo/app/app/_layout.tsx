@@ -7,9 +7,9 @@ import {
   initSentry,
   makeQueryClient,
   persister,
-} from "@platform/core";
-import { client } from "@platform/demo-api-client";
-import { ThemeProvider } from "@platform/ui/theme-provider";
+} from "@the777incident/core";
+import { client } from "@the777incident/demo-api-client";
+import { ThemeProvider } from "@the777incident/ui/theme-provider";
 import { ErrorBoundary } from "../features/_shared/error-boundary";
 import { useThemeStore } from "../features/settings/use-theme";
 

@@ -1,6 +1,6 @@
-Add a Tier-1 owned primitive to @platform/ui. Argument: $ARGUMENTS (component name).
+Add a Tier-1 owned primitive to @the777incident/ui. Argument: $ARGUMENTS (component name).
 
-1. cli-add (or author): `pnpm --filter @platform/ui dlx @react-native-reusables/cli add <name>`
+1. cli-add (or author): `pnpm --filter @the777incident/ui dlx @react-native-reusables/cli add <name>`
    then reconcile into the owned shadcn shape (cva variants, semantic tokens ONLY, cn()).
    The CLI prompts for a components.json in fresh checkouts — authoring by hand into the
    shadcn shape (see src/components/ui/button.tsx as the reference) is equally valid.

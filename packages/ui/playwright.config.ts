@@ -9,7 +9,7 @@ export default defineConfig({
   // Baselines live next to the spec and are committed, one set PER PLATFORM — font
   // rendering differs across OSes, so a shared baseline can't satisfy both a local
   // Windows/mac run and the Linux CI runner (proved by the first nightly CI run).
-  // Local: `pnpm --filter @platform/ui exec playwright test --update-snapshots`.
+  // Local: `pnpm --filter @the777incident/ui exec playwright test --update-snapshots`.
   // Linux (CI runner): dispatch e2e-nightly with `update-vr-baselines: true` and
   // commit the uploaded `vr-baselines-linux` artifact.
   snapshotPathTemplate: "{testDir}/visual-regression.spec.ts-snapshots/{arg}-{platform}{ext}",

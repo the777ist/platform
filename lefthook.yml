@@ -15,7 +15,7 @@ pre-commit:
       stage_fixed: true # re-stage files prettier reformatted
     eslint:
       glob: "*.{ts,tsx,js,jsx,mjs,cjs}"
-      # Lint only staged JS/TS; the @platform/config flat config ignores the generated client.
+      # Lint only staged JS/TS; the @the777incident/config flat config ignores the generated client.
       run: pnpm eslint --fix --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     ruff-check:

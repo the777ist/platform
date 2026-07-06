@@ -38,7 +38,7 @@ jobs:
       - run: uv sync --frozen --project products/_template/api
       - run: pnpm exec playwright install --with-deps chromium
       - name: Web E2E (signup → login → CRUD → realtime)
-        run: pnpm --filter @platform/template-app exec playwright test
+        run: pnpm --filter @the777incident/template-app exec playwright test
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -53,16 +53,16 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - name: Build Storybook
-        run: pnpm --filter @platform/ui build-storybook
+        run: pnpm --filter @the777incident/ui build-storybook
       - name: Visual regression (each story × light/dark vs committed baselines)
         if: ${{ !inputs.update-vr-baselines }}
-        run: pnpm --filter @platform/ui exec playwright test
+        run: pnpm --filter @the777incident/ui exec playwright test
       # Baselines are per-platform (font rendering differs across OSes) — the linux set
       # must be generated on THIS runner: dispatch with `update-vr-baselines: true`,
       # download the artifact, commit it under the snapshots dir.
       - name: Regenerate linux VR baselines (dispatch opt-in)
         if: ${{ inputs.update-vr-baselines }}
-        run: pnpm --filter @platform/ui exec playwright test --update-snapshots
+        run: pnpm --filter @the777incident/ui exec playwright test --update-snapshots
       - uses: actions/upload-artifact@v4
         if: ${{ inputs.update-vr-baselines }}
         with:

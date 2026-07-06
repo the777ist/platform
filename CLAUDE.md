@@ -20,8 +20,9 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
 
 - Promote-on-2nd-use: compositions start product-local (`app/features/<x>/components/`);
   move into `packages/*` on the SECOND use, never speculatively.
-- Naming derives from the PRODUCT, never the repo: `@platform/*` packages,
-  `com.the777incident.*` bundle ids, infra `the777incident-<product>-<env>`.
+- Naming: the org prefix is `the777incident` (`@the777incident/*` packages,
+  `com.the777incident.*` bundle ids, infra `the777incident-<product>-<env>`); the
+  PRODUCT segment always derives from the product name, never the repo.
 - Theming = semantic CSS variables. NEVER name a color in a component — tokens only
   (`bg-primary`, not hex). A brand is a token-VALUE override, never forked components.
 - Figma modes ARE brand modes; each product's `theme.ts` is the export of its Figma brand

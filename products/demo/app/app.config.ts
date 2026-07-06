@@ -24,7 +24,7 @@ const config: ExpoConfig = {
       { image: "./assets/brand/splash.png", imageWidth: 200, backgroundColor: "#ffffff" },
     ],
     [
-      // Build-time half of Sentry (runtime init lives in @platform/core sentry.ts):
+      // Build-time half of Sentry (runtime init lives in @the777incident/core sentry.ts):
       // source-map upload + native symbolication. SENTRY_AUTH_TOKEN is a BUILD env
       // var (EAS secret) — never committed.
       "@sentry/react-native/expo",

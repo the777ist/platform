@@ -5,15 +5,15 @@ CLAUDE.md (loads hierarchically); this file is what's specific to THIS product.
 
 ## Structure
 
-- `app/` — `@platform/template-app`: ONE Expo app for iOS + Android + web
+- `app/` — `@the777incident/template-app`: ONE Expo app for iOS + Android + web
   (`expo export --platform web` → `dist/`). Routes in `app/app/` are thin one-liners;
   real screens/logic live in `app/features/<feature>/` (auth, home, settings).
-- `desktop/` — `@platform/template-desktop`: Electron shell serving the exported web
+- `desktop/` — `@the777incident/template-desktop`: Electron shell serving the exported web
   `dist/` over the privileged `app://` protocol. appId `com.the777incident.template.desktop`;
   publishes to `the777incident/template-desktop-releases`.
-- `api/` — `@platform/template-api`: FastAPI, its own uv universe (module
+- `api/` — `@the777incident/template-api`: FastAPI, its own uv universe (module
   `template_api`). See [api/CLAUDE.md](api/CLAUDE.md) for the add-an-endpoint recipe.
-- `api-client/` — `@platform/template-api-client`: GENERATED (hey-api) from
+- `api-client/` — `@the777incident/template-api-client`: GENERATED (hey-api) from
   `api/openapi.json`, committed, never hand-edited.
 - `supabase/` — this product's own local stack + migrations context
   (project_id `the777incident-template`).
@@ -49,9 +49,9 @@ via `TODO-EAS-PROJECT-ID` in `app/app.config.ts`. (`the777incident` = the org.)
 `/dev` · `/typegen` · `/migrate` · `/add-feature <name>` · `/release <surface>` — see
 `.claude/commands/`.
 
-Tests: `pnpm --filter @platform/template-app test` (Jest) ·
-`pnpm --filter @platform/template-api test` (pytest, real Postgres) ·
-`pnpm --filter @platform/template-app exec playwright test` (full-stack web E2E —
+Tests: `pnpm --filter @the777incident/template-app test` (Jest) ·
+`pnpm --filter @the777incident/template-api test` (pytest, real Postgres) ·
+`pnpm --filter @the777incident/template-app exec playwright test` (full-stack web E2E —
 starts/reuses the local stack itself; ports derive from product.json).
 
 ## Agentic pipeline artifacts

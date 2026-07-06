@@ -1,5 +1,5 @@
 {
-  "name": "@platform/core",
+  "name": "@the777incident/core",
   "version": "0.0.0",
   "private": true,
   "main": "./src/index.ts",
@@ -27,7 +27,7 @@
     "react-native": "*"
   },
   "devDependencies": {
-    "@platform/config": "workspace:*",
+    "@the777incident/config": "workspace:*",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@types/react": "~19.2.0",
     "expo": "56.0.14",
