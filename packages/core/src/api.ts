@@ -4,7 +4,7 @@
 // into Sentry on both sides → client→API→logs traceability).
 //
 // The PRODUCT's generated client is passed IN (core is shared and product-agnostic —
-// it cannot import @the777incident/<product>-api-client itself; each product's _layout.tsx
+// it cannot import @platform/<product>-api-client itself; each product's _layout.tsx
 // passes its own instance). Structural type below matches the hey-api client surface.
 import { getAccessToken } from "./auth";
 import { env } from "./env";

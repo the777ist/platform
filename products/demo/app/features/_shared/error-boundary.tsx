@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { View } from "react-native";
-import { Button, Text } from "@the777incident/ui";
+import { Button, Text } from "@platform/ui";
 
 type Props = { children: ReactNode };
 type State = { error: Error | null };

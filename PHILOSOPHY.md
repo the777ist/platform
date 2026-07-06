@@ -1,4 +1,4 @@
-# the777incident — Multi-Product Cross-Platform Monorepo Philosophy
+# Multi-Product Cross-Platform Monorepo — Philosophy
 
 > **What this document is.** The architecture, the locked decisions, and the _why_ behind
 > them — the enduring rationale for the whole monorepo. It is the **gospel**: while the
@@ -10,14 +10,14 @@
 > recipes. Change a decision here only deliberately, and propagate it into the affected
 > `CLAUDE.md`/guides in the same change.
 
-> **Naming conventions:** package scope `@the777incident/*`; bundle ids `com.the777incident.*`
-> (the org reverse-domain); infra names follow
-> `<org>-<product>-<env>` (org `the777incident`); products are `template` (the
+> **Naming conventions:** package scope `@platform/*`; bundle ids `com.example.*`
+> (placeholder until a real reverse-domain is chosen); infra names follow
+> `<org>-<product>-<env>` (org placeholder `example`); products are `template` (the
 > working template at `products/_template`) + `demo` (stamped proof). Product names —
 > never the monorepo's name — drive all app ids, slugs, and infra naming, so the scaffold
-> stays portable and products stay independently brandable. Keep the remaining
-> placeholders (`TODO-EAS-PROJECT-ID` and friends) clearly marked; the org
-> `the777incident` is baked in — create its infra accounts on infra day.
+> stays portable and products stay independently brandable. Keep placeholders
+> (`example`, `com.example.*`, `TODO-EAS-PROJECT-ID`, releases-repo owner) clearly
+> marked; swap them for real org values when infra accounts exist.
 
 ## Context
 
@@ -47,11 +47,11 @@ stamp one `demo` product to prove the generator.
 - **Hosting:** web → Vercel (one project/product, turbo-ignore); per-env separate Supabase projects; local dev via Supabase CLI stack
 - **Quality:** ESLint flat config + Prettier; Ruff; **pyright strict** + Pydantic strict mode (Python); **single Jest runner** (jest-expo preset) + RNTL for ALL JS tests; Playwright (web E2E, **nightly CI**); Maestro (mobile E2E, **local-only initially**); pytest + httpx against **real Postgres**; typegen drift check; GitHub Actions (affected-only) — full inventory in “Testing strategy”
 - **Cross-cutting:** Sentry (`@sentry/react-native` — NOT deprecated `sentry-expo`; the **Expo config plugin is `@sentry/react-native/expo`** + Metro `getSentryExpoConfig` wiring for production source maps; pin a release that lists SDK 56 / RN 0.85 support), Expo Push, Supabase Storage/CDN
-- **Multi-product:** `products/<name>/` consuming shared `packages/{ui,core,config}`; `pnpm new-product <name>` generator; infra naming `<org>-<product>-<env>` (org `the777incident`)
+- **Multi-product:** `products/<name>/` consuming shared `packages/{ui,core,config}`; `pnpm new-product <name>` generator; infra naming `<org>-<product>-<env>`
 - **Git hooks (Lefthook, repo-level + affected-scoped):** `lefthook.yml` at root. **pre-commit** (fast, staged files only): Prettier + ESLint on staged JS/TS, Ruff check+format on staged `.py` (scoped to the touched product's api). **pre-push:** `turbo run typecheck test build --affected` + (for affected APIs) pyright strict + pytest — i.e. ONLY the product(s) actually touched run (plus all dependents when `packages/*` change, which is the co-evolve guard moved before the push). Builds are turbo-cached so repeat pushes are fast
-- **Design system workbench:** **Storybook 9 (9.1.x)** (web, **`@storybook/react-native-web-vite`** — renders the SAME RN components through react-native-web that ship to every target; NOT on-device `@storybook/react-native`; chose 9 over ESM-only 10 for the broadest RN-web-vite + NativeWind compat) as a SINGLE shared workbench in `packages/ui` — `.storybook/main.ts` sets `jsxImportSource: "nativewind"` and runs the Tailwind/NativeWind step on `global.css`; the framework already aliases `react-native`→`react-native-web` (no manual alias needed) — stories colocated (`*.stories.tsx`, one story per cva variant), run with `pnpm --filter @the777incident/ui storybook`. Global decorator imports `global.css` + wraps in the theme provider so `className`/NativeWind utilities resolve identically to the app; toolbar exposes a **light/dark toggle AND a brand switcher** (template ↔ demo) that swaps the active CSS-var set — so the workbench is also the live preview surface for the Figma token modes (below) and the demo-able "one component set, different brand" moment. Visual regression = Playwright screenshots of the static Storybook build (iterates the stories `index.json`, each story × {light,dark}), committed baselines, wired into the nightly E2E run. **Chromatic deliberately declined** — self-hosted Playwright keeps VR free + in-repo, consistent with the no-paid-SaaS stance elsewhere
+- **Design system workbench:** **Storybook 9 (9.1.x)** (web, **`@storybook/react-native-web-vite`** — renders the SAME RN components through react-native-web that ship to every target; NOT on-device `@storybook/react-native`; chose 9 over ESM-only 10 for the broadest RN-web-vite + NativeWind compat) as a SINGLE shared workbench in `packages/ui` — `.storybook/main.ts` sets `jsxImportSource: "nativewind"` and runs the Tailwind/NativeWind step on `global.css`; the framework already aliases `react-native`→`react-native-web` (no manual alias needed) — stories colocated (`*.stories.tsx`, one story per cva variant), run with `pnpm --filter @platform/ui storybook`. Global decorator imports `global.css` + wraps in the theme provider so `className`/NativeWind utilities resolve identically to the app; toolbar exposes a **light/dark toggle AND a brand switcher** (template ↔ demo) that swaps the active CSS-var set — so the workbench is also the live preview surface for the Figma token modes (below) and the demo-able "one component set, different brand" moment. Visual regression = Playwright screenshots of the static Storybook build (iterates the stories `index.json`, each story × {light,dark}), committed baselines, wired into the nightly E2E run. **Chromatic deliberately declined** — self-hosted Playwright keeps VR free + in-repo, consistent with the no-paid-SaaS stance elsewhere
 - **Component lifecycle (shadcn-ownership two-tier):** Tier-1 **owned primitives** in `packages/ui/src/components/ui/` (react-native-reusables components copied in via its CLI, then OWNED as source); Tier-2 **product compositions** start product-local in `app/features/<feature>/components/` and **promote down into `packages/ui` on 2nd use**. Primitives consume **semantic tokens ONLY** (`bg-primary`, never hex/brand values) so one set works on all targets + all products. Fixed **add-a-component recipe** (documented in `packages/ui` CLAUDE.md, enforced like the API's `model→service→schema→router`): `cli-add (or author) → pin @rn-primitives/* exact → write *.stories.tsx (one per variant) → write *.figma.tsx Code Connect map → export from index.ts → commit VR baseline (light+dark)`. Exposed as a `/add-component` command
-- **Figma bridge (design ↔ code, three planes):** (1) **Tokens** — a Figma Variables file is the source of truth for token VALUES: `primitives` collection (raw scale) + `semantic` collection (`--primary`, `--background`, `--muted`, …) whose **modes = light/dark × brand (template/demo)**, mapping 1:1 onto each product's `theme.ts`/`global.css`. A token-export script (`figma-tokens.mjs`, **source abstracted behind one interface — default Tokens Studio JSON export (tier-independent, CI-runnable, reviewable diff); Figma REST Variables API on Enterprise plans** — → Style Dictionary) regenerates the CSS-var values per product — a brand change in Figma rebrands a product with ZERO component edits, the design-side mirror of the locked theming mechanism. Pin **Style Dictionary v5** (ESM-only, DTCG) and actually run it — a custom HSL-channel transform feeding `hsl(var(--x))` plus `css/variables` + a JS format co-generate `global.css` (web) AND native `theme.ts`. (2) **Components** — **Code Connect** `*.figma.tsx` files colocated next to each `packages/ui` component map Figma component props → cva variants, so `get_design_context` returns real `@the777incident/ui` components, not generic JSX. **Code Connect's CLI config MUST be `figma.config.json` at the repo ROOT** (next to `package.json`) — a `.figma/` subdir is NOT discovered; the token-pipeline config is named separately (`tokens.config.json`) to avoid a filename collision. The **Code Connect CLI reads `FIGMA_ACCESS_TOKEN`** (scopes `code_connect:write` + `file_content:read`) — distinct from the REST Variables pull's `FIGMA_TOKEN`/`X-Figma-Token` (which stays Enterprise-only). (3) **Screens** — with (1)+(2) wired, scaffolding a `features/<x>` screen from a Figma frame yields on-system code (owned components + semantic tokens, no one-off hex). Figma official MCP server drives all three. **Library is GLOBAL** (`packages/ui` + shared Foundations) — per-app differentiation is a brand _mode_, never a forked component library. Handover-day bootstrap is a documented, repeatable procedure (`/bootstrap-design-system`, see gotchas); designer conventions live in `packages/ui/FIGMA.md`
+- **Figma bridge (design ↔ code, three planes):** (1) **Tokens** — a Figma Variables file is the source of truth for token VALUES: `primitives` collection (raw scale) + `semantic` collection (`--primary`, `--background`, `--muted`, …) whose **modes = light/dark × brand (template/demo)**, mapping 1:1 onto each product's `theme.ts`/`global.css`. A token-export script (`figma-tokens.mjs`, **source abstracted behind one interface — default Tokens Studio JSON export (tier-independent, CI-runnable, reviewable diff); Figma REST Variables API on Enterprise plans** — → Style Dictionary) regenerates the CSS-var values per product — a brand change in Figma rebrands a product with ZERO component edits, the design-side mirror of the locked theming mechanism. Pin **Style Dictionary v5** (ESM-only, DTCG) and actually run it — a custom HSL-channel transform feeding `hsl(var(--x))` plus `css/variables` + a JS format co-generate `global.css` (web) AND native `theme.ts`. (2) **Components** — **Code Connect** `*.figma.tsx` files colocated next to each `packages/ui` component map Figma component props → cva variants, so `get_design_context` returns real `@platform/ui` components, not generic JSX. **Code Connect's CLI config MUST be `figma.config.json` at the repo ROOT** (next to `package.json`) — a `.figma/` subdir is NOT discovered; the token-pipeline config is named separately (`tokens.config.json`) to avoid a filename collision. The **Code Connect CLI reads `FIGMA_ACCESS_TOKEN`** (scopes `code_connect:write` + `file_content:read`) — distinct from the REST Variables pull's `FIGMA_TOKEN`/`X-Figma-Token` (which stays Enterprise-only). (3) **Screens** — with (1)+(2) wired, scaffolding a `features/<x>` screen from a Figma frame yields on-system code (owned components + semantic tokens, no one-off hex). Figma official MCP server drives all three. **Library is GLOBAL** (`packages/ui` + shared Foundations) — per-app differentiation is a brand _mode_, never a forked component library. Handover-day bootstrap is a documented, repeatable procedure (`/bootstrap-design-system`, see gotchas); designer conventions live in `packages/ui/FIGMA.md`
 - **API hardening (template defaults):** env-driven **CORS allowlist** (web origin + `app://` desktop + mobile), security-headers middleware, **slowapi** rate limiting (per-IP + per-user) — every product inherits sensible defaults
 - **Branding assets:** template ships placeholder icon/splash/favicon in `app/assets/brand/` from a single source; a regen script (`gen-brand.mjs`, using **`sharp`**) produces all sizes; the generator copies them and prints a "replace brand assets" checklist item
 - **Background/scheduled jobs:** **Fly scheduled machines** running a lightweight `tasks` module in the api (no queue infra); template ships one example (prune stale push tokens); heavier products can add a worker later
@@ -77,7 +77,7 @@ stamp one `demo` product to prove the generator.
    Requires `web.output: "single"` (SPA) in `app.config.ts`.
 3. **electron-updater collision:** GitHub provider resolves "latest release of the repo" —
    multiple products in one monorepo collide. Each product's desktop publishes to its own
-   `the777incident/<product>-desktop-releases` repo (created on infra day).
+   `<org>/<product>-desktop-releases` repo (placeholder until real org/repo exists).
 4. **Supabase pooler reality:** Supavisor **deprecated session mode on the 6543 pooler
    (2025-02-28)** — 6543 is transaction-mode only (session mode and direct connections live
    on **5432**); asyncpg prepared statements break on the transaction pooler. Use **psycopg
@@ -131,11 +131,11 @@ stamp one `demo` product to prove the generator.
 One repo, **one JS dependency universe + N isolated Python universes**, all orchestrated
 by one Turborepo task graph:
 
-| Layer    | Management                                                                                                                                      | Rationale                                                                                                                                                                                                                                                                                                                     |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| JS/TS    | **Global** — root pnpm workspace, ONE `pnpm-lock.yaml`, hoisted `node_modules`, single `pnpm install`                                           | Products share LIVE code (`@the777incident/ui`, `@the777incident/core` via `workspace:*`) — they must resolve against one dependency graph or shared packages break. Each workspace still declares its own deps in its own `package.json` (products MAY pin divergent versions of a lib; pnpm dedupes in the single lockfile) |
-| Python   | **Per-product** — each `products/<name>/api` is a self-contained uv project: own `pyproject.toml`, own `uv.lock`, own `.venv`, own Docker image | Product APIs share NOTHING; isolation is the feature — a dep bump in one API cannot ripple into another, and each deploys independently. The `package.json` in `api/` is only a script shim so Turborepo can orchestrate `uv run` tasks in the same graph                                                                     |
-| Supabase | **Per-product** — own `config.toml`, own migrations, own local stack on offset ports                                                            | Full data-plane segregation per product                                                                                                                                                                                                                                                                                       |
+| Layer    | Management                                                                                                                                      | Rationale                                                                                                                                                                                                                                                                                                         |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| JS/TS    | **Global** — root pnpm workspace, ONE `pnpm-lock.yaml`, hoisted `node_modules`, single `pnpm install`                                           | Products share LIVE code (`@platform/ui`, `@platform/core` via `workspace:*`) — they must resolve against one dependency graph or shared packages break. Each workspace still declares its own deps in its own `package.json` (products MAY pin divergent versions of a lib; pnpm dedupes in the single lockfile) |
+| Python   | **Per-product** — each `products/<name>/api` is a self-contained uv project: own `pyproject.toml`, own `uv.lock`, own `.venv`, own Docker image | Product APIs share NOTHING; isolation is the feature — a dep bump in one API cannot ripple into another, and each deploys independently. The `package.json` in `api/` is only a script shim so Turborepo can orchestrate `uv run` tasks in the same graph                                                         |
+| Supabase | **Per-product** — own `config.toml`, own migrations, own local stack on offset ports                                                            | Full data-plane segregation per product                                                                                                                                                                                                                                                                           |
 
 Corollary (document in root CLAUDE.md): there is deliberately **no shared Python
 package** between products. Cross-product reuse happens in TypeScript (`packages/*`) or
@@ -172,9 +172,9 @@ that's a new architecture decision, not a default.
 ├── figma.config.json              # fileKey + variable-collection → product mode mapping
 ├── .figma/                        # Code Connect CLI config (publish *.figma.tsx maps)
 ├── packages/
-│   ├── config/                    # @the777incident/config: eslint flat config, prettier.json,
+│   ├── config/                    # @platform/config: eslint flat config, prettier.json,
 │   │   └── ...                    #   tailwind-preset.js (design tokens), tsconfig/{base,expo,node}.json
-│   ├── ui/                        # @the777incident/ui — react-native-reusables components (OWNED,
+│   ├── ui/                        # @platform/ui — react-native-reusables components (OWNED,
 │   │   ├── package.json           #   copied in via its CLI), consumed AS SOURCE, no build
 │   │   ├── CLAUDE.md              # design-system runbook: add-a-component recipe,
 │   │   │                          #   tokens-only rule, Storybook, Code Connect, token sync
@@ -191,7 +191,7 @@ that's a new architecture decision, not a default.
 │   │       │                      #   + *.stories.tsx + *.figma.tsx (Code Connect) colocated
 │   │       └── lib/{utils.ts,     # cn() helper
 │   │                theme.ts}     # default light/dark themes: CSS vars (web) + vars() (native)
-│   └── core/                      # @the777incident/core — plumbing ONLY (no screens)
+│   └── core/                      # @platform/core — plumbing ONLY (no screens)
 │       └── src/{index.ts,supabase.ts,auth.ts,    # session store (zustand) + route guards
 │                query.ts,                        # query client + cache persistence
 │                realtime.ts,                     # subscribe-and-invalidate helper
@@ -205,9 +205,9 @@ that's a new architecture decision, not a default.
     │   ├── .claude/commands/      # /dev, /typegen, /migrate, /add-feature, /release <surface>
     │   ├── product.json           # {"name":"template","portIndex":0} generator metadata
     │   ├── .env.example           # server-side secrets template (api)
-    │   ├── supabase/{config.toml,migrations/}   # project_id the777incident-template; ports from portIndex
-    │   ├── app/                   # @the777incident/template-app (iOS+Android+WEB)
-    │   │   ├── app.config.ts      # web.output "single", scheme, com.the777incident.template,
+    │   ├── supabase/{config.toml,migrations/}   # project_id example-template; ports from portIndex
+    │   ├── app/                   # @platform/template-app (iOS+Android+WEB)
+    │   │   ├── app.config.ts      # web.output "single", scheme, com.example.template,
     │   │   │                      #   extra.eas.projectId: "TODO-EAS-PROJECT-ID"
     │   │   ├── assets/brand/      # icon/splash/favicon (placeholders) + source + regen script
     │   │   ├── .env.development · .env.staging · .env.production   # committed, publishable only
@@ -227,14 +227,14 @@ that's a new architecture decision, not a default.
     │   │       │                                #   + global error boundary / offline UX
     │   │       ├── (auth)/{login,signup}.tsx
     │   │       └── (tabs)/{_layout,index,settings}.tsx
-    │   ├── desktop/               # @the777incident/template-desktop
-    │   │   ├── electron-builder.yml             # appId com.the777incident.template.desktop;
-    │   │   │                                    #   publish → the777incident/template-desktop-releases
+    │   ├── desktop/               # @platform/template-desktop
+    │   │   ├── electron-builder.yml             # appId com.example.template.desktop;
+    │   │   │                                    #   publish → <org>/template-desktop-releases
     │   │   └── src/{main.ts,preload.ts}         # app:// protocol + SPA fallback + autoUpdater
     │   ├── api/                   # FastAPI; ALSO a pnpm workspace (script shim → uv run)
-    │   │   ├── package.json       # @the777incident/template-api; dev/lint/test/openapi via uv
+    │   │   ├── package.json       # @platform/template-api; dev/lint/test/openapi via uv
     │   │   ├── pyproject.toml · uv.lock · Dockerfile
-    │   │   ├── fly.staging.toml   # app = "the777incident-template-api-stg"; release_command alembic
+    │   │   ├── fly.staging.toml   # app = "example-template-api-stg"; release_command alembic
     │   │   ├── fly.production.toml
     │   │   ├── alembic.ini · alembic/{env.py,versions/}   # initial migration incl. RLS deny-all
     │   │   ├── src/template_api/
@@ -252,7 +252,7 @@ that's a new architecture decision, not a default.
     │   │   │   └── export_openapi.py
     │   │   └── tests/{conftest.py,                        # polyfactory factories, db fixture
     │   │             test_items.py,test_auth.py,test_push.py}   # service+router layers
-    │   └── api-client/            # @the777incident/template-api-client (GENERATED, committed)
+    │   └── api-client/            # @platform/template-api-client (GENERATED, committed)
     │       ├── openapi-ts.config.ts             # input ../api/openapi.json
     │       └── src/                             # hey-api output: sdk/types/tanstack hooks
     └── demo/                      # stamped by `pnpm new-product demo` (portIndex=1)
@@ -278,8 +278,8 @@ module.exports = withNativeWind(config, { input: "./global.css" });
 ```
 
 **babel.config.js:** `[["babel-preset-expo",{jsxImportSource:"nativewind"}],"nativewind/babel"]`.
-**tailwind.config.js:** presets `@the777incident/config/tailwind-preset`; content = app globs +
-`path.dirname(require.resolve("@the777incident/ui/package.json")) + "/src/**/*.{ts,tsx}"`
+**tailwind.config.js:** presets `@platform/config/tailwind-preset`; content = app globs +
+`path.dirname(require.resolve("@platform/ui/package.json")) + "/src/**/*.{ts,tsx}"`
 (robust cross-package globs; `packages/ui` has NO tailwind config of its own).
 **Theming wiring:** the preset maps semantic colors to CSS vars
 (`primary: "hsl(var(--primary))"`, `background`, `foreground`, `muted`, `border`, …);
@@ -331,7 +331,7 @@ CSS-var values — one-way + committed (drift is review-visible, optional CI re-
 --exit-code` guard like typegen). `figma.config.json` maps `{ fileKey, modes: { "template":
 <modeId>, "demo": <modeId> } }`. Code Connect: colocated `*.figma.tsx` map Figma component
 props → cva variants; published via the Code Connect CLI (`.figma/` config) so MCP
-`get_design_context` returns owned `@the777incident/ui` components. The generator adds the new
+`get_design_context` returns owned `@platform/ui` components. The generator adds the new
 product's brand mode to `figma.config.json` (placeholder modeId until the designer creates it).
 
 **Bootstrap the design system from Figma (`/bootstrap-design-system`, handover-day, one-time
@@ -366,7 +366,7 @@ Button/Input/Card → composites); per component run the add-a-component recipe 
 3. Whole-word replace `template`/`Template`/`template_api` in contents AND paths → kebab/Pascal/snake variants (covers package names, slug/scheme/bundle ids, electron appId + releases repo, fly app names, pyproject module, alembic, supabase project_id, and the product's README.md / CLAUDE.md / `.claude/commands/*` — ports and infra names in those docs come from `product.json` so they stay accurate).
 4. Ports from portIndex: API `8000+10i`; Supabase block `54321+100i` → products' local stacks coexist. Applied everywhere ports appear: supabase `config.toml`, api dev script, AND the committed `app/.env.*` files (`EXPO_PUBLIC_API_URL`, supabase URL).
 5. Write `.env.example` + `product.json`; `pnpm install`.
-6. Print infra checklist: 2 Supabase projects (`the777incident-<name>-stg|prod`), `fly apps create the777incident-<name>-api-stg|prod` + secrets, Vercel project (root `products/<name>/app`, build via turbo filter, output `dist`, ignore step `npx turbo-ignore`), `eas init` → paste projectId, create `<name>-desktop-releases` repo + `GH_TOKEN`, 4 Sentry projects + DSNs, per-product GH Action secrets.
+6. Print infra checklist: 2 Supabase projects (`<org>-<name>-stg|prod`), `fly apps create <org>-<name>-api-stg|prod` + secrets, Vercel project (root `products/<name>/app`, build via turbo filter, output `dist`, ignore step `npx turbo-ignore`), `eas init` → paste projectId, create `<name>-desktop-releases` repo + `GH_TOKEN`, 4 Sentry projects + DSNs, per-product GH Action secrets.
 
 **Workflows:** pin **current action majors** (June 2026): `actions/checkout@v6`,
 `jdx/mise-action@v4`, `dorny/paths-filter@v4` (mise-action/paths-filter v4 are the Node-24
@@ -394,7 +394,7 @@ until the real repo/org exists.
 | API unit (service classes over a test DB; pagination edges, `send_push()` w/ mocked httpx, JWT paths)           | pytest                                                                                                                                                              | `products/*/api/tests`                                                        | every PR                                                                      |
 | API integration (routers over HTTP: CRUD round-trips, problem+json shapes, 401s, DTO/ORM separation)            | pytest + httpx against **real Postgres** (Supabase local in dev; postgres **service container** in CI), per-test transaction rollback — exercises UUIDv7 + real SQL | `products/*/api/tests`                                                        | every PR                                                                      |
 | Contract (API ↔ generated client can't drift)                                                                   | regen `openapi.json` + client → `git diff --exit-code`                                                                                                              | CI step                                                                       | every PR                                                                      |
-| Visual regression (every `@the777incident/ui` component, light+dark)                                            | Playwright screenshots of the static **Storybook** build, committed baselines                                                                                       | `packages/ui/.storybook`                                                      | **nightly** + locally on demand                                               |
+| Visual regression (every `@platform/ui` component, light+dark)                                                  | Playwright screenshots of the static **Storybook** build, committed baselines                                                                                       | `packages/ui/.storybook`                                                      | **nightly** + locally on demand                                               |
 | Web E2E (full stack: exported dist + API + Supabase local; signup → login → items CRUD → realtime invalidation) | Playwright                                                                                                                                                          | `products/*/app/e2e`                                                          | **nightly** (`e2e-nightly.yml`, also `workflow_dispatch`) + locally on demand |
 | Mobile E2E (login, tabs, theme toggle on simulator/dev build)                                                   | Maestro                                                                                                                                                             | `products/*/app/.maestro`                                                     | **local-only** for now; CI via EAS Workflows deferred                         |
 | Desktop                                                                                                         | no separate E2E — same web bundle; `app://` shell gets a launch smoke in Phase 5; Playwright `_electron` only if shell logic grows                                  | —                                                                             | —                                                                             |
@@ -412,7 +412,7 @@ Each phase = one commit (or a few logical commits) on a feature branch.
 ## Verification (end-to-end, after Phase 8)
 
 1. `mise install && pnpm install && pnpm turbo run lint typecheck test build` — all green.
-2. One shared `@the777incident/ui` component set visibly identical on: web (`localhost:8081`),
+2. One shared `@platform/ui` component set visibly identical on: web (`localhost:8081`),
    device (Expo Go), desktop (Electron window) — all rendering data fetched from FastAPI
    via the generated TanStack hook, with the dark-mode toggle re-theming every target via
    the same CSS-variable mechanism, and the `demo` product showing different brand token
@@ -422,5 +422,5 @@ Each phase = one commit (or a few logical commits) on a feature branch.
 4. Multi-product proof: `_template` and `demo` dev stacks (Expo + API + Supabase local)
    running at the same time, distinct ports; `--affected` only rebuilds the touched product.
 5. Naming audit: all app ids/slugs/infra names derive from product names (`template`,
-   `demo`) with the org `the777incident` baked in — `git grep -inE 'TODO'` surfaces exactly the
-   remaining swap-points and nothing else.
+   `demo`) with clearly marked `example` org placeholders — `git grep -inE 'example|TODO'`
+   surfaces exactly the intended swap-points and nothing else.

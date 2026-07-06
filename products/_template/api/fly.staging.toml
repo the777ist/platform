@@ -1,4 +1,4 @@
-app = "the777incident-template-api-stg"
+app = "example-template-api-stg"
 primary_region = "iad"
 
 [build]

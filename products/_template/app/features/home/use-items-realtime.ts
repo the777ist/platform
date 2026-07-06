@@ -4,8 +4,8 @@
 // mapping passes the generated key fn result — a bare ["items"] would never match.
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { subscribeAndInvalidate, supabase } from "@the777incident/core";
-import { listItemsQueryKey } from "@the777incident/template-api-client";
+import { subscribeAndInvalidate, supabase } from "@platform/core";
+import { listItemsQueryKey } from "@platform/template-api-client";
 
 export function useItemsRealtime(): void {
   const queryClient = useQueryClient();

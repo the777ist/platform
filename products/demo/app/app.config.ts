@@ -10,9 +10,9 @@ const config: ExpoConfig = {
   // (`pnpm brand:gen`). Keep this set and the script's size matrix in sync.
   icon: "./assets/brand/icon.png",
   web: { output: "single", bundler: "metro", favicon: "./assets/brand/favicon.png" },
-  ios: { bundleIdentifier: "com.the777incident.demo" },
+  ios: { bundleIdentifier: "com.example.demo" },
   android: {
-    package: "com.the777incident.demo",
+    package: "com.example.demo",
     adaptiveIcon: {
       foregroundImage: "./assets/brand/adaptive-icon.png",
       backgroundColor: "#6366F1",
@@ -24,13 +24,13 @@ const config: ExpoConfig = {
       { image: "./assets/brand/splash.png", imageWidth: 200, backgroundColor: "#ffffff" },
     ],
     [
-      // Build-time half of Sentry (runtime init lives in @the777incident/core sentry.ts):
+      // Build-time half of Sentry (runtime init lives in @platform/core sentry.ts):
       // source-map upload + native symbolication. SENTRY_AUTH_TOKEN is a BUILD env
       // var (EAS secret) — never committed.
       "@sentry/react-native/expo",
       {
-        organization: "the777incident", // the org (Sentry org created on infra day)
-        project: "the777incident-demo", // Sentry project slug (created on infra day)
+        organization: "example", // PLACEHOLDER org slug
+        project: "example-demo", // PLACEHOLDER Sentry project slug
       },
     ],
   ],

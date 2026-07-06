@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { Tabs } from "expo-router";
-import { registerForPushNotifications, useProtectedRoute, useSession } from "@the777incident/core";
-import { registerToken } from "@the777incident/template-api-client";
-import { Text } from "@the777incident/ui";
+import { registerForPushNotifications, useProtectedRoute, useSession } from "@platform/core";
+import { registerToken } from "@platform/template-api-client";
+import { Text } from "@platform/ui";
 
 export default function TabsLayout() {
   const { loading } = useProtectedRoute(); // redirects to (auth)/login when signed out

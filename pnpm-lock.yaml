@@ -11,7 +11,7 @@ importers:
 
   .:
     devDependencies:
-      '@the777incident/config':
+      '@platform/config':
         specifier: workspace:*
         version: link:packages/config
       lefthook:
@@ -84,12 +84,12 @@ importers:
         specifier: 5.0.14
         version: 5.0.14(@types/react@19.2.17)(react@19.2.3)
     devDependencies:
+      '@platform/config':
+        specifier: workspace:*
+        version: link:../config
       '@react-native-async-storage/async-storage':
         specifier: 2.2.0
         version: 2.2.0(react-native@0.85.3(@babel/core@7.29.7)(@react-native/jest-preset@0.85.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))
-      '@the777incident/config':
-        specifier: workspace:*
-        version: link:../config
       '@types/react':
         specifier: ~19.2.0
         version: 19.2.17
@@ -133,6 +133,9 @@ importers:
       '@figma/code-connect':
         specifier: 1.4.8
         version: 1.4.8
+      '@platform/config':
+        specifier: workspace:*
+        version: link:../config
       '@playwright/test':
         specifier: 1.61.1
         version: 1.61.1
@@ -142,9 +145,6 @@ importers:
       '@testing-library/react-native':
         specifier: 14.0.1
         version: 14.0.1(jest@29.7.0(@types/node@24.13.2))(react-native@0.85.3(@babel/core@7.29.7)(@react-native/jest-preset@0.85.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(test-renderer@1.2.0(@types/react@19.2.17)(react@19.2.3))
-      '@the777incident/config':
-        specifier: workspace:*
-        version: link:../config
       '@types/jest':
         specifier: ~29.5.14
         version: 29.5.14
@@ -211,10 +211,10 @@ importers:
       '@hey-api/openapi-ts':
         specifier: 0.99.0
         version: 0.99.0(typescript@5.9.3)
-      '@the777incident/config':
+      '@platform/config':
         specifier: workspace:*
         version: link:../../../packages/config
-      '@the777incident/template-api':
+      '@platform/template-api':
         specifier: workspace:*
         version: link:../api
       typescript:
@@ -226,6 +226,15 @@ importers:
       '@expo/metro-runtime':
         specifier: ~56.0.16
         version: 56.0.16(@expo/log-box@56.0.14)(expo@56.0.14)(react-dom@19.2.3(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@react-native/jest-preset@0.85.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
+      '@platform/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@platform/template-api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@platform/ui':
+        specifier: workspace:*
+        version: link:../../../packages/ui
       '@react-native-async-storage/async-storage':
         specifier: 2.2.0
         version: 2.2.0(react-native@0.85.3(@babel/core@7.29.7)(@react-native/jest-preset@0.85.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))
@@ -238,15 +247,6 @@ importers:
       '@tanstack/react-query-persist-client':
         specifier: 5.101.2
         version: 5.101.2(@tanstack/react-query@5.101.2(react@19.2.3))(react@19.2.3)
-      '@the777incident/core':
-        specifier: workspace:*
-        version: link:../../../packages/core
-      '@the777incident/template-api-client':
-        specifier: workspace:*
-        version: link:../api-client
-      '@the777incident/ui':
-        specifier: workspace:*
-        version: link:../../../packages/ui
       expo:
         specifier: ~56.0.14
         version: 56.0.14(@babel/core@7.29.7)(@expo/dom-webview@56.0.6)(@expo/metro-runtime@56.0.16)(expo-router@56.2.13)(react-dom@19.2.3(react@19.2.3))(react-native-web@0.21.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-native-worklets@0.10.1(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(react-native@0.85.3(@babel/core@7.29.7)(@react-native/jest-preset@0.85.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@react-native/jest-preset@0.85.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
@@ -308,12 +308,12 @@ importers:
         specifier: 5.0.14
         version: 5.0.14(@types/react@19.2.17)(react@19.2.3)
     devDependencies:
+      '@platform/config':
+        specifier: workspace:*
+        version: link:../../../packages/config
       '@playwright/test':
         specifier: 1.61.1
         version: 1.61.1
-      '@the777incident/config':
-        specifier: workspace:*
-        version: link:../../../packages/config
       '@types/react':
         specifier: ~19.2.0
         version: 19.2.17
@@ -333,7 +333,7 @@ importers:
         specifier: 6.8.9
         version: 6.8.9
     devDependencies:
-      '@the777incident/template-app':
+      '@platform/template-app':
         specifier: workspace:*
         version: link:../app
       '@types/node':
@@ -360,10 +360,10 @@ importers:
       '@hey-api/openapi-ts':
         specifier: 0.99.0
         version: 0.99.0(typescript@5.9.3)
-      '@the777incident/config':
+      '@platform/config':
         specifier: workspace:*
         version: link:../../../packages/config
-      '@the777incident/demo-api':
+      '@platform/demo-api':
         specifier: workspace:*
         version: link:../api
       typescript:
@@ -375,6 +375,15 @@ importers:
       '@expo/metro-runtime':
         specifier: ~56.0.16
         version: 56.0.16(@expo/log-box@56.0.14)(expo@56.0.14)(react-dom@19.2.3(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@react-native/jest-preset@0.85.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
+      '@platform/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@platform/demo-api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@platform/ui':
+        specifier: workspace:*
+        version: link:../../../packages/ui
       '@react-native-async-storage/async-storage':
         specifier: 2.2.0
         version: 2.2.0(react-native@0.85.3(@babel/core@7.29.7)(@react-native/jest-preset@0.85.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))
@@ -387,15 +396,6 @@ importers:
       '@tanstack/react-query-persist-client':
         specifier: 5.101.2
         version: 5.101.2(@tanstack/react-query@5.101.2(react@19.2.3))(react@19.2.3)
-      '@the777incident/core':
-        specifier: workspace:*
-        version: link:../../../packages/core
-      '@the777incident/demo-api-client':
-        specifier: workspace:*
-        version: link:../api-client
-      '@the777incident/ui':
-        specifier: workspace:*
-        version: link:../../../packages/ui
       expo:
         specifier: ~56.0.14
         version: 56.0.14(@babel/core@7.29.7)(@expo/dom-webview@56.0.6)(@expo/metro-runtime@56.0.16)(expo-router@56.2.13)(react-dom@19.2.3(react@19.2.3))(react-native-web@0.21.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-native-worklets@0.10.1(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(react-native@0.85.3(@babel/core@7.29.7)(@react-native/jest-preset@0.85.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@react-native/jest-preset@0.85.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
@@ -457,12 +457,12 @@ importers:
         specifier: 5.0.14
         version: 5.0.14(@types/react@19.2.17)(react@19.2.3)
     devDependencies:
+      '@platform/config':
+        specifier: workspace:*
+        version: link:../../../packages/config
       '@playwright/test':
         specifier: 1.61.1
         version: 1.61.1
-      '@the777incident/config':
-        specifier: workspace:*
-        version: link:../../../packages/config
       '@types/react':
         specifier: ~19.2.0
         version: 19.2.17
@@ -482,7 +482,7 @@ importers:
         specifier: 6.8.9
         version: 6.8.9
     devDependencies:
-      '@the777incident/demo-app':
+      '@platform/demo-app':
         specifier: workspace:*
         version: link:../app
       '@types/node':

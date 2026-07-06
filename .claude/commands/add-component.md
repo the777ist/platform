@@ -11,4 +11,4 @@ Delegates to the design-system runbook — follow the fixed recipe in
 4. `<name>.figma.tsx` — Code Connect map.
 5. Export from `src/index.ts`.
 6. Commit the VR baseline (light + dark):
-   `pnpm --filter @the777incident/ui build-storybook && pnpm --filter @the777incident/ui exec playwright test --update-snapshots`
+   `pnpm --filter @platform/ui build-storybook && pnpm --filter @platform/ui exec playwright test --update-snapshots`

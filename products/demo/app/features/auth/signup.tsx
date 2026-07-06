@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { View } from "react-native";
 import { Link, useRouter } from "expo-router";
-import { signUp } from "@the777incident/core";
-import { Button, Card, Input, Text } from "@the777incident/ui";
+import { signUp } from "@platform/core";
+import { Button, Card, Input, Text } from "@platform/ui";
 
 export function SignupScreen() {
   const router = useRouter();

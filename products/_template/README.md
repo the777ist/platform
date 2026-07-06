@@ -12,8 +12,8 @@ quickstart.
 # one-time, repo root: mise install && pnpm install
 pnpm bootstrap                                   # starts every product's local Supabase stack
 cd products/template/api && cp ../.env.example .env   # fill the local values, then:
-pnpm --filter @the777incident/template-api dev         # FastAPI (port = 8000 + 10·portIndex)
-pnpm --filter @the777incident/template-app dev         # Expo (web on :8081, QR for device)
+pnpm --filter @platform/template-api dev         # FastAPI (port = 8000 + 10·portIndex)
+pnpm --filter @platform/template-app dev         # Expo (web on :8081, QR for device)
 ```
 
 Local ports derive from `product.json`'s `portIndex` — see CLAUDE.md "Ports & infra".
@@ -21,22 +21,22 @@ Local ports derive from `product.json`'s `portIndex` — see CLAUDE.md "Ports & 
 ## Where things live
 
 - Screens & product logic: `app/features/<feature>/` (routes in `app/app/` stay one-liners)
-- Shared components: `@the777incident/ui` (workbench: `pnpm --filter @the777incident/ui storybook`)
+- Shared components: `@platform/ui` (workbench: `pnpm --filter @platform/ui storybook`)
 - API endpoints: `api/src/template_api/` — recipe in [api/CLAUDE.md](api/CLAUDE.md)
 - Generated client: `api-client/` — regen with `/typegen`, never edit
 
 ## Brand
 
-Replace `app/assets/brand/source.svg`, run `pnpm --filter @the777incident/template-app brand:gen`,
+Replace `app/assets/brand/source.svg`, run `pnpm --filter @platform/template-app brand:gen`,
 commit the PNGs. Token values re-theme via the product's Figma brand mode → `/sync-tokens`
 (zero component edits).
 
 ## Tests
 
 ```bash
-pnpm --filter @the777incident/template-app test        # Jest + RNTL
-pnpm --filter @the777incident/template-api test        # pytest against real Postgres
-pnpm --filter @the777incident/template-app exec playwright test   # web E2E (full local stack)
+pnpm --filter @platform/template-app test        # Jest + RNTL
+pnpm --filter @platform/template-api test        # pytest against real Postgres
+pnpm --filter @platform/template-app exec playwright test   # web E2E (full local stack)
 maestro test app/.maestro/login.yaml             # mobile flow (dev build, local only)
 ```
 

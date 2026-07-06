@@ -1,12 +1,12 @@
 {
-  "name": "the777incident",
+  "name": "platform",
   "private": true,
   "packageManager": "pnpm@11.9.0",
   "engines": {
     "node": ">=22.13",
     "pnpm": ">=11"
   },
-  "prettier": "@the777incident/config/prettier",
+  "prettier": "@platform/config/prettier",
   "scripts": {
     "prepare": "lefthook install",
     "bootstrap": "node scripts/bootstrap.mjs",
@@ -19,7 +19,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\""
   },
   "devDependencies": {
-    "@the777incident/config": "workspace:*",
+    "@platform/config": "workspace:*",
     "lefthook": "^1.7.0",
     "prettier": "^3.3.0",
     "style-dictionary": "5.5.0",

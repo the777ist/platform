@@ -1,5 +1,5 @@
 {
-  "name": "@the777incident/demo-api",
+  "name": "@platform/demo-api",
   "version": "0.0.0",
   "private": true,
   "scripts": {

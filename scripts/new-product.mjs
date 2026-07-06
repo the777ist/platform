@@ -260,7 +260,7 @@ function writeMeta(dest, name, portIndex) {
 
 // ---- Step 6: print infra checklist ------------------------------------------------------
 function printChecklist(name, portIndex) {
-  const org = "the777incident"; // the org (Naming conventions header)
+  const org = "example"; // placeholder org (Naming conventions header)
   const apiPort = 8000 + 10 * portIndex;
   const sbBase = 54321 + 100 * portIndex;
   console.log(`
@@ -268,7 +268,7 @@ function printChecklist(name, portIndex) {
    local ports: API http://localhost:${apiPort} · Supabase block base ${sbBase}
 
 ────────────────────────────────────────────────────────────────────
- INFRA CHECKLIST for "${name}" (create these under the ${org} org)
+ INFRA CHECKLIST for "${name}" (swap the ${org} placeholders for real org values)
 ────────────────────────────────────────────────────────────────────
  [ ] Supabase: create 2 projects  ${org}-${name}-stg  and  ${org}-${name}-prod
  [ ] Fly: flyctl apps create ${org}-${name}-api-stg
@@ -279,7 +279,7 @@ function printChecklist(name, portIndex) {
           output dir = dist, ignored-build-step = npx turbo-ignore
  [ ] EAS: eas init  -> paste the projectId into app.config.ts
           (replace TODO-EAS-PROJECT-ID)
- [ ] Desktop: create repo ${org}/${name}-desktop-releases  + a GH_TOKEN with repo scope
+ [ ] Desktop: create repo <org>/${name}-desktop-releases  + a GH_TOKEN with repo scope
           (electron-updater publish target)
  [ ] Sentry: create 4 projects (app stg/prod, api stg/prod) -> paste DSNs into env
  [ ] GitHub Actions: add per-product secrets (FLY_API_TOKEN_${name.toUpperCase().replace(/-/g, "_")},

@@ -1,10 +1,10 @@
-# the777incident
+# Cross-Platform Template
 
 A multi-product, cross-platform monorepo. Each product ships to **iOS, Android, web, and
 desktop from one shared React Native codebase**, backed by its own **FastAPI** service and
 segregated per-environment infrastructure.
 
-One component, authored once in `@the777incident/ui`, renders to every target: native via Expo, web
+One component, authored once in `@platform/ui`, renders to every target: native via Expo, web
 via react-native-web, desktop via an Electron shell wrapping the same web build. There is **no
 separate web or desktop app** — it's one frontend codebase plus a Python backend.
 
@@ -14,15 +14,15 @@ separate web or desktop app** — it's one frontend codebase plus a Python backe
 
 **Frontend** — one React Native codebase → iOS · Android · web · desktop
 
-| Layer               | Choice                                                                              |
-| ------------------- | ----------------------------------------------------------------------------------- |
-| Framework / runtime | **Expo SDK 56** · React Native 0.85 · React 19.2                                    |
-| Navigation          | Expo Router                                                                         |
-| Web                 | react-native-web (Expo web export)                                                  |
-| Desktop             | **Electron 42** wrapping the web build (electron-builder / -updater)                |
-| Styling             | **NativeWind v4** on Tailwind CSS v3 — semantic tokens, light/dark + brand modes    |
-| Components          | `@the777incident/ui` — owned react-native-reusables primitives (`@rn-primitives/*`) |
-| Data / state        | **TanStack Query v5** (server) · **Zustand v5** (local)                             |
+| Layer               | Choice                                                                           |
+| ------------------- | -------------------------------------------------------------------------------- |
+| Framework / runtime | **Expo SDK 56** · React Native 0.85 · React 19.2                                 |
+| Navigation          | Expo Router                                                                      |
+| Web                 | react-native-web (Expo web export)                                               |
+| Desktop             | **Electron 42** wrapping the web build (electron-builder / -updater)             |
+| Styling             | **NativeWind v4** on Tailwind CSS v3 — semantic tokens, light/dark + brand modes |
+| Components          | `@platform/ui` — owned react-native-reusables primitives (`@rn-primitives/*`)    |
+| Data / state        | **TanStack Query v5** (server) · **Zustand v5** (local)                          |
 
 **Backend** — one FastAPI service per product
 
@@ -81,11 +81,11 @@ The generator copies `products/_template` → `products/blog`, whole-word-rename
 infrastructure checklist**. Work through that checklist (the external accounts it can't create
 for you):
 
-- **2 Supabase projects** (`the777incident-blog-stg|prod`)
-- **Fly apps**: `fly apps create the777incident-blog-api-stg|prod` + secrets
+- **2 Supabase projects** (`<org>-blog-stg|prod`)
+- **Fly apps**: `fly apps create <org>-blog-api-stg|prod` + secrets
 - **Vercel** project (root `products/blog/app`, output `dist`)
 - **EAS**: `eas init` → paste the `projectId` into `app.config.ts`
-- **`the777incident/blog-desktop-releases`** repo + `GH_TOKEN` (Electron auto-update)
+- **`<org>/blog-desktop-releases`** repo + `GH_TOKEN` (Electron auto-update)
 - **Sentry** projects + DSNs; per-product GitHub Action secrets
 
 Then run it locally:
@@ -104,9 +104,9 @@ brand mode**, then `/sync-tokens` re-themes everything with zero component edits
 
 ```
 packages/
-  ui/                   # @the777incident/ui — owned design system (shadcn model)
-  core/                 # @the777incident/core — supabase client, auth, query client, env
-  config/               # @the777incident/config — shared tsconfig/eslint/tailwind presets
+  ui/                   # @platform/ui — owned design system (shadcn model)
+  core/                 # @platform/core — supabase client, auth, query client, env
+  config/               # @platform/config — shared tsconfig/eslint/tailwind presets
 products/
   _template/            # the starter stamped by `new-product`
   <name>/
@@ -120,7 +120,7 @@ products/
 
 ## Conventions that bite (read before writing code)
 
-- **Components are _owned_, not dependencies** — `@the777incident/ui` is copied-in source you edit.
+- **Components are _owned_, not dependencies** — `@platform/ui` is copied-in source you edit.
 - **Semantic tokens only** (`bg-primary`, never hex). Brand = a token _mode_, never a forked
   component.
 - **API is strictly layered**: `schemas/` (Pydantic DTOs) → `routers/` (thin) → `services/`

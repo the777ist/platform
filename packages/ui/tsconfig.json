@@ -1,5 +1,5 @@
 {
-  "extends": "@the777incident/config/tsconfig/expo",
+  "extends": "@platform/config/tsconfig/expo",
   "include": ["src", ".storybook"],
   "compilerOptions": {
     "types": ["expo", "react", "react-native", "jest"]

@@ -1,9 +1,9 @@
-# electron-builder configuration for @the777incident/demo-desktop.
+# electron-builder configuration for @platform/demo-desktop.
 # appId / publish repo are LOCKED placeholders — the generator whole-word-replaces
 # `demo` and the `<org>` owner is a marked placeholder until a real org exists.
-appId: com.the777incident.demo.desktop
+appId: com.example.demo.desktop
 productName: Demo
-copyright: Copyright © the777incident
+copyright: Copyright © example
 
 directories:
   output: release # electron-builder --dir / installers land here
@@ -44,7 +44,7 @@ mac:
 # resolution does not collide across products in the monorepo.
 publish:
   provider: github
-  owner: the777incident # the org (releases repo created on infra day)
+  owner: example # PLACEHOLDER org
   repo: demo-desktop-releases # <org>/demo-desktop-releases (per-product)
   # `releaseType` left default; electron-release.yml runs `--publish always` only
   # on a real tag, and only win/linux are published until mac is signed.

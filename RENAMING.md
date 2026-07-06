@@ -1,9 +1,11 @@
 # Renaming playbook — rebrand this monorepo to a new identity
 
 How to rename this template monorepo (repo name, org, package scope) without breaking the
-product-stamping machinery. This is the exact procedure used to rename it from its generic
-identity (`Cross-Platform Template` / org placeholder `example` / scope `@platform/*`) to
-`the777incident` — follow it again to rebrand to YOUR identity.
+product-stamping machinery. Battle-tested in BOTH directions: this procedure renamed a copy
+of this repo from its generic identity (`Cross-Platform Template` / org placeholder
+`example` / scope `@platform/*`) to `the777incident`, and then — run in reverse — restored
+this snapshot to generic, reproducing the pre-rename tree byte-exactly. Follow it to
+rebrand to YOUR identity.
 
 ## The three identity layers (rename these)
 
@@ -90,6 +92,17 @@ Uniform string replace `@old-scope` → `@new-scope` in every tracked file EXCEP
 `require.resolve` content globs, the jest `transformIgnorePatterns` regex, workflow
 `pnpm --filter` lines, and docs. The generator is scope-agnostic — it rewrites the product
 token INSIDE package names, so stamps come out `@new-scope/<name>-app` automatically.
+
+### 3½. Re-run prettier — table padding is name-length-dependent
+
+```bash
+pnpm run format   # prettier --write
+```
+
+Markdown tables (README tech-stack, PHILOSOPHY) are padded to their widest cell; a longer
+or shorter scope/org changes cell widths, and a pure string replacement leaves stale
+padding that `format:check` will fail. Found by the reverse-run test: without this step the
+reverted tree differed from the original by nothing but table whitespace.
 
 ### 4. Verify — every gate, uncached
 

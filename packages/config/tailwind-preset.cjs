@@ -1,4 +1,4 @@
-// @the777incident/config — shared Tailwind/NativeWind PRESET.
+// @platform/config — shared Tailwind/NativeWind PRESET.
 // PHILOSOPHY ruling #8 + "Theming wiring": the preset maps SEMANTIC color names to CSS VARIABLES.
 // Components consume semantic names ONLY (bg-primary, text-foreground) — never hex/brand values.
 // Each PRODUCT overrides the VARIABLE VALUES in its own theme.ts/global.css; component code is

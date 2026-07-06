@@ -5,18 +5,18 @@ CLAUDE.md (loads hierarchically); this file is what's specific to THIS product.
 
 ## Structure
 
-- `app/` — `@the777incident/demo-app`: ONE Expo app for iOS + Android + web
+- `app/` — `@platform/demo-app`: ONE Expo app for iOS + Android + web
   (`expo export --platform web` → `dist/`). Routes in `app/app/` are thin one-liners;
   real screens/logic live in `app/features/<feature>/` (auth, home, settings).
-- `desktop/` — `@the777incident/demo-desktop`: Electron shell serving the exported web
-  `dist/` over the privileged `app://` protocol. appId `com.the777incident.demo.desktop`;
-  publishes to `the777incident/demo-desktop-releases`.
-- `api/` — `@the777incident/demo-api`: FastAPI, its own uv universe (module
+- `desktop/` — `@platform/demo-desktop`: Electron shell serving the exported web
+  `dist/` over the privileged `app://` protocol. appId `com.example.demo.desktop`;
+  publishes to `<org>/demo-desktop-releases` (org placeholder `example`).
+- `api/` — `@platform/demo-api`: FastAPI, its own uv universe (module
   `demo_api`). See [api/CLAUDE.md](api/CLAUDE.md) for the add-an-endpoint recipe.
-- `api-client/` — `@the777incident/demo-api-client`: GENERATED (hey-api) from
+- `api-client/` — `@platform/demo-api-client`: GENERATED (hey-api) from
   `api/openapi.json`, committed, never hand-edited.
 - `supabase/` — this product's own local stack + migrations context
-  (project_id `the777incident-demo`).
+  (project_id `example-demo`).
 
 ## Ports & infra (derived from product.json — the single source of truth)
 
@@ -28,9 +28,9 @@ from portIndex, so every product's stack coexists:
   `supabase/config.toml`)
 - Expo dev server: 8081 for every product (Expo auto-offers the next port when busy)
 
-Infra names derive from the PRODUCT name: Fly `the777incident-demo-api-stg|prod`,
-Supabase projects `the777incident-demo-stg|prod`, Sentry `the777incident-demo`, EAS project
-via `TODO-EAS-PROJECT-ID` in `app/app.config.ts`. (`the777incident` = the org.)
+Infra names derive from the PRODUCT name: Fly `example-demo-api-stg|prod`,
+Supabase projects `example-demo-stg|prod`, Sentry `example-demo`, EAS project
+via `TODO-EAS-PROJECT-ID` in `app/app.config.ts`. (`example` = org placeholder.)
 
 ## Conventions that apply here
 
@@ -49,9 +49,9 @@ via `TODO-EAS-PROJECT-ID` in `app/app.config.ts`. (`the777incident` = the org.)
 `/dev` · `/typegen` · `/migrate` · `/add-feature <name>` · `/release <surface>` — see
 `.claude/commands/`.
 
-Tests: `pnpm --filter @the777incident/demo-app test` (Jest) ·
-`pnpm --filter @the777incident/demo-api test` (pytest, real Postgres) ·
-`pnpm --filter @the777incident/demo-app exec playwright test` (full-stack web E2E —
+Tests: `pnpm --filter @platform/demo-app test` (Jest) ·
+`pnpm --filter @platform/demo-api test` (pytest, real Postgres) ·
+`pnpm --filter @platform/demo-app exec playwright test` (full-stack web E2E —
 starts/reuses the local stack itself; ports derive from product.json).
 
 ## Agentic pipeline artifacts

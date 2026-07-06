@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Theme } from "@the777incident/ui";
+import type { Theme } from "@platform/ui";
 
 type ThemeState = { theme: Theme; toggle: () => void };
 export const useThemeStore = create<ThemeState>((set) => ({

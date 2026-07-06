@@ -1,5 +1,5 @@
 {
-  "name": "@the777incident/template-api-client",
+  "name": "@platform/template-api-client",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -18,8 +18,8 @@
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "0.99.0",
-    "@the777incident/config": "workspace:*",
-    "@the777incident/template-api": "workspace:*",
+    "@platform/config": "workspace:*",
+    "@platform/template-api": "workspace:*",
     "typescript": "^5.6.0"
   }
 }

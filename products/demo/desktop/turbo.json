@@ -4,7 +4,7 @@
     "build": {
       // ^export:web = run the web export of THIS package's dependencies (the app)
       // before building the desktop shell. The edge exists because package.json
-      // devDepends on @the777incident/demo-app.
+      // devDepends on @platform/demo-app.
       "dependsOn": ["^export:web"],
       // build/ = compiled main+preload; renderer/ = copied SPA bundle.
       "outputs": ["build/**", "renderer/**"]
