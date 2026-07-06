@@ -288,7 +288,7 @@ What `/ptfm-product` does NOT mean:
 - **Figma** (`mcp__Figma__*`) — this project has a deep Figma integration (Code Connect + token modes), so Figma is the design-reference backbone. If the ticket / brief references Figma frames, fetch them (`get_design_context`, `get_screenshot`, `get_metadata`) to understand the existing design direction and which on-system components / token modes (light/dark × brand) a surface would reuse. The brief references these by URL; it does NOT produce new design.
 - **Supabase** (`mcp__Supabase__*`) — read-only context only: `list_tables` / `list_migrations` to see what data already exists for this product, `execute_sql` for read-only checks on existing usage patterns / user counts that inform the brief's "user research signal" section. (Schema changes go via Alembic downstream, never the MCP's `apply_migration` — but the MCP introspection is fair game here.)
 - **Playwright** (`mcp__playwright__*`) — rare; only if the product lead needs to inspect the existing web behaviour live to understand the current user journey before scoping the change.
-- **Deployment context** — this product ships to four surfaces (Fly = api, EAS = mobile, Vercel = web, Electron = desktop), infra named `<org>-<product>-<env>`. Only reference this if the brief needs to ground a constraint in an existing deployment / integration surface; it is not a workflow pillar for product scoping.
+- **Deployment context** — this product ships to four surfaces (Fly = api, EAS = mobile, Vercel = web, Electron = desktop), infra named `the777incident-<product>-<env>`. Only reference this if the brief needs to ground a constraint in an existing deployment / integration surface; it is not a workflow pillar for product scoping.
 
 ---
 

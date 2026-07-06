@@ -1,7 +1,7 @@
 # PHILOSOPHY Workflows / Releases (trunk-based): main → staging, tag <product>-api-v* →
 # that product's production. Alembic runs as the Fly release_command over the direct
 # 5432 DATABASE_MIGRATION_URL (Key ruling #4) — NOT a CI step. All secrets/app names
-# are clearly-marked placeholders (org placeholder `example`) until real infra exists.
+# carry the org `the777incident`; the Fly apps themselves are created on infra day.
 name: Deploy API
 on:
   push:
