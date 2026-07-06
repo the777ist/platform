@@ -1078,3 +1078,34 @@ package.json` (guide skeleton has no author field; harmless for --dir and irrele
 - **Template change needed:** Phase 9 Step 2/3 should list the research-deletion ripple:
   README layout tree `docs/` line, README "Maintaining this template" section (describes
   `/update`), and the whole provenance blockquote in PHILOSOPHY.
+
+## Post-merge CI fixes (PR #1) — run 2026-07-06
+
+### 1. `openapi.json` must be exported with `newline="\n"` — Windows CRLF breaks the drift check
+
+- `Path.write_text` without `newline=` applies platform newline translation: the
+  committed `openapi.json` (exported on Windows) carried CRLF, CI's Linux regeneration
+  produced LF, and the typegen drift check diffed all 761 lines of both products' files
+  despite byte-identical JSON. Local drift checks never caught it because local regen is
+  also CRLF. Fixed by passing `newline="\n"` in `export_openapi.py` (both products) and
+  recommitting the files normalized (`git diff --ignore-cr-at-eol` proved content-equal).
+- **Lesson:** every generated-and-committed text artifact needs an explicit,
+  platform-independent newline policy at the writer (the hey-api client was already safe
+  only because prettier post-processing enforces LF).
+
+### 2. Whole-word token rewrite cannot see into longer identifiers — stamped demo kept `template_api_rls_test`
+
+- `test_migration_rls.py` named its scratch DB `template_api_rls_test` as one identifier;
+  the generator's whole-word rewrite (`\btemplate_api\b`) can't match inside it, so the
+  demo stamp kept the TEMPLATE's name. Locally invisible (each product tests against its
+  own Supabase stack); on CI's single shared Postgres the two parallel suites raced on
+  the same scratch DB — template's teardown `DROP DATABASE` landed while demo was
+  connecting → `FATAL: database "template_api_rls_test" does not exist`.
+- Fixed by keeping the token word-delimited (`"template_api" + "_rls_test"`) so the
+  rewrite reaches it — and the explanatory comment itself must stay token-free (a first
+  fix attempt embedded the joined name in the comment and re-broke the stamp invariant).
+- **Lesson:** Phase 7's stamp verification (`git grep -iw template products/demo`) was
+  whole-word and therefore structurally blind to this class. The audit sweep must be the
+  SUBSTRING grep (`git grep -i template products/<name>`), whose only acceptable hits are
+  Supabase's own commented email-template examples in `config.toml`. Root CLAUDE.md
+  gotcha added.

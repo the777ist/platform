@@ -16,7 +16,10 @@ from sqlalchemy import create_engine, text
 
 from tests.conftest import TEST_DB_URL
 
-RLS_DB = "template_api_rls_test"
+# Concatenated so the product token stays a whole word — the new-product generator's
+# whole-word rewrite cannot rewrite a token embedded in a longer identifier, and a
+# stamped product reusing this scratch-DB name collides on CI's single shared Postgres.
+RLS_DB = "template_api" + "_rls_test"
 
 
 @pytest.fixture

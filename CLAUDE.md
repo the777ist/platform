@@ -60,6 +60,10 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
 - `products/demo` is a STAMP of `products/_template` (snapshot, byte-derived). Never
   hand-edit demo — change `_template` and re-stamp (`rm -rf products/demo &&
 pnpm new-product demo`; preserve the untracked `demo/api/.env` first).
+- The generator rewrites WHOLE-WORD tokens only — never embed `template`/`template_api`
+  inside a longer identifier in `_template` files (e.g. a scratch-DB name like
+  `<module>_rls_test`); keep the token word-delimited (`"template_api" + "_suffix"`).
+  Audit stamps with substring `git grep -i template products/<name>`, not just `-iw`.
 - Scripting pnpm/expo: set `CI=1` for non-TTY pnpm, but NEVER pass an empty `CI=` to
   expo-cli — its `getenv.boolish` throws on an empty string.
 - `expo export` FORCES the production dotenv and Metro's transform cache does NOT key
