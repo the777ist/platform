@@ -20,6 +20,8 @@
   },
   "peerDependencies": {
     "@react-native-async-storage/async-storage": "*",
+    "expo-device": "*",
+    "expo-notifications": "*",
     "expo-router": "*",
     "react": "*",
     "react-native": "*"
@@ -29,6 +31,8 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@types/react": "~19.2.0",
     "expo": "56.0.14",
+    "expo-device": "56.0.4",
+    "expo-notifications": "56.0.19",
     "expo-router": "56.2.13",
     "react": "19.2.3",
     "react-native": "0.85.3"

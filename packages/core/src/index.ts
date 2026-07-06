@@ -15,3 +15,4 @@ export {
   useSessionStore,
 } from "./auth";
 export { signedAvatarUrl, uploadAvatar, type UploadResult } from "./storage";
+export { registerForPushNotifications, type PushRegistration } from "./notifications";
