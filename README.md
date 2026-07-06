@@ -10,20 +10,6 @@ separate web or desktop app** — it's one frontend codebase plus a Python backe
 
 ---
 
-## Status
-
-This repository currently holds the **architecture and the per-phase build guides**, not the
-built template. Setting up therefore has two stages:
-
-1. **Build the template once** (Phases 1–8) — see _Stage 1_.
-2. **Stamp a product** with `pnpm new-product <name>` — see _Stage 2_. This is the everyday
-   flow once the template exists.
-
-The authoritative architecture and decisions live in **[`PHILOSOPHY.md`](PHILOSOPHY.md)**; the literal,
-step-by-step build instructions live in **[`docs/`](docs/)** (`phase-1` … `phase-8`).
-
----
-
 ## Tech stack
 
 **Frontend** — one React Native codebase → iOS · Android · web · desktop
@@ -76,43 +62,15 @@ step-by-step build instructions live in **[`docs/`](docs/)** (`phase-1` … `pha
 - **[Supabase CLI](https://supabase.com/docs/guides/local-development)** + **Docker** — the
   local backend stack (Postgres, auth, storage) runs in Docker, so **Docker must be running**
   for `supabase start` / `pnpm bootstrap`.
-- **Agentic workflow (optional but recommended):** the `/implement` build and the `ptfm-*`
-  pipeline drive MCP servers — connect **Supabase, GitHub, Figma, Linear, Notion, Playwright**
-  in Claude Code before running them (see the **Operational stack** section below).
+- **Agentic workflow (optional but recommended):** the `ptfm-*` pipeline drives MCP servers —
+  connect **Supabase, GitHub, Figma, Linear, Notion, Playwright** in Claude Code before
+  running it (see the **Operational stack** section below).
 - The git repo name is irrelevant — nothing derives from it (app/infra ids come from _product_
   names).
 
 ---
 
-## Stage 1 — build the template (one-time)
-
-```bash
-mise install            # Node 24, pnpm 11, Python 3.13, uv
-```
-
-Then execute the phases in order. Each follows its guide in `docs/` and ends with a
-verification gate. With Claude Code, the `/implement` command drives a phase end-to-end:
-
-```
-/implement 1     # root tooling: pnpm workspace, Turborepo, mise, lefthook
-/implement 2     # @platform/ui design system + Storybook + Figma token pipeline
-/implement 3     # FastAPI backend (SQLModel, Alembic, layered services)
-/implement 4     # OpenAPI -> typed client + TanStack Query hooks
-/implement 5     # Electron desktop shell
-/implement 6     # Supabase auth, route guards, storage
-/implement 7     # the `new-product` generator
-/implement 8     # CI/CD, observability, realtime, push
-/implement 9     # finalize: strip build scaffolding (destructive; after 1-8 verified)
-```
-
-(Or build manually straight from `docs/phase-N-*.md`.) After Phase 7 you have a working
-`products/_template` starter — auth screens, an API-backed list (items CRUD), settings with a
-theme/dark toggle, and tab navigation. **Phase 9** is the graduation step: once 1–8 are built
-and verified, it strips the template machinery.
-
----
-
-## Stage 2 — create a product (the everyday flow)
+## Create a product (the everyday flow)
 
 ```bash
 pnpm new-product blog
@@ -133,8 +91,8 @@ for you):
 Then run it locally:
 
 ```bash
-pnpm bootstrap          # mise -> install -> supabase start (full local stack)
-pnpm dev                # run the Expo app (web/native) + local API
+pnpm bootstrap                        # mise -> install -> supabase start (full local stack)
+pnpm turbo run dev --filter=*blog-*   # run the Expo app (web/native) + local API
 ```
 
 Make it yours: replace brand assets (`gen-brand.mjs`, uses `sharp`), set the product's **Figma
@@ -156,7 +114,6 @@ products/
     desktop/            # thin Electron wrapper around the web build
     api/                # FastAPI service (its own uv project)
     api-client/         # generated TS client (committed, never hand-edited)
-docs/                   # phase-by-phase build guides (phase-1 … phase-8) + research/
 ```
 
 ---
@@ -218,20 +175,7 @@ its first argument** and writes its artifact under that product's own docs tree
   per-phase plan).
 
 These commands are distinct from the thin `pnpm`/`turbo` wrappers — they encode the project's
-invariants as executable flows. (Not to be confused with `/implement`, the _build-time_ command
-that constructs the monorepo's eight phases.)
-
----
-
-## Maintaining this template
-
-`/update` keeps the template current: it re-runs **deep web research** for every surface
-against current official docs, then folds the findings into the research reports,
-`PHILOSOPHY.md`, the phase guides, the `ptfm-*` commands, and this README — bumping versions and
-adapting to changed APIs / deprecations, every change cited to a live source. Run `/update <N>` to update a given phase of the template
-(phase numbers map to the same phase as `/implement <N>`), or `/update` without args to update
-the entire stack. It is **research-gated**: if live web research isn't available it stops rather
-than update from stale knowledge.
+invariants as executable flows.
 
 ---
 
@@ -240,7 +184,5 @@ than update from stale knowledge.
 | Doc                                              | What it is                                                                                                          |
 | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
 | [`PHILOSOPHY.md`](PHILOSOPHY.md)                 | Architecture, locked decisions, conventions, repo spec                                                              |
-| [`docs/phase-*.md`](docs/)                       | Literal step-by-step build guides (one per phase)                                                                   |
-| [`docs/research/`](docs/research/)               | The fact-check behind every stack choice, with sources                                                              |
 | [`packages/ui/FIGMA.md`](packages/ui/FIGMA.md)   | Design-system / token contract (also the designer handover doc)                                                     |
 | `CLAUDE.md` (root / `packages/ui` / per-product) | The authoritative add-a-thing recipes (root map/conventions · design-system runbook · product + nested api recipes) |

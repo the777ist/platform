@@ -1034,3 +1034,47 @@ package.json` (guide skeleton has no author field; harmless for --dir and irrele
   `X-Request-Id` and its access-log line carries a generated `request_id` (middleware
   truly outermost); a leftover E2E `uvicorn` can squat port 8000 and silently serve a
   second instance's curl checks — kill by PID from netstat before re-verifying servers.
+
+## Phase 9 — finalize (`docs/phase-9-finalize.md`, removed by this phase) — run 2026-07-06
+
+### 1. The dangling-ref sweep also catches CODE comments, not just docs
+
+- Step 6's `git grep -nE 'docs/phase-|commands/(implement|update)\b'` flagged
+  `packages/ui/tailwind.config.js` — a JS comment said "see docs/phase-2 gotchas". The
+  guide's Step 2/3 pre-flight only anticipates PHILOSOPHY.md/README.md references, so a
+  code-comment hit is easy to misread as a false positive. It isn't: comments pointing at
+  deleted guides must be reworded (done — the comment now stands alone).
+- **Template change needed:** Phase 9 Step 6 should say references can live in _code
+  comments_ too, and that they get reworded, not carve-outed.
+
+### 2. Built-state README froze a broken command (`pnpm dev`)
+
+- The kept "Stage 2 → Create a product" section says `pnpm dev`, but the root
+  `package.json` has no `dev` script — `dev` exists only as a turbo task plus the
+  product-scoped `/dev` command. The keep-list rewrite therefore preserved a command that
+  never resolved. Fixed to `pnpm turbo run dev --filter=*blog-*` (matches
+  `products/*/.claude/commands/dev.md`).
+- **Template change needed:** the Stage-2 skeleton (wherever the README is first authored)
+  should use the turbo invocation; Phase 9's "daily commands resolve" check should include
+  every command the README itself prints.
+
+### 3. Files the guide doesn't cover at the destructive gate: LEARNINGS.md
+
+- The guide predates LEARNINGS.md and gives it no keep/delete ruling, yet it is the
+  largest remaining `docs/phase-` reference source after finalize. Surfaced it as an
+  explicit user decision at the Step 1 gate (user: keep, untouched, historical carve-out
+  in the Step 6 grep — same treatment the guide gives kept research reports).
+- **Template change needed:** Phase 9 Step 1 should enumerate _all_ build-era artifacts
+  needing a retention ruling (LEARNINGS.md alongside docs/research/).
+
+### 4. Deleting docs/research/ empties docs/ entirely — more refs to update than listed
+
+- With the guides AND research gone, `docs/` ceases to exist, so the README's repository-
+  layout tree needed its whole `docs/` line removed — Step 3 only mentions dropping the
+  `docs/phase-*.md` row from "Where to read more". Likewise PHILOSOPHY's stack-provenance
+  blockquote (research pointer + the `/update` description) had to go as one unit: the
+  research half because of the opt-in deletion, the `/update` half because Step 4 deletes
+  that command — Step 2 mentions neither explicitly.
+- **Template change needed:** Phase 9 Step 2/3 should list the research-deletion ripple:
+  README layout tree `docs/` line, README "Maintaining this template" section (describes
+  `/update`), and the whole provenance blockquote in PHILOSOPHY.
