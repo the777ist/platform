@@ -911,3 +911,113 @@ package.json` (guide skeleton has no author field; harmless for --dir and irrele
 - **English-word collateral accepted per ruling #7:** whole-word replace turns prose like
   ".env.example's "secrets template"" into "secrets demo" and config.toml's "# Template
   for sending OTP" into "# Demo for sending OTP" — harmless, documented tradeoff.
+
+## Phase 8 — CI/CD, observability, push, realtime, E2E & docs (`docs/phase-8-cicd-obs.md`) — run 2026-07-06
+
+### 1. The guide's `packages/core` skeletons import `@platform/<product>-api-client` — impossible in a shared, unstamped package
+
+- **Symptom:** step (a)'s `api.ts` and step (b)'s `notifications.ts` skeletons import from
+  `"@platform/<product>-api-client"` — but `packages/core` is shared and NEVER stamped, so
+  the `<product>` token can't be rewritten there. Worse, the Phase 4-built `core/api.ts`
+  hard-imported `@platform/template-api-client`, meaning demo's stamped `_layout.tsx` was
+  silently configuring TEMPLATE's client singleton while demo's hooks used demo's own
+  unconfigured client — a real latent bug shipped in Phases 4–7.
+- **Root cause:** the guide treats core as if it were product-scoped for these two files.
+- **Fix applied:** parameterised core — `configureApiClient(client)` takes the product's
+  generated client (structural `GeneratedApiClient` type, no workspace dep), and
+  `registerForPushNotifications(post)` takes the generated SDK call. Each product's
+  `_layout.tsx`/(tabs) layout passes its own. Core's dependency on
+  `@platform/template-api-client` REMOVED.
+- **Template change needed:** rewrite both skeletons to the injected form; add a Phase 4
+  correction (core must never import a product's api-client).
+
+### 2. hey-api query keys are OBJECT-shaped — `invalidateQueries({queryKey: ["items"]})` never matches
+
+- The guide's own ⚠️ ("confirm the generated key prefix") pays off: keys are
+  `[{ _id: "listItems", baseUrl, ... }]`, so the skeleton's bare `[resource]` filter can't
+  match. Fix: `subscribeAndInvalidate` takes a `keys` map (resource → generated key fn
+  results, e.g. `{ items: [listItemsQueryKey()] }`); partial deep matching also catches the
+  `_infinite` variant. Unmapped resources still fall back to `[resource]`.
+
+### 3. Server-side Realtime broadcast path CONFIRMED live
+
+- `POST {SUPABASE_URL}/realtime/v1/api/broadcast` with `apikey` + service-role bearer →
+  **202 Accepted** against the local stack (CLI current as of 2026-07), and the E2E proves
+  end-to-end delivery (second client repaints via broadcast → invalidate → refetch). The
+  guide's ⚠️ REVIEW can be marked resolved for local; re-verify once a hosted project exists.
+
+### 4. `expo export` FORCES production env — and Metro's cache doesn't key on EXPO_PUBLIC_*
+
+- **Symptom:** E2E bundle called `https://TODO-SUPABASE-PROJECT-PROD.supabase.co` ("Failed
+  to fetch" at signup) even with `NODE_ENV=development` passed to the export.
+- **Root cause (two layers):** (1) `expo export` pins NODE_ENV=production → `.env.production`
+  placeholders win; (2) even with correct direct env vars, Metro's transform cache replays
+  the previous bundle BYTE-IDENTICAL because `EXPO_PUBLIC_*` values aren't in the cache key.
+- **Fix applied:** global-setup parses `.env.development` and injects its `EXPO_PUBLIC_*` as
+  DIRECT env vars (they beat dotenv) AND exports with `--clear`.
+- Also: `getenv.boolish("CI")` in expo-cli THROWS on an empty-string `CI=` — sanitize before
+  spawning expo from tooling.
+
+### 5. E2E process orchestration (guide ⚠️ OPEN) resolved via Playwright multi-webServer
+
+- Both long-lived processes (serve -s dist, uvicorn) are `webServer` entries — Playwright
+  owns readiness + teardown; global-setup only prepares state (supabase up-check, migrate,
+  seed, export). NOTE: `npx serve dist -l 8081` from the guide 404s deep links — the SPA
+  fallback flag `-s` is required for `/signup`.
+
+### 6. E2E assertions must respect the persisted-cache design
+
+- A second context seeded from `storageState` rehydrates the FIRST client's persisted query
+  cache and (fresh enough) won't refetch on mount — asserting the pre-broadcast item is
+  visible there FAILS by design. The realtime proof is the post-broadcast item appearing
+  (which also pulls the older item in via the refetch).
+
+### 7. Ports hardcoded in template E2E files would cross products after stamping
+
+- First demo re-stamp shipped `playwright.config.ts`/`global-setup.ts` pointing at 8000/54321
+  (template's stack). Fixed by deriving ports from `product.json` (`8000+10i`, `54321+100i`)
+  at config load — the "ports come from product.json" doctrine applies to EVERY file the
+  generator copies, not just env/config files.
+
+### 8. Workflow skeleton fixes (all load-bearing)
+
+- `with: { token: ${{ secrets.EXPO_TOKEN }} }` inside a YAML FLOW mapping is invalid YAML —
+  quote the expression.
+- `electron-release.yml` uses `env.MAC_CSC_LINK` in a step `if` without defining it at
+  job/workflow level (actionlint error; empty context in the expression) — hoist to job env.
+  The bash tag-parse step also needs `shell: bash` (windows runner defaults to pwsh).
+- `e2e-nightly.yml` as skeleton'd cannot run: the web E2E needs the Supabase CLI
+  (`supabase/setup-cli@v1`), a `uv sync`, and the api's env vars (no `.env` in CI).
+- Guide references a `storybook:build` script; Phase 2's committed name is `build-storybook`
+  (also baked into `packages/ui/CLAUDE.md`) — workflows call the established name.
+
+### 9. `eas.json` + `vercel.json` are in PHILOSOPHY's tree but NO phase creates them
+
+- Phase 2 built the app shell without them; Phase 8's workflows need eas.json's
+  `staging`/`production` channels and Vercel needs the SPA rewrite. Created here (eas-cli
+  > = 16, appVersionSource remote; channels staging/production EXACT). Template change:
+  > either add to Phase 2's app-shell step or to Phase 8's file list explicitly.
+
+### 10. Assorted smaller deltas
+
+- `logging.getLevelName(str)` (guide skeleton) fails pyright strict (deprecated str→int
+  direction) — use `logging.getLevelNamesMapping()[level.upper()]` (3.11+).
+- structlog + sentry-sdk[fastapi] were ALREADY Phase 3 deps (PHILOSOPHY's dep list) — the
+  guide's `uv add` is a no-op; likewise most of the push loop (model/schema/service/router,
+  RLS migration, per user+device shape per the gospel) shipped in Phase 3. Phase 8's real
+  additions: tests, core helper, app wiring, tasks alignment.
+- Guide's prune default is 90 days but Phase 3 shipped `prune_stale(older_than_days=60)` —
+  aligned to 90; the phase guides disagree, gospel is silent (still ⚠️ OPEN per product).
+- Guide's tasks CLI name `prune-push-tokens` ≠ Phase 3's `prune-stale-tokens` — renamed to
+  the Phase 8 DoD contract.
+- Maestro skeleton taps "Log in" but the Phase 6 login button reads "Sign in"; auth inputs
+  use PLACEHOLDERS not labels → Playwright `getByPlaceholder`, not `getByLabel`.
+- `@sentry/cli` postinstall (sentry-cli binary) needs a pnpm 11 `allowBuilds` entry.
+- VR baselines: committed from win32 with platform suffix stripped from snapshot names;
+  ubuntu CI may still diff on font rendering — regenerate baselines on the CI platform when
+  wiring real CI (documented in packages/ui/playwright.config.ts).
+- Verify #1 ("push branch → CI green") can't fire from a feature branch: ci.yml triggers on
+  `pull_request` + push to `main` only, and this session's rules forbid opening a PR — ran
+  the CI steps locally (full gate + drift check) as the evidence instead. Verify #7 (fly
+  machine run) blocked on placeholder infra; the task module was run locally against the
+  real local DB and emits the exact documented JSON line.

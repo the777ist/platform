@@ -23,6 +23,16 @@ const config: ExpoConfig = {
       "expo-splash-screen",
       { image: "./assets/brand/splash.png", imageWidth: 200, backgroundColor: "#ffffff" },
     ],
+    [
+      // Build-time half of Sentry (runtime init lives in @platform/core sentry.ts):
+      // source-map upload + native symbolication. SENTRY_AUTH_TOKEN is a BUILD env
+      // var (EAS secret) — never committed.
+      "@sentry/react-native/expo",
+      {
+        organization: "example", // PLACEHOLDER org slug
+        project: "example-demo", // PLACEHOLDER Sentry project slug
+      },
+    ],
   ],
   // EAS Update OTA: projectId ALONE will NOT deliver OTA — `updates.url` +
   // `runtimeVersion` are the contract between a published JS bundle and the installed

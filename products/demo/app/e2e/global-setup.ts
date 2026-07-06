@@ -35,7 +35,7 @@ export default async function globalSetup(): Promise<void> {
   }
   // 2. migrate + seed (seed targets a fixture owner; E2E users are fresh signups)
   execSync("uv run alembic upgrade head", { cwd: apiDir, stdio: "inherit" });
-  execSync("uv run python -m template_api.seed", { cwd: apiDir, stdio: "inherit" });
+  execSync("uv run python -m demo_api.seed", { cwd: apiDir, stdio: "inherit" });
   // 3. export the web bundle `npx serve dist` will serve. `expo export` FORCES
   // NODE_ENV=production, so it would bake the .env.production PLACEHOLDER fly.dev
   // URLs and the E2E would target infra that doesn't exist. Direct env vars beat

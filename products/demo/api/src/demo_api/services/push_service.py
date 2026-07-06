@@ -48,7 +48,9 @@ class PushService(BaseService):
             async with httpx.AsyncClient(timeout=10) as client:
                 await client.post(get_settings().expo_push_url, json=messages)
 
-    def prune_stale(self, *, older_than_days: int = 60) -> int:
+    # 90 days is the Phase 8 guide's documented default for "stale" (⚠️ OPEN —
+    # PHILOSOPHY gives no threshold; confirm per product).
+    def prune_stale(self, *, older_than_days: int = 90) -> int:
         cutoff = datetime.now(UTC) - timedelta(days=older_than_days)
         # DELETE/UPDATE go through Session.execute() — SQLModel's exec() only types select()
         # (delete()/update() break pyright strict AND don't expose .rowcount). Key ruling DB.

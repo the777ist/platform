@@ -1,14 +1,24 @@
 import "../global.css";
 import { Slot } from "expo-router";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { AuthProvider, configureApiClient, makeQueryClient, persister } from "@platform/core";
+import {
+  AuthProvider,
+  configureApiClient,
+  initSentry,
+  makeQueryClient,
+  persister,
+} from "@platform/core";
+import { client } from "@platform/demo-api-client";
 import { ThemeProvider } from "@platform/ui/theme-provider";
 import { ErrorBoundary } from "../features/_shared/error-boundary";
 import { useThemeStore } from "../features/settings/use-theme";
 
-// Point the generated hey-api client at EXPO_PUBLIC_API_URL (and attach the bearer
-// token interceptor) before any query can run.
-configureApiClient();
+// Sentry first (no-op without EXPO_PUBLIC_SENTRY_DSN), then point THIS product's
+// generated hey-api client at EXPO_PUBLIC_API_URL (attaching the bearer-token +
+// X-Request-Id interceptor) before any query can run. Core is product-agnostic —
+// the product passes its own client instance in.
+initSentry();
+configureApiClient(client);
 const queryClient = makeQueryClient();
 
 export default function RootLayout() {

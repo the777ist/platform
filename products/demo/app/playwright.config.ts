@@ -31,7 +31,7 @@ export default defineConfig({
     },
     {
       // cwd api/ so pydantic-settings picks up api/.env (local) — CI provides env vars.
-      command: `uv run uvicorn template_api.main:app --port ${API_PORT}`,
+      command: `uv run uvicorn demo_api.main:app --port ${API_PORT}`,
       cwd: "../api",
       url: `http://localhost:${API_PORT}/healthz`,
       reuseExistingServer: !process.env.CI,

@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     # --- Rate limits (slowapi) ---
     rate_limit_default: str = Field(default="100/minute")
 
+    # --- Observability (Phase 8) ---
+    sentry_dsn: str | None = Field(default=None)  # unset => Sentry init is a no-op
+    release: str | None = Field(default=None)  # e.g. git SHA; set by the deploy env
+    log_level: str = Field(default="INFO")
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
