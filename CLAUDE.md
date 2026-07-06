@@ -57,8 +57,23 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   Supabase block `54321+100i`. `pnpm bootstrap` starts every product's stack.
 - Expo Go cannot receive push tokens — the push loop needs a dev build on a real device.
 - Web deploys have NO workflow (Vercel git integration) — do not add one.
+- `products/demo` is a STAMP of `products/_template` (snapshot, byte-derived). Never
+  hand-edit demo — change `_template` and re-stamp (`rm -rf products/demo &&
+pnpm new-product demo`; preserve the untracked `demo/api/.env` first).
+- Scripting pnpm/expo: set `CI=1` for non-TTY pnpm, but NEVER pass an empty `CI=` to
+  expo-cli — its `getenv.boolish` throws on an empty string.
+- `expo export` FORCES the production dotenv and Metro's transform cache does NOT key
+  on `EXPO_PUBLIC_*` values — inject env vars directly AND pass `--clear` when the
+  baked env matters (see `app/e2e/global-setup.ts`).
 
 ## Commands
+
+```bash
+pnpm bootstrap                                                # start EVERY product's local Supabase stack
+pnpm turbo run lint typecheck test build openapi --affected   # the CI gate, scoped to changes
+git diff --exit-code products/*/api-client products/*/api/openapi.json  # typegen drift check
+pnpm run format:check                                         # prettier gate (`pnpm run format` to fix)
+```
 
 Root (product arg unless noted): `/new-product <name>` · `/affected` ·
 `/typegen <product>` · `/release <product> <surface>` — plus the shared-`packages/ui`

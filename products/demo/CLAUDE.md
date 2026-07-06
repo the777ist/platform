@@ -49,6 +49,11 @@ via `TODO-EAS-PROJECT-ID` in `app/app.config.ts`. (`example` = org placeholder.)
 `/dev` · `/typegen` · `/migrate` · `/add-feature <name>` · `/release <surface>` — see
 `.claude/commands/`.
 
+Tests: `pnpm --filter @platform/demo-app test` (Jest) ·
+`pnpm --filter @platform/demo-api test` (pytest, real Postgres) ·
+`pnpm --filter @platform/demo-app exec playwright test` (full-stack web E2E —
+starts/reuses the local stack itself; ports derive from product.json).
+
 ## Agentic pipeline artifacts
 
 The `ptfm-*` pipeline (root commands; the canonical build workflow for this product)
