@@ -26,10 +26,12 @@ def main() -> None:
     from demo_api.main import app
 
     schema = app.openapi()
-    # sort_keys=True => byte-stable diffs; trailing newline => clean git diff.
+    # sort_keys=True => byte-stable diffs; trailing newline => clean git diff;
+    # newline="\n" => LF on every platform (Windows CRLF trips the CI drift check).
     OUTPUT.write_text(
         json.dumps(schema, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
     print(f"wrote {OUTPUT}")
 
