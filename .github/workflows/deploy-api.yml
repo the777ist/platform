@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       products: ${{ steps.filter.outputs.changes }}
+      has-fly-token: ${{ steps.secret-gate.outputs.has-fly-token }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v4
@@ -20,9 +21,17 @@ jobs:
           filters: |
             template: ['products/_template/api/**', 'packages/**']
             demo: ['products/demo/api/**', 'packages/**']
+      # `secrets` isn't readable in a job-level `if`, so surface the gate as an output:
+      # until FLY_API_TOKEN is configured (real infra day), deploy SKIPS green instead
+      # of failing against the placeholder Fly apps.
+      - name: Secret gate
+        id: secret-gate
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: echo "has-fly-token=$([[ -n "$FLY_API_TOKEN" ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
   deploy:
     needs: changes
-    if: ${{ needs.changes.outputs.products != '[]' }}
+    if: ${{ needs.changes.outputs.products != '[]' && needs.changes.outputs.has-fly-token == 'true' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:

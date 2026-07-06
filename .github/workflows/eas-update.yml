@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       products: ${{ steps.filter.outputs.changes }}
+      has-expo-token: ${{ steps.secret-gate.outputs.has-expo-token }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v4
@@ -21,9 +22,17 @@ jobs:
           filters: |
             template: ['products/_template/app/**', 'packages/**']
             demo: ['products/demo/app/**', 'packages/**']
+      # `secrets` isn't readable in a job-level `if`, so surface the gate as an output:
+      # until EXPO_TOKEN is configured (real infra day), the OTA job SKIPS green instead
+      # of failing against the placeholder EAS project.
+      - name: Secret gate
+        id: secret-gate
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: echo "has-expo-token=$([[ -n "$EXPO_TOKEN" ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
   update:
     needs: changes
-    if: ${{ needs.changes.outputs.products != '[]' }}
+    if: ${{ needs.changes.outputs.products != '[]' && needs.changes.outputs.has-expo-token == 'true' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
