@@ -55,6 +55,17 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   committed; committed `app/.env.*` files carry publishable values only.
 - Local stacks coexist by portIndex (`product.json`): API `8000+10i`,
   Supabase block `54321+100i`. `pnpm bootstrap` starts every product's stack.
+- A stamped stack starts EMPTY and `api/.env` is never generated: copy the product's
+  `.env.example` (ports pre-offset per product), paste the `supabase status` service_role
+  key, then `alembic upgrade head` + `python -m <name>_api.seed` from `api/`. NEVER leave
+  `SUPABASE_JWKS_URL=` / `SUPABASE_JWT_SECRET=` as empty-string lines — pydantic reads ""
+  (not None), it passes the `is not None` checks in `auth.py`, and every authed call 401s.
+- Local API tests: turbo's strict env mode drops `TEST_DATABASE_URL` (no turbo.json
+  declares `env`) and its default is CI's `:5432` — run `uv run pytest` from `api/` with
+  the var set to the product's direct db port (`54322+100i`). The lefthook pre-push turbo
+  gate is therefore red locally on api-package changes; CI's service container is fine.
+- `deploy-api.yml` / `eas-update.yml` enumerate products by name in their `changes:`
+  filters — add each new product there or pushes to main never deploy it.
 - Expo Go cannot receive push tokens — the push loop needs a dev build on a real device.
 - Web deploys have NO workflow (Vercel git integration) — do not add one.
 - `products/demo` is a STAMP of `products/_template` (snapshot, byte-derived). Never
