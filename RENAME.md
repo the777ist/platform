@@ -1,0 +1,197 @@
+# RENAME.md — the template-to-real-repo renaming playbook
+
+A repo carrying the template's generic identity — README `# Cross-Platform Template`,
+root package `platform`, org placeholder `example`, package scope `@platform/*` — gets
+renamed to its real identity with this playbook. It is the complete, commit-verified
+procedure: extracted from the actual rename of THIS repo to `the777incident` (commits
+`fa2eb9f` → `eea8a91` → `114a0ed`, PRs #6–#8, 117 file changes), then validated by
+running it in REVERSE and reproducing the pre-rename tree **byte-exactly**.
+
+Throughout, `<repo>` = your new identity (worked example: `the777incident`). One identity
+serves as repo name, org, and scope here; if yours differ, substitute per layer.
+
+## The identity model
+
+| Layer            | Generic value                          | Renamed to  | Commit    |
+| ---------------- | -------------------------------------- | ----------- | --------- |
+| 1. Repo identity | `Cross-Platform Template` / `platform` | `<repo>`    | `fa2eb9f` |
+| 2. Org           | `example` (placeholder)                | `<repo>`    | `eea8a91` |
+| 3. Package scope | `@platform/*`                          | `@<repo>/*` | `114a0ed` |
+
+**The fourth layer is machinery — NEVER rename it:**
+
+- **The `template` product token + `products/_template`** — the generator's
+  find-and-replace mold (`pnpm new-product blog` rewrites whole-word `template` → `blog`).
+  The token must NEVER equal the org/repo name: the stamper rewrites EVERY occurrence of
+  the token, so it would mangle the org names too (`<repo>-blog-blog-api-stg`,
+  `com.blog.blog`…).
+- **Brand modes `template` | `demo`** — per-PRODUCT by design (Figma modes ARE brand
+  modes); every stamped product gets its own mode named after it.
+- **Workflow paths/filters** (`products/_template/**`, `*template-*`) — they point at the
+  mold directory and product-token package names.
+- **`products/demo`'s `demo` tokens** — it's a stamp; only its ORG half renames (layer 2),
+  applied identically to `_template` and `demo` (stamp invariant below).
+- **`TODO-*` ids** (EAS project id, Figma file key/mode ids, Supabase URLs, DSNs) — real
+  external accounts that only exist on infra day. After the rename,
+  `git grep -inE 'TODO'` is the swap-point audit.
+
+## Non-negotiable constraints (each one bit us or was proven in the real run)
+
+1. **Stop the local Supabase stacks BEFORE touching `supabase/config.toml`**
+   (`supabase stop` in `products/_template` AND `products/demo`) — the CLI resolves
+   containers by the CURRENT `project_id`; change it first and the old containers/volumes
+   orphan. Restart after; fresh volumes/DBs are re-migrated + seeded by the E2E run.
+2. **Exact-count, per-file replacements — never a blind repo-wide sed.** Assert the
+   expected occurrence count per string per file (a script that dies on mismatch). The
+   keep-list below is exactly what a blind sed corrupts.
+3. **Whole-word tokens only.** Rewrites (yours and the generator's) cannot see into longer
+   identifiers — `template_api_rls_test` survived a stamp untouched once and collided on
+   CI's shared Postgres. Derived names in `_template` keep the token word-delimited
+   (`"template_api" + "_suffix"`). Audit with SUBSTRING grep
+   (`git grep -i template products/<name>`), never just `-iw`.
+4. **Stamp invariant.** Every product-file edit lands in `_template` AND `demo`
+   identically; verify each pair is byte-identical modulo the token rewrite — EXCEPT the
+   generator's own port math (`supabase/config.toml` 543xx block = `54321+100·portIndex`;
+   `api/package.json` dev script `--port 8000+10·portIndex`), which legitimately differs.
+
+   ```python
+   import re
+   def stamp(s):  # mirror of the generator's whole-word rewrite
+       s = re.sub(r"\btemplate_api\b", "demo_api", s)
+       s = re.sub(r"products/_template\b", "products/demo", s)
+       s = re.sub(r"\bTemplate\b", "Demo", s)
+       return re.sub(r"\btemplate\b", "demo", s)
+   # stamp(template_file) == demo_file  (config.toml / api dev-script ports excluded)
+   ```
+
+5. **Re-run prettier AFTER replacing** (`pnpm run format`). Markdown tables pad to their
+   widest cell; a different-length name changes widths and a pure string swap leaves stale
+   padding that `format:check` fails. Found by the reverse-run test — it was the ONLY
+   difference from byte-exactness.
+6. **Generated files are never hand-edited.** `pnpm-lock.yaml` regenerates via
+   `pnpm install` (run it after the scope layer — the workspace names live in it). The
+   api-client `src/` + `openapi.json` regenerate via typegen; only the api-client's own
+   `package.json`/`tsconfig.json` are yours to edit. After the scope rename, "drift" on
+   api-client means changes under `src/` or `openapi.json` — your config edits are not
+   drift.
+7. **TOML keys literally named `template`** (supabase `config.toml` `[auth.sms]` /
+   `[auth.mfa.phone]` message template) are config-schema names, not product tokens — the
+   generator masks them; your edits must not touch them either.
+
+## Layer 1 — repo identity (4 files, 5 lines — commit `fa2eb9f`)
+
+| File            | Change                                                                                                                           |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`     | title `# Cross-Platform Template` → `# <repo>`                                                                                   |
+| `package.json`  | `"name": "platform"` → `"name": "<repo>"` (nothing filters on it; keep the `packageManager` field — eas-cli workspace detection) |
+| `CLAUDE.md`     | header `platform monorepo` → `<repo> monorepo`                                                                                   |
+| `PHILOSOPHY.md` | title gains the repo name                                                                                                        |
+
+## Layer 2 — bake the org (29 files, 80 lines — commit `eea8a91`)
+
+Per product — `products/_template` AND `products/demo`, identically:
+
+| File                                               | What carries the org                                                                      |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `api/fly.staging.toml` + `api/fly.production.toml` | `app = "<org>-<product>-api-stg\|prod"`                                                   |
+| `api/src/<module>/tasks.py`                        | 4× fly-run docstring app names                                                            |
+| `app/app.config.ts`                                | `bundleIdentifier` + `package` (`com.<org>.<product>`), Sentry `organization` + `project` |
+| `app/.env.staging` / `.env.production`             | API URL value + its comment (2 each)                                                      |
+| `app/.maestro/login.yaml`                          | `appId`                                                                                   |
+| `desktop/electron-builder.yml`                     | `appId`, `copyright`, publish `owner`                                                     |
+| `supabase/config.toml`                             | `project_id` (+ its comment) — STACKS STOPPED FIRST                                       |
+| `CLAUDE.md`                                        | 6 spots: desktop appId, releases repo, project_id, Fly/Supabase/Sentry names, org note    |
+| `.claude/commands/release.md`                      | desktop-releases repo owner                                                               |
+
+Root level:
+
+- `README.md` — the create-a-product infra checklist (3 `<org>` mentions)
+- `CLAUDE.md` — the naming-convention line
+- `PHILOSOPHY.md` — 11 spots: naming-conventions header block, keep-placeholders sentence,
+  key ruling #3 (desktop-releases), directory-tree annotations (project_id, bundle ids,
+  appId, publish target, fly app), generator checklist spec, the naming-audit verification
+  item (post-rename it becomes `git grep TODO`), the multi-product infra-naming line
+- `.github/workflows/deploy-api.yml` — the org comment
+- `.claude/commands/ptfm-product.md` + `.claude/commands/release.md` — infra-name mentions
+- **`scripts/new-product.mjs`** — `const org = "..."` + checklist wording (this is what
+  makes every FUTURE stamp come out under the real org with a matching checklist)
+
+## Layer 3 — package scope (84 files, 239 occurrences + lockfile — commit `114a0ed`)
+
+Method: uniform string replace `@platform` → `@<repo>` in every tracked file EXCEPT
+`pnpm-lock.yaml`, then `pnpm install` to regenerate it. The one string uniformly covers
+every context it hides in — the full hiding-spot list from the real commit:
+
+- 11 package.json `name`s + all `workspace:*` dependency entries
+- every TS/TSX import in `packages/*` and both products' app/feature/route files
+- `tsconfig.json` `extends` (`@<repo>/config/tsconfig/expo`) — 5 files
+- `tailwind.config.js` preset `require`s AND the content-glob
+  `require.resolve("@<repo>/ui/package.json")` — ui + both apps
+- `packages/ui/jest.config.js` — the `transformIgnorePatterns` REGEX (`@<repo>/.*`)
+- `.github/workflows/e2e-nightly.yml` — 4 `pnpm --filter @<repo>/...` lines
+- root `eslint.config.mjs` (re-exports `@<repo>/config/eslint`) + `lefthook.yml` comment
+- `packages/config/tailwind-preset.cjs`, `packages/core/src/api.ts`,
+  `products/*/desktop/turbo.json` — scope in comments
+- `packages/ui/.storybook/visual-regression.spec.ts` — command strings in comments/errors
+- all docs: root + product README/CLAUDE.md, `packages/ui` CLAUDE.md, every ptfm command,
+  the thin commands (`add-component`, `dev`, `add-feature`)
+
+Semantic follow-up: reword the root `CLAUDE.md` naming line — the org prefix now derives
+from the repo, but the PRODUCT segment still always derives from the product name.
+
+The generator is scope-agnostic (it rewrites the product token INSIDE package names), so
+stamps come out `@<repo>/<name>-app` automatically — proven by the first post-rename stamp
+(`stream` → `@the777incident/stream-app`, `the777incident-stream-api-stg`, clean sweep).
+
+## The keep-list — strings a blind replace corrupts (verified every one)
+
+- `@example.com` / `example.test` — RFC-reserved fixture domains in tests/e2e specs
+- `.env.example` — filenames (product CLAUDE/README, generator skip-list comments)
+- Code Connect's `example:` — the Figma SDK's API property in `*.figma.tsx`
+- swagger "View examples" text in the GENERATED api-client — never hand-edited
+- `.npmrc` `registry.example.com` sample comment; supabase config's commented Clerk domain
+- the English words "example"/"template" in prose; `snapshotPathTemplate` (Playwright API)
+- TOML `template =` keys (constraint 7)
+
+## Verify — every gate, uncached (as actually run)
+
+```bash
+supabase start                      # both products — new project_ids, fresh volumes
+pnpm run format:check
+pnpm turbo run lint typecheck test build openapi --force        # 31/31
+git status --porcelain products/*/api-client/src products/*/api/openapi.json  # real drift only
+cd products/_template/app && CI=1 pnpm exec playwright test     # full-stack E2E
+cd products/demo/app      && CI=1 pnpm exec playwright test     # full-stack E2E (stamp)
+cd packages/ui            && pnpm exec playwright test          # VR — every story × theme
+git grep -in '<old-tokens>' -- ':!pnpm-lock.yaml'               # residual → keep-list only
+```
+
+Plus the stamp-invariant script (constraint 4) over every changed product-file pair.
+
+## Ship
+
+One PR per layer (identity → org → scope), each CI-green before the next — diffs stay
+reviewable and failures isolate to their layer. After merging: the main-push deploy
+workflows skip green (secret-gated until infra day); dispatch `e2e-nightly` once to prove
+the full nightly path on the renamed state.
+
+## Aftermath — post-rename symptoms that are NOT bugs
+
+- **VS Code Tailwind IntelliSense** "can't resolve `@<repo>/config/tailwind-preset`" —
+  its language server caches module resolution from before the rename. `Developer:
+Reload Window`. Node itself resolves fine (verify:
+  `node -e "require.resolve('@<repo>/config/tailwind-preset',{paths:['packages/ui']})"`).
+- **Docker cruft** — old volumes remain under the previous project ids:
+  `docker volume ls --filter label=com.supabase.cli.project=<old-org>-template` (safe to
+  `docker volume rm`; disposable local seed/test data).
+- **Turbo cache** — new package names = new hashes; the first gate run is fully uncached.
+- **New products** — `pnpm new-product <name>` now stamps correctly, but remember its
+  checklist's workflow item: `deploy-api.yml`/`eas-update.yml` enumerate products
+  explicitly in their `changes` filters — add the new product's entries or main pushes
+  never deploy it. (`pnpm remove-product <name>` is the automated inverse of a stamp.)
+
+## Reversibility
+
+The whole procedure is an involution: run it with OLD/NEW swapped and it restores the
+generic identity — proven by reverse-applying it and reproducing the pre-rename tree
+byte-exactly.
