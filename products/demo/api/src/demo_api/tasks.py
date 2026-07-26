@@ -2,13 +2,13 @@
 no queue infra): `python -m demo_api.tasks <task>`.
 
 One-off run (staging):
-    fly machine run --app example-demo-api-stg \\
-      registry.fly.io/example-demo-api-stg:latest \\
+    fly machine run --app sevenfold-demo-api-stg \\
+      registry.fly.io/sevenfold-demo-api-stg:latest \\
       python -m demo_api.tasks prune-push-tokens
 
 Scheduled (daily) machine — Fly's built-in scheduler:
-    fly machine run --app example-demo-api-stg --schedule daily \\
-      registry.fly.io/example-demo-api-stg:latest \\
+    fly machine run --app sevenfold-demo-api-stg --schedule daily \\
+      registry.fly.io/sevenfold-demo-api-stg:latest \\
       python -m demo_api.tasks prune-push-tokens
 
 NOTE: `--schedule` takes interval keywords ONLY (hourly/daily/weekly/monthly, NOT cron

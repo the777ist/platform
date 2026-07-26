@@ -1,4 +1,4 @@
-app = "example-demo-api-stg"
+app = "sevenfold-demo-api-stg"
 primary_region = "iad"
 
 [build]
