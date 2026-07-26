@@ -1,5 +1,5 @@
-// @platform/config — shared ESLint FLAT config (PHILOSOPHY "Quality": ESLint flat config + Prettier).
-// Consumed by downstream workspaces: `export { default } from "@platform/config/eslint";`
+// @sevenfold/config — shared ESLint FLAT config (PHILOSOPHY "Quality": ESLint flat config + Prettier).
+// Consumed by downstream workspaces: `export { default } from "@sevenfold/config/eslint";`
 import js from "@eslint/js";
 import globals from "globals";
 import tseslint from "typescript-eslint";

@@ -1,6 +1,6 @@
 import { View } from "react-native";
-import { signOut, useSession } from "@platform/core";
-import { Button, Text } from "@platform/ui";
+import { signOut, useSession } from "@sevenfold/core";
+import { Button, Text } from "@sevenfold/ui";
 import { AvatarUploader } from "../../features/settings/avatar-uploader";
 import { useThemeStore } from "../../features/settings/use-theme";
 

@@ -4,7 +4,7 @@ A multi-product, cross-platform monorepo. Each product ships to **iOS, Android, 
 desktop from one shared React Native codebase**, backed by its own **FastAPI** service and
 segregated per-environment infrastructure.
 
-One component, authored once in `@platform/ui`, renders to every target: native via Expo, web
+One component, authored once in `@sevenfold/ui`, renders to every target: native via Expo, web
 via react-native-web, desktop via an Electron shell wrapping the same web build. There is **no
 separate web or desktop app** — it's one frontend codebase plus a Python backend.
 
@@ -21,7 +21,7 @@ separate web or desktop app** — it's one frontend codebase plus a Python backe
 | Web                 | react-native-web (Expo web export)                                               |
 | Desktop             | **Electron 42** wrapping the web build (electron-builder / -updater)             |
 | Styling             | **NativeWind v4** on Tailwind CSS v3 — semantic tokens, light/dark + brand modes |
-| Components          | `@platform/ui` — owned react-native-reusables primitives (`@rn-primitives/*`)    |
+| Components          | `@sevenfold/ui` — owned react-native-reusables primitives (`@rn-primitives/*`)   |
 | Data / state        | **TanStack Query v5** (server) · **Zustand v5** (local)                          |
 
 **Backend** — one FastAPI service per product
@@ -104,9 +104,9 @@ brand mode**, then `/sync-tokens` re-themes everything with zero component edits
 
 ```
 packages/
-  ui/                   # @platform/ui — owned design system (shadcn model)
-  core/                 # @platform/core — supabase client, auth, query client, env
-  config/               # @platform/config — shared tsconfig/eslint/tailwind presets
+  ui/                   # @sevenfold/ui — owned design system (shadcn model)
+  core/                 # @sevenfold/core — supabase client, auth, query client, env
+  config/               # @sevenfold/config — shared tsconfig/eslint/tailwind presets
 products/
   _template/            # the starter stamped by `new-product`
   <name>/
@@ -120,7 +120,7 @@ products/
 
 ## Conventions that bite (read before writing code)
 
-- **Components are _owned_, not dependencies** — `@platform/ui` is copied-in source you edit.
+- **Components are _owned_, not dependencies** — `@sevenfold/ui` is copied-in source you edit.
 - **Semantic tokens only** (`bg-primary`, never hex). Brand = a token _mode_, never a forked
   component.
 - **API is strictly layered**: `schemas/` (Pydantic DTOs) → `routers/` (thin) → `services/`

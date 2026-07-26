@@ -1,4 +1,4 @@
-# @platform/ui — design-system runbook
+# @sevenfold/ui — design-system runbook
 
 The shared component library for every product, on every target (iOS / Android / web /
 desktop). Components here are **OWNED source** (shadcn model — copied in, then ours), consumed
@@ -7,7 +7,7 @@ as source (no build step). Designer-facing Figma conventions live in [FIGMA.md](
 ## The two invariants
 
 1. **Semantic tokens ONLY — never name a color.** Components use `bg-primary`,
-   `text-foreground`, `border-border`, … (the `@platform/config/tailwind-preset` maps them to
+   `text-foreground`, `border-border`, … (the `@sevenfold/config/tailwind-preset` maps them to
    `hsl(var(--x))`). No hex, no `rgb()`, no raw tailwind palette colors. This is what makes one
    component set brandable per product and dark-mode-switchable at runtime.
 2. **Two-tier ownership.** Tier-1 owned primitives live in `src/components/ui/`. Tier-2
@@ -16,7 +16,7 @@ as source (no build step). Designer-facing Figma conventions live in [FIGMA.md](
 
 ## Add a component (the fixed recipe — `/add-component <name>`)
 
-1. `cli-add` (or author by hand): `pnpm --filter @platform/ui dlx @react-native-reusables/cli add <name>`,
+1. `cli-add` (or author by hand): `pnpm --filter @sevenfold/ui dlx @react-native-reusables/cli add <name>`,
    then reconcile into the owned shadcn shape — cva variants, semantic tokens only, `cn()`,
    `className` escape hatch.
 2. Pin any new `@rn-primitives/*` deps **exact** (no caret — version-coupled to
@@ -25,8 +25,8 @@ as source (no build step). Designer-facing Figma conventions live in [FIGMA.md](
 4. Write `src/components/ui/<name>.figma.tsx` — Code Connect map (Figma props → cva variants).
 5. Export from `src/index.ts`.
 6. Commit VR baselines (light + dark, PER PLATFORM — font rendering differs across OSes):
-   `pnpm --filter @platform/ui build-storybook` then
-   `pnpm --filter @platform/ui exec playwright test --update-snapshots` produces YOUR
+   `pnpm --filter @sevenfold/ui build-storybook` then
+   `pnpm --filter @sevenfold/ui exec playwright test --update-snapshots` produces YOUR
    platform's set (e.g. `*-win32.png`); the CI runner's `*-linux.png` set comes from
    dispatching `e2e-nightly.yml` with `update-vr-baselines: true` and committing the
    downloaded `vr-baselines-linux` artifact. Both live in
@@ -46,10 +46,10 @@ as source (no build step). Designer-facing Figma conventions live in [FIGMA.md](
 
 ## Storybook workbench
 
-- `pnpm --filter @platform/ui storybook` → http://localhost:6006 (app stays on 8081).
+- `pnpm --filter @sevenfold/ui storybook` → http://localhost:6006 (app stays on 8081).
 - Toolbar: **Theme** (light|dark) and **Brand** (template|demo) — the live preview surface for
   the Figma token modes (Figma modes ARE the brand modes).
-- `pnpm --filter @platform/ui build-storybook` → `storybook-static/` (+ `index.json`, consumed
+- `pnpm --filter @sevenfold/ui build-storybook` → `storybook-static/` (+ `index.json`, consumed
   by the Playwright VR sweep).
 
 ## Figma bridge

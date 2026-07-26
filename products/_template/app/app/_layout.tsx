@@ -7,9 +7,9 @@ import {
   initSentry,
   makeQueryClient,
   persister,
-} from "@platform/core";
-import { client } from "@platform/template-api-client";
-import { ThemeProvider } from "@platform/ui/theme-provider";
+} from "@sevenfold/core";
+import { client } from "@sevenfold/template-api-client";
+import { ThemeProvider } from "@sevenfold/ui/theme-provider";
 import { ErrorBoundary } from "../features/_shared/error-boundary";
 import { useThemeStore } from "../features/settings/use-theme";
 

@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { View } from "react-native";
-import { Button, Text } from "@platform/ui";
+import { Button, Text } from "@sevenfold/ui";
 
 type Props = { children: ReactNode };
 type State = { error: Error | null };

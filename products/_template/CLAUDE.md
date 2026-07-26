@@ -5,15 +5,15 @@ CLAUDE.md (loads hierarchically); this file is what's specific to THIS product.
 
 ## Structure
 
-- `app/` — `@platform/template-app`: ONE Expo app for iOS + Android + web
+- `app/` — `@sevenfold/template-app`: ONE Expo app for iOS + Android + web
   (`expo export --platform web` → `dist/`). Routes in `app/app/` are thin one-liners;
   real screens/logic live in `app/features/<feature>/` (auth, home, settings).
-- `desktop/` — `@platform/template-desktop`: Electron shell serving the exported web
+- `desktop/` — `@sevenfold/template-desktop`: Electron shell serving the exported web
   `dist/` over the privileged `app://` protocol. appId `com.sevenfold.template.desktop`;
   publishes to `sevenfold/template-desktop-releases`.
-- `api/` — `@platform/template-api`: FastAPI, its own uv universe (module
+- `api/` — `@sevenfold/template-api`: FastAPI, its own uv universe (module
   `template_api`). See [api/CLAUDE.md](api/CLAUDE.md) for the add-an-endpoint recipe.
-- `api-client/` — `@platform/template-api-client`: GENERATED (hey-api) from
+- `api-client/` — `@sevenfold/template-api-client`: GENERATED (hey-api) from
   `api/openapi.json`, committed, never hand-edited.
 - `supabase/` — this product's own local stack + migrations context
   (project_id `sevenfold-template`).
@@ -49,9 +49,9 @@ via `TODO-EAS-PROJECT-ID` in `app/app.config.ts`. (`sevenfold` = the org.)
 `/dev` · `/typegen` · `/migrate` · `/add-feature <name>` · `/release <surface>` — see
 `.claude/commands/`.
 
-Tests: `pnpm --filter @platform/template-app test` (Jest) ·
-`pnpm --filter @platform/template-api test` (pytest, real Postgres) ·
-`pnpm --filter @platform/template-app exec playwright test` (full-stack web E2E —
+Tests: `pnpm --filter @sevenfold/template-app test` (Jest) ·
+`pnpm --filter @sevenfold/template-api test` (pytest, real Postgres) ·
+`pnpm --filter @sevenfold/template-app exec playwright test` (full-stack web E2E —
 starts/reuses the local stack itself; ports derive from product.json).
 
 ## Agentic pipeline artifacts
