@@ -64,7 +64,9 @@ replacements (assert expected occurrence counts) — never a blind repo-wide sed
 ### 1. Repo identity
 
 README title, root `package.json` `name` (verify nothing filters on it), root `CLAUDE.md`
-header + naming-convention line, `PHILOSOPHY.md` title.
+header + naming-convention line, `PHILOSOPHY.md` title, and `products/*/README.md`
+"in the platform monorepo" (`_template` AND every stamp identically — a stamp-invariant
+pair missed by the original run).
 
 ### 2. Org bake (per product — `_template` and every stamp, identically)
 
@@ -87,7 +89,8 @@ printed infra checklist come out under the new org).
 ### 3. Package scope
 
 Uniform string replace `@old-scope` → `@new-scope` in every tracked file EXCEPT
-`pnpm-lock.yaml`, then `pnpm install` to regenerate it. The one string covers: package names,
+`pnpm-lock.yaml` and the playbook docs themselves (`RENAME.md`, `RENAMING.md` — they
+document the generic identity), then `pnpm install` to regenerate the lockfile. The one string covers: package names,
 `workspace:*` deps, imports, tsconfig `extends`, tailwind preset `require`s +
 `require.resolve` content globs, the jest `transformIgnorePatterns` regex, workflow
 `pnpm --filter` lines, and docs. The generator is scope-agnostic — it rewrites the product
@@ -96,7 +99,7 @@ token INSIDE package names, so stamps come out `@new-scope/<name>-app` automatic
 ### 3½. Re-run prettier — table padding is name-length-dependent
 
 ```bash
-pnpm run format   # prettier --write
+pnpm run format   # prettier --write — after EACH layer, not just here (per-layer CI-green)
 ```
 
 Markdown tables (README tech-stack, PHILOSOPHY) are padded to their widest cell; a longer
@@ -109,12 +112,18 @@ reverted tree differed from the original by nothing but table whitespace.
 ```bash
 supabase start                                   # both products, new project_ids
 pnpm run format:check
+# api pytest reads TEST_DATABASE_URL (defaults to the CI 5432 mapping) — locally run the
+# api test tasks per product against 54322 / 54422, the rest of the gate in one go, and
+# run them AFTER the E2E: alembic (E2E migrate) dies on a pytest-create_all'd DB
 pnpm turbo run lint typecheck test build openapi --force
 git diff --exit-code products/*/api-client/src products/*/api/openapi.json   # real drift only
+# fresh clone: each product first needs its machine-local api/.env (from .env.example,
+# ports offset by portIndex, service-role key from `supabase status`)
 cd products/_template/app && CI=1 pnpm exec playwright test    # full-stack E2E, template
 cd products/demo/app      && CI=1 pnpm exec playwright test    # full-stack E2E, stamp
+pnpm --filter @new-scope/ui build-storybook                    # VR prerequisite (as in CI)
 cd packages/ui            && pnpm exec playwright test         # VR, all stories × themes
-git grep -inE '\bOLD-ORG\b|@old-scope'                         # residual audit → keep-list only
+git grep -inE '\bOLD-ORG\b|@old-scope' -- ':!RENAME.md' ':!RENAMING.md'  # residual → keep-list only
 ```
 
 Stamp-invariant check (run for every changed `_template` file against its stamp twin):
