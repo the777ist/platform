@@ -64,10 +64,13 @@ serves as repo name, org, and scope here; if yours differ, substitute per layer.
    # stamp(template_file) == demo_file  (config.toml / api dev-script ports excluded)
    ```
 
-5. **Re-run prettier AFTER replacing** (`pnpm run format`). Markdown tables pad to their
-   widest cell; a different-length name changes widths and a pure string swap leaves stale
-   padding that `format:check` fails. Found by the reverse-run test — it was the ONLY
-   difference from byte-exactness.
+5. **Re-run prettier AFTER EACH layer's replacements** (`pnpm run format`), not once at
+   the end. Markdown tables pad to their widest cell; a different-length name changes
+   widths and a pure string swap leaves stale padding that `format:check` fails. Found by
+   the reverse-run test — it was the ONLY difference from byte-exactness. WHICH layer
+   drifts depends on the new name's length vs the old string in each table (the
+   `sevenfold` run drifted only at layer 3) — and the ship model requires every layer's
+   PR to be CI-green on its own, so format each layer before committing it.
 6. **Generated files are never hand-edited.** `pnpm-lock.yaml` regenerates via
    `pnpm install` (run it after the scope layer — the workspace names live in it). The
    api-client `src/` + `openapi.json` regenerate via typegen; only the api-client's own
@@ -78,14 +81,15 @@ serves as repo name, org, and scope here; if yours differ, substitute per layer.
    `[auth.mfa.phone]` message template) are config-schema names, not product tokens — the
    generator masks them; your edits must not touch them either.
 
-## Layer 1 — repo identity (4 files, 5 lines — commit `fa2eb9f`)
+## Layer 1 — repo identity (6 files, 7 lines — commit `fa2eb9f` + one gap fix)
 
-| File            | Change                                                                                                                           |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `README.md`     | title `# Cross-Platform Template` → `# <repo>`                                                                                   |
-| `package.json`  | `"name": "platform"` → `"name": "<repo>"` (nothing filters on it; keep the `packageManager` field — eas-cli workspace detection) |
-| `CLAUDE.md`     | header `platform monorepo` → `<repo> monorepo`                                                                                   |
-| `PHILOSOPHY.md` | title gains the repo name                                                                                                        |
+| File                   | Change                                                                                                                                                                                       |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`            | title `# Cross-Platform Template` → `# <repo>`                                                                                                                                               |
+| `package.json`         | `"name": "platform"` → `"name": "<repo>"` (nothing filters on it; keep the `packageManager` field — eas-cli workspace detection)                                                             |
+| `CLAUDE.md`            | header `platform monorepo` → `<repo> monorepo`                                                                                                                                               |
+| `PHILOSOPHY.md`        | title gains the repo name                                                                                                                                                                    |
+| `products/*/README.md` | "in the platform monorepo" → "in the `<repo>` monorepo" — `_template` AND `demo` identically (stamp-invariant pair). MISSED by the original `fa2eb9f` run; found by the `sevenfold` test run |
 
 ## Layer 2 — bake the org (29 files, 80 lines — commit `eea8a91`)
 
@@ -119,7 +123,10 @@ Root level:
 ## Layer 3 — package scope (84 files, 239 occurrences + lockfile — commit `114a0ed`)
 
 Method: uniform string replace `@platform` → `@<repo>` in every tracked file EXCEPT
-`pnpm-lock.yaml`, then `pnpm install` to regenerate it. The one string uniformly covers
+`pnpm-lock.yaml` AND the playbook docs themselves (`RENAME.md`, `RENAMING.md` — they
+document the GENERIC identity; rewriting them corrupts the procedure), then
+`pnpm install` to regenerate the lockfile. Expected: exactly 239 occurrences across
+83 files (the lockfile is the 84th changed file). The one string uniformly covers
 every context it hides in — the full hiding-spot list from the real commit:
 
 - 11 package.json `name`s + all `workspace:*` dependency entries
@@ -152,18 +159,53 @@ stamps come out `@<repo>/<name>-app` automatically — proven by the first post-
 - `.npmrc` `registry.example.com` sample comment; supabase config's commented Clerk domain
 - the English words "example"/"template" in prose; `snapshotPathTemplate` (Playwright API)
 - TOML `template =` keys (constraint 7)
+- **`RENAME.md` / `RENAMING.md` themselves** — they document the generic identity and the
+  worked example. Exclude them from every layer's replacements AND from the residual
+  audits (`':!RENAME.md' ':!RENAMING.md'`), or layer 3 corrupts the playbook and the
+  239-occurrence count won't reproduce
+- the word `platform` outside the identity spots: generic prose ("each platform's native
+  store", PHILOSOPHY's "platform/template monorepo"), APIs (`process.platform`,
+  Playwright's `{platform}` token), and the `PATCH(platform)` tag inside
+  `patches/*.patch` (patch content is hash-pinned by `patchedDependencies` — renaming
+  the tag is pure lockfile churn)
 
 ## Verify — every gate, uncached (as actually run)
 
 ```bash
 supabase start                      # both products — new project_ids, fresh volumes
 pnpm run format:check
-pnpm turbo run lint typecheck test build openapi --force        # 31/31
+pnpm turbo run lint typecheck build openapi --force
+pnpm turbo run test --filter='!@<repo>/template-api' --filter='!@<repo>/demo-api' --force
 git status --porcelain products/*/api-client/src products/*/api/openapi.json  # real drift only
+# E2E prerequisite the original run had ambiently: each product needs its machine-local
+# (gitignored) api/.env — the API webServer boots with cwd api/ so pydantic-settings
+# reads it (CI provides env vars instead). On a fresh clone, build it from
+# products/<p>/.env.example with the product's OWN ports (DB 54322+100·portIndex — the
+# local pooler is disabled, use the direct port for BOTH URLs; SUPABASE_URL
+# 54321+100·portIndex) and the local stack's SERVICE_ROLE_KEY + JWT secret
+# (`supabase status`), or the E2E dies with "config.webServer was not able to start"
+# on missing database_url/database_migration_url. OMIT keys you have no value for —
+# do NOT copy `SUPABASE_JWKS_URL=` (empty) verbatim from .env.example: pydantic reads
+# it as "" (not None), the API then builds PyJWKClient("") and the JWKS PRIMARY auth
+# path silently dies, surfacing as 401 "The specified alg value is not allowed" on
+# every authed call (the HS256 fallback rejecting the ES256 token).
 cd products/_template/app && CI=1 pnpm exec playwright test     # full-stack E2E
 cd products/demo/app      && CI=1 pnpm exec playwright test     # full-stack E2E (stamp)
-cd packages/ui            && pnpm exec playwright test          # VR — every story × theme
-git grep -in '<old-tokens>' -- ':!pnpm-lock.yaml'               # residual → keep-list only
+# The api pytest suites read TEST_DATABASE_URL and default to localhost:5432 (the CI
+# service-container port mapping). Locally each product's DB is on its own port
+# (54322 + 100·portIndex) and 5432 may be a FOREIGN Postgres — one turbo invocation
+# cannot carry two URLs, so run the api tests per product. ORDER MATTERS: run them
+# AFTER the E2E — pytest's create_all() tolerates the alembic-built schema, but
+# alembic (the E2E's migrate step) dies with DuplicateTable on a create_all-built one
+# (`supabase db reset` in the product dir un-wedges a contaminated stack DB).
+TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:54322/postgres \
+  pnpm turbo run test --filter=@<repo>/template-api --force
+TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:54422/postgres \
+  pnpm turbo run test --filter=@<repo>/demo-api --force
+pnpm --filter @<repo>/ui build-storybook                        # VR serves storybook-static —
+cd packages/ui            && pnpm exec playwright test          #   build it first (as CI does),
+                                                                #   else webServer times out
+git grep -in '<old-tokens>' -- ':!pnpm-lock.yaml' ':!RENAME.md' ':!RENAMING.md'  # residual → keep-list only
 ```
 
 Plus the stamp-invariant script (constraint 4) over every changed product-file pair.
@@ -171,7 +213,11 @@ Plus the stamp-invariant script (constraint 4) over every changed product-file p
 ## Ship
 
 One PR per layer (identity → org → scope), each CI-green before the next — diffs stay
-reviewable and failures isolate to their layer. After merging: the main-push deploy
+reviewable and failures isolate to their layer. Confirm each layer's commit actually
+LANDED (`git log`) before starting the next: lefthook runs prettier+eslint pre-commit,
+and a broken hook environment (e.g. an untrusted `mise.toml` on a fresh clone — run
+`mise trust` first) aborts the commit while a chained follow-up command happily keeps
+going — the next layer then silently amends/mixes into the wrong commit. After merging: the main-push deploy
 workflows skip green (secret-gated until infra day); dispatch `e2e-nightly` once to prove
 the full nightly path on the renamed state.
 
@@ -185,10 +231,14 @@ Reload Window`. Node itself resolves fine (verify:
   `docker volume ls --filter label=com.supabase.cli.project=<old-org>-template` (safe to
   `docker volume rm`; disposable local seed/test data).
 - **Turbo cache** — new package names = new hashes; the first gate run is fully uncached.
-- **New products** — `pnpm new-product <name>` now stamps correctly, but remember its
+- **New products** — `pnpm new-product <name>` now stamps correctly (re-proven post-
+  `sevenfold`: `@sevenfold/stream-app`, `com.sevenfold.stream`,
+  `sevenfold-stream-api-stg`, zero residuals on the substring audit), but remember its
   checklist's workflow item: `deploy-api.yml`/`eas-update.yml` enumerate products
   explicitly in their `changes` filters — add the new product's entries or main pushes
-  never deploy it. (`pnpm remove-product <name>` is the automated inverse of a stamp.)
+  never deploy it. There is NO `remove-product` script (an earlier draft claimed one);
+  the manual inverse of a fresh stamp is
+  `rm -rf products/<name> && git checkout -- pnpm-lock.yaml tokens.config.json && pnpm install`.
 
 ## Reversibility
 
