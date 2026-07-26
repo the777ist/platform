@@ -1,5 +1,5 @@
 {
-  "name": "platform",
+  "name": "sevenfold",
   "private": true,
   "packageManager": "pnpm@11.9.0",
   "engines": {

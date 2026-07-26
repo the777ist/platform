@@ -1,4 +1,4 @@
-# CLAUDE.md — platform monorepo
+# CLAUDE.md — sevenfold monorepo
 
 Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOSOPHY.md)
 (the locked decisions win every conflict); this file is the operational distillation.

@@ -1,6 +1,6 @@
 # demo
 
-A cross-platform product in the platform monorepo: one Expo codebase → iOS, Android,
+A cross-platform product in the sevenfold monorepo: one Expo codebase → iOS, Android,
 web (Vercel) and desktop (Electron wrapping the same web build), backed by its own
 FastAPI service and Supabase project. Authoritative recipes live in
 [CLAUDE.md](CLAUDE.md) and [api/CLAUDE.md](api/CLAUDE.md) — this README is the human
