@@ -37,9 +37,10 @@ never Postgres-Changes, never open RLS).
 - pyright STRICT + Pydantic STRICT — enforced in pre-push and CI. No untyped defs.
 - RFC 9457 problem+json for every error (`errors.py`); cursor pagination
   (`pagination.py`, `useInfiniteQuery`-ready).
-- DB: runtime over the transaction pooler 6543 (psycopg3 + NullPool +
+- DB: on HOSTED envs runtime goes over the transaction pooler 6543 (psycopg3, NullPool,
   `prepare_threshold=None`); migrations over direct 5432 (`DATABASE_MIGRATION_URL`,
-  Fly release_command). Schema changes ONLY via Alembic.
+  Fly release_command). The LOCAL stack has no pooler — both URLs use the direct
+  `db.port` from `supabase/config.toml`. Schema changes ONLY via Alembic.
 - Auth: JWKS/ES256 primary everywhere (local included); HS256 fallback only.
 - External HTTP (Expo Push, Supabase broadcast) is httpx with an injectable client —
   unit tests pass `httpx.MockTransport`; integration tests hit real Postgres, never
