@@ -119,6 +119,9 @@ Root level:
 - `.claude/commands/ptfm-product.md` + `.claude/commands/release.md` — infra-name mentions
 - **`scripts/new-product.mjs`** — `const org = "..."` + checklist wording (this is what
   makes every FUTURE stamp come out under the real org with a matching checklist)
+- **`scripts/remove-product.mjs`** — `const org = "..."` + the hardcoded
+  `com.supabase.cli.project=<org>-${name}` docker-volume hint (post-dates the original
+  run — added on main after the `sevenfold` verification)
 
 ## Layer 3 — package scope (84 files, 239 occurrences + lockfile — commit `114a0ed`)
 
@@ -236,9 +239,9 @@ Reload Window`. Node itself resolves fine (verify:
   `sevenfold-stream-api-stg`, zero residuals on the substring audit), but remember its
   checklist's workflow item: `deploy-api.yml`/`eas-update.yml` enumerate products
   explicitly in their `changes` filters — add the new product's entries or main pushes
-  never deploy it. There is NO `remove-product` script (an earlier draft claimed one);
-  the manual inverse of a fresh stamp is
-  `rm -rf products/<name> && git checkout -- pnpm-lock.yaml tokens.config.json && pnpm install`.
+  never deploy it. `pnpm remove-product <name>` is the automated inverse of a stamp
+  (stops the product's stack, deletes the tree, restores tokens.config.json, reinstalls;
+  pass `--yes` in non-interactive shells).
 
 ## Reversibility
 
