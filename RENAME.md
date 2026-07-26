@@ -123,8 +123,8 @@ Root level:
 ## Layer 3 — package scope (84 files, 239 occurrences + lockfile — commit `114a0ed`)
 
 Method: uniform string replace `@platform` → `@<repo>` in every tracked file EXCEPT
-`pnpm-lock.yaml` AND the playbook docs themselves (`RENAME.md`, `RENAMING.md` — they
-document the GENERIC identity; rewriting them corrupts the procedure), then
+`pnpm-lock.yaml` AND this playbook itself (`RENAME.md` documents the GENERIC
+identity; rewriting it corrupts the procedure), then
 `pnpm install` to regenerate the lockfile. Expected: exactly 239 occurrences across
 83 files (the lockfile is the 84th changed file). The one string uniformly covers
 every context it hides in — the full hiding-spot list from the real commit:
@@ -159,9 +159,9 @@ stamps come out `@<repo>/<name>-app` automatically — proven by the first post-
 - `.npmrc` `registry.example.com` sample comment; supabase config's commented Clerk domain
 - the English words "example"/"template" in prose; `snapshotPathTemplate` (Playwright API)
 - TOML `template =` keys (constraint 7)
-- **`RENAME.md` / `RENAMING.md` themselves** — they document the generic identity and the
+- **`RENAME.md` itself** — it documents the generic identity and the
   worked example. Exclude them from every layer's replacements AND from the residual
-  audits (`':!RENAME.md' ':!RENAMING.md'`), or layer 3 corrupts the playbook and the
+  audits (`':!RENAME.md'`), or layer 3 corrupts the playbook and the
   239-occurrence count won't reproduce
 - the word `platform` outside the identity spots: generic prose ("each platform's native
   store", PHILOSOPHY's "platform/template monorepo"), APIs (`process.platform`,
@@ -205,7 +205,7 @@ TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:54422/postgre
 pnpm --filter @<repo>/ui build-storybook                        # VR serves storybook-static —
 cd packages/ui            && pnpm exec playwright test          #   build it first (as CI does),
                                                                 #   else webServer times out
-git grep -in '<old-tokens>' -- ':!pnpm-lock.yaml' ':!RENAME.md' ':!RENAMING.md'  # residual → keep-list only
+git grep -in '<old-tokens>' -- ':!pnpm-lock.yaml' ':!RENAME.md'  # residual → keep-list only
 ```
 
 Plus the stamp-invariant script (constraint 4) over every changed product-file pair.
