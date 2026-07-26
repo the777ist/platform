@@ -98,6 +98,10 @@ pnpm turbo run dev --filter=*blog-*   # run the Expo app (web/native) + local AP
 Make it yours: replace brand assets (`gen-brand.mjs`, uses `sharp`), set the product's **Figma
 brand mode**, then `/sync-tokens` re-themes everything with zero component edits.
 
+To delete a product later: `pnpm remove-product <name>` — the exact inverse (stops its local
+stack, removes the tree + lockfile workspaces + brand-mode entry, prints the de-provision
+checklist).
+
 ---
 
 ## Repository layout

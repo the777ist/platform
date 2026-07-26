@@ -80,7 +80,8 @@ git diff --exit-code products/*/api-client products/*/api/openapi.json  # typege
 pnpm run format:check                                         # prettier gate (`pnpm run format` to fix)
 ```
 
-Root (product arg unless noted): `/new-product <name>` · `/affected` ·
+Root (product arg unless noted): `/new-product <name>` · `/remove-product <name>` ·
+`/affected` ·
 `/typegen <product>` · `/release <product> <surface>` — plus the shared-`packages/ui`
 trio (no product arg): `/add-component <name>` · `/sync-tokens` ·
 `/bootstrap-design-system`.
