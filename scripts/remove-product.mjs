@@ -52,7 +52,7 @@ function stopSupabase(name, dest) {
   } catch {
     console.warn(
       `⚠ could not stop the "${name}" Supabase stack (CLI missing, Docker down, or not running) — ` +
-        `if containers/volumes linger: docker volume ls --filter label=com.supabase.cli.project=example-${name}`,
+        `if containers/volumes linger: docker volume ls --filter label=com.supabase.cli.project=sevenfold-${name}`,
     );
   }
 }
@@ -70,7 +70,7 @@ function removeFigmaMode(name) {
 
 // ---- Step 6: print the de-provision checklist ---------------------------------------------
 function printChecklist(name) {
-  const org = "example"; // placeholder org (Naming conventions header)
+  const org = "sevenfold"; // the org (Naming conventions header)
   console.log(`
 ✅ Removed products/${name} (workspaces dropped from the lockfile)
 
