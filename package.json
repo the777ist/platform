@@ -11,6 +11,7 @@
     "prepare": "lefthook install",
     "bootstrap": "node scripts/bootstrap.mjs",
     "new-product": "node scripts/new-product.mjs",
+    "remove-product": "node scripts/remove-product.mjs",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
