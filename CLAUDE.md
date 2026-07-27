@@ -70,7 +70,9 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
 - Web deploys have NO workflow (Vercel git integration) — do not add one.
 - `products/demo` is a STAMP of `products/_template` (snapshot, byte-derived). Never
   hand-edit demo — change `_template` and re-stamp (`rm -rf products/demo &&
-pnpm new-product demo`; preserve the untracked `demo/api/.env` first).
+pnpm new-product demo`; preserve the untracked `demo/api/.env` first). The generator
+  reuses the freed portIndex, so the re-stamp keeps demo's ports even when
+  higher-indexed products exist.
 - The generator rewrites WHOLE-WORD tokens only — never embed `template`/`template_api`
   inside a longer identifier in `_template` files (e.g. a scratch-DB name like
   `<module>_rls_test`); keep the token word-delimited (`"template_api" + "_suffix"`).

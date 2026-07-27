@@ -71,15 +71,22 @@ function parseArgs() {
 }
 
 function nextPortIndex() {
-  // Scan EVERY products/*/product.json, take max(portIndex)+1. _template = 0.
-  let max = -1;
+  // Scan EVERY products/*/product.json, take the SMALLEST unused index (_template = 0).
+  // Reusing freed indexes (instead of max+1) keeps the documented demo re-stamp
+  // (`rm -rf products/demo && pnpm new-product demo`) idempotent even when a
+  // higher-indexed product exists — max+1 would silently reassign demo's ports and
+  // break its byte-derived-snapshot property. Ports are a purely LOCAL concern
+  // (cloud infra derives from names), so reuse after remove-product is always safe.
+  const used = new Set();
   for (const entry of readdirSync(PRODUCTS_DIR)) {
     const pj = join(PRODUCTS_DIR, entry, "product.json");
     if (!existsSync(pj)) continue;
     const meta = JSON.parse(readFileSync(pj, "utf8"));
-    if (typeof meta.portIndex === "number") max = Math.max(max, meta.portIndex);
+    if (typeof meta.portIndex === "number") used.add(meta.portIndex);
   }
-  return max + 1;
+  let i = 0;
+  while (used.has(i)) i++;
+  return i;
 }
 
 // ---- Naming variants (PHILOSOPHY.md: kebab / Pascal / snake) ----------------------------
