@@ -100,7 +100,7 @@ cd api && cp ../.env.example .env     # ports are already this product's local o
 #   -> paste the service_role key into SUPABASE_SERVICE_ROLE_KEY
 uv run alembic upgrade head           # create the schema
 uv run python -m blog_api.seed        # seed demo data (module = <name>_api)
-cd ../..
+cd ../../..                           # back to the repo root
 
 pnpm turbo run dev --filter=*blog-*   # run the Expo app (web/native) + local API
 ```
