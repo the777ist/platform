@@ -71,15 +71,22 @@ function parseArgs() {
 }
 
 function nextPortIndex() {
-  // Scan EVERY products/*/product.json, take max(portIndex)+1. _template = 0.
-  let max = -1;
+  // Scan EVERY products/*/product.json, take the SMALLEST unused index (_template = 0).
+  // Reusing freed indexes (instead of max+1) keeps the documented demo re-stamp
+  // (`rm -rf products/demo && pnpm new-product demo`) idempotent even when a
+  // higher-indexed product exists — max+1 would silently reassign demo's ports and
+  // break its byte-derived-snapshot property. Ports are a purely LOCAL concern
+  // (cloud infra derives from names), so reuse after remove-product is always safe.
+  const used = new Set();
   for (const entry of readdirSync(PRODUCTS_DIR)) {
     const pj = join(PRODUCTS_DIR, entry, "product.json");
     if (!existsSync(pj)) continue;
     const meta = JSON.parse(readFileSync(pj, "utf8"));
-    if (typeof meta.portIndex === "number") max = Math.max(max, meta.portIndex);
+    if (typeof meta.portIndex === "number") used.add(meta.portIndex);
   }
-  return max + 1;
+  let i = 0;
+  while (used.has(i)) i++;
+  return i;
 }
 
 // ---- Naming variants (PHILOSOPHY.md: kebab / Pascal / snake) ----------------------------
@@ -227,13 +234,18 @@ function applyPorts(dest, i) {
     writeFileSync(f, txt);
   }
 
-  // (d) server-side .env.example (api template) — same local-host offsets so a dev copying
-  //     it to api/.env starts against the product's OWN stack ports.
-  const envExample = join(dest, ".env.example");
-  if (existsSync(envExample)) {
-    let txt = readFileSync(envExample, "utf8");
-    txt = txt.replace(/(localhost|127\.0\.0\.1):54321\b/g, `$1:${sbBase}`);
-    writeFileSync(envExample, txt);
+  // (d) server-side .env.example + the product README — same local-host offsets so a dev
+  //     copying/pasting from them starts against the product's OWN stack ports. Shift the
+  //     whole 543xx block (like config.toml): SUPABASE_URL is 54321, both DATABASE_*URLs
+  //     are 54322 (the local stack has no pooler — direct DB port for runtime AND
+  //     migrations). NOTE: these files must not contain literal `543xx + …` port FORMULAS
+  //     (the shift would corrupt the base); spell formulas without the literal base.
+  for (const rel of [".env.example", "README.md"]) {
+    const f = join(dest, rel);
+    if (!existsSync(f)) continue;
+    let txt = readFileSync(f, "utf8");
+    txt = txt.replace(/\b(543\d\d)\b/g, (m) => String(Number(m) + sbDelta));
+    writeFileSync(f, txt);
   }
 }
 
@@ -263,9 +275,19 @@ function printChecklist(name, portIndex) {
   const org = "example"; // placeholder org (Naming conventions header)
   const apiPort = 8000 + 10 * portIndex;
   const sbBase = 54321 + 100 * portIndex;
+  const mod = name.replace(/-/g, "_") + "_api"; // python module (mirrors buildReplacers)
   console.log(`
 ✅ Stamped products/${name} (portIndex=${portIndex})
    local ports: API http://localhost:${apiPort} · Supabase block base ${sbBase}
+
+ LOCAL FIRST RUN (no cloud accounts needed — the stack starts EMPTY):
+   pnpm bootstrap                             # if the local stacks aren't up yet
+   cd products/${name} && supabase status     # note the service_role key
+   cd api && cp ../.env.example .env          # ports are already this product's
+   #  -> paste the service_role key into SUPABASE_SERVICE_ROLE_KEY
+   uv run alembic upgrade head                # create the schema
+   uv run python -m ${mod}.seed               # seed demo data
+   pnpm turbo run dev --filter=*${name}-*     # Expo app + API
 
 ────────────────────────────────────────────────────────────────────
  INFRA CHECKLIST for "${name}" (swap the ${org} placeholders for real org values)
@@ -284,6 +306,9 @@ function printChecklist(name, portIndex) {
  [ ] Sentry: create 4 projects (app stg/prod, api stg/prod) -> paste DSNs into env
  [ ] GitHub Actions: add per-product secrets (FLY_API_TOKEN_${name.toUpperCase().replace(/-/g, "_")},
           EXPO_TOKEN, VERCEL_*, GH_TOKEN, SENTRY_AUTH_TOKEN, ...)
+ [ ] CI deploy filters: add "${name}" entries to the hardcoded \`changes:\` filters in
+          .github/workflows/deploy-api.yml and eas-update.yml — without them,
+          pushes to main NEVER deploy this product
  [ ] BRAND: replace placeholder assets in products/${name}/app/assets/brand/source.svg
           then run: node products/${name}/app/assets/brand/gen-brand.mjs
  [ ] FIGMA: ask design to create the "${name}" brand mode, then replace the

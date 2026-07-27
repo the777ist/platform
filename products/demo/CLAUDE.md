@@ -50,7 +50,10 @@ via `TODO-EAS-PROJECT-ID` in `app/app.config.ts`. (`example` = org placeholder.)
 `.claude/commands/`.
 
 Tests: `pnpm --filter @platform/demo-app test` (Jest) ·
-`pnpm --filter @platform/demo-api test` (pytest, real Postgres) ·
+API pytest (real Postgres): run from `api/` with `TEST_DATABASE_URL` pointing at this
+product's local direct db port (`db.port` in `supabase/config.toml`) —
+`TEST_DATABASE_URL=... uv run pytest`. The default URL assumes CI's :5432, and
+`pnpm turbo run test` drops the variable (strict env mode), so invoke pytest directly ·
 `pnpm --filter @platform/demo-app exec playwright test` (full-stack web E2E —
 starts/reuses the local stack itself; ports derive from product.json).
 

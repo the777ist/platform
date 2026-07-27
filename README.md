@@ -78,8 +78,9 @@ pnpm new-product blog
 
 The generator copies `products/_template` → `products/blog`, whole-word-renames every
 `template` token, assigns a non-colliding port block, runs `pnpm install`, and **prints an
-infrastructure checklist**. Work through that checklist (the external accounts it can't create
-for you):
+infrastructure checklist**. The checklist is **deploy-time only** — nothing on it blocks
+local development, so it can wait until the product ships. It covers the external accounts
+the generator can't create for you:
 
 - **2 Supabase projects** (`<org>-blog-stg|prod`)
 - **Fly apps**: `fly apps create <org>-blog-api-stg|prod` + secrets
@@ -88,12 +89,24 @@ for you):
 - **`<org>/blog-desktop-releases`** repo + `GH_TOKEN` (Electron auto-update)
 - **Sentry** projects + DSNs; per-product GitHub Action secrets
 
-Then run it locally:
+Then run it locally (zero cloud accounts needed):
 
 ```bash
 pnpm bootstrap                        # mise -> install -> supabase start (full local stack)
+
+# first run only — the stamped stack starts EMPTY (no api/.env, no tables, no data):
+cd products/blog && supabase status   # note the service_role key
+cd api && cp ../.env.example .env     # ports are already this product's local ones
+#   -> paste the service_role key into SUPABASE_SERVICE_ROLE_KEY
+uv run alembic upgrade head           # create the schema
+uv run python -m blog_api.seed        # seed demo data (module = <name>_api)
+cd ../../..                           # back to the repo root
+
 pnpm turbo run dev --filter=*blog-*   # run the Expo app (web/native) + local API
 ```
+
+The generator prints these first-run steps after stamping; the full recipe (including the
+env-file traps to avoid) lives in the product's own README under "Run it locally".
 
 Make it yours: replace brand assets (`gen-brand.mjs`, uses `sharp`), set the product's **Figma
 brand mode**, then `/sync-tokens` re-themes everything with zero component edits.
