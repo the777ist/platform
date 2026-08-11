@@ -21,7 +21,7 @@ Two deliberate deviations from [PHILOSOPHY.md](../../PHILOSOPHY.md):
 | Locked decision                                                | Deviation                                                               | Why it's safe                                                                                                                                                                                                                                                                                              |
 | -------------------------------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | #54 — Figma Variables are the source of truth for token values | **Tokens are hand-authored in-repo.** No Figma import, no Code Connect. | `scripts/figma-tokens.mjs` already treats a committed DTCG JSON file as its _default_ source (`source: "tokens-studio"`). We are using the documented default path, not bypassing the pipeline. Figma can be attached later by flipping `tokens.config.json` to `source: "rest"` — zero component changes. |
-| #53 — Tier-1 = react-native-reusables components copied in     | **Tier-1 also includes hand-authored components and other registries.** | The invariant that matters is _owned source + semantic tokens only_, not the provenance. RNR covers 32 of ~57 shadcn components; the rest have to come from somewhere.                                                                                                                                     |
+| #53 — Tier-1 = react-native-reusables components copied in     | **Tier-1 also includes hand-authored components and other registries.** | The invariant that matters is _owned source + semantic tokens only_, not the provenance. RNR covers 32 of the 62 shadcn registry components; the rest have to come from somewhere.                                                                                                                         |
 
 Everything else holds — especially **semantic tokens only, never name a color**, and
 **promote-on-2nd-use** for Tier-2 compositions.
@@ -140,7 +140,7 @@ Strategy codes used throughout:
 | **M** | Mobile re-interpretation — same role and API, different interaction/presentation  |
 | **W** | Web/desktop-only — renders a documented graceful fallback on native               |
 
-### shadcn/ui surface (~57)
+### shadcn/ui surface (62 registry components)
 
 **Direct from RNR (27 to import; you have 5).**
 
@@ -155,74 +155,139 @@ imported component expects: `text` `button` `badge` `input` `card`.
 
 **Everything else:**
 
-| Component              | Strategy | How                                                                                                                                              |
-| ---------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `sheet`                | **S**    | Bottom sheet on native (`@gorhom/bottom-sheet`, or **N**), side sheet on web. Highest-value non-RNR component for a mobile app — build it early. |
-| `drawer`               | **S**    | Same primitive as `sheet`; different default side/snap points.                                                                                   |
-| `sonner` / toast       | **A**    | Over `@rn-primitives/portal` + Reanimated. Must respect safe-area insets on native.                                                              |
-| `slider`               | **N**    | Wraps `@react-native-community/slider`.                                                                                                          |
-| `spinner`              | **S**    | `ActivityIndicator` native / CSS spinner web.                                                                                                    |
-| `form`                 | **A**    | `react-hook-form` is platform-agnostic — wire it to `Field`.                                                                                     |
-| `field`                | **A**    | Label + control + description + error. The workhorse; build before `form`.                                                                       |
-| `item`                 | **A**    | List-row primitive. Trivial on web, **essential** on mobile — most mobile UI is rows.                                                            |
-| `empty`                | **A**    | Icon + title + description + action. Trivial.                                                                                                    |
-| `input-group`          | **A**    | Input + affixes.                                                                                                                                 |
-| `button-group`         | **A**    | Trivial composition.                                                                                                                             |
-| `input-otp`            | **A**    | RN `TextInput` with per-char boxes + `autoComplete="one-time-code"`.                                                                             |
-| `scroll-area`          | **S**    | Native `ScrollView` / web styled scrollbars.                                                                                                     |
-| `typography`           | **A**    | Heading/prose variants on your existing `Text`.                                                                                                  |
-| `breadcrumb`           | **M**    | Full trail on web; on mobile collapse to back-affordance + current page.                                                                         |
-| `table` / `data-table` | **M**    | There is no `<table>` in RN. Mobile = `FlatList` of `Item` cards; web = real table. Same props, two renderers.                                   |
-| `command`              | **M**    | Web = overlay palette; mobile = full-screen search sheet. `FlatList` + fuzzy filter.                                                             |
-| `combobox`             | **A**    | Composition of `popover` + `command`. Build after both.                                                                                          |
-| `calendar`             | **S**    | `react-native-calendars` or **N** date-picker native; `react-day-picker` web.                                                                    |
-| `date-picker`          | **S**    | `calendar` inside `popover` (web) / bottom sheet (native).                                                                                       |
-| `carousel`             | **S**    | `FlatList` `pagingEnabled` native; embla web.                                                                                                    |
-| `chart`                | **S**    | `victory-native` (Skia) native; `recharts` web. **Heavy — defer to last.**                                                                       |
-| `pagination`           | **M**    | Web = page controls; mobile = infinite scroll. You already use `useInfiniteQuery`.                                                               |
-| `navigation-menu`      | **M**    | Mobile = expo-router tabs/drawer, not a component. Web-only component + documented native pattern.                                               |
-| `sidebar`              | **M**    | Mobile = drawer navigation. Web/desktop = real sidebar.                                                                                          |
-| `menubar`              | **W**    | Desktop-only pattern. Ships via RNR, but document it as desktop/web.                                                                             |
-| `resizable`            | **W**    | Pointer-only. Desktop/web only.                                                                                                                  |
-| `kbd`                  | **W**    | No meaning without a keyboard. Renders `null` on native.                                                                                         |
+| Component                                                   | Strategy | How                                                                                                                                                                                               |
+| ----------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sheet`                                                     | **S**    | Bottom sheet on native (`@gorhom/bottom-sheet`, or **N**), side sheet on web. Highest-value non-RNR component for a mobile app — build it early.                                                  |
+| `drawer`                                                    | **S**    | Same primitive as `sheet`; different default side/snap points.                                                                                                                                    |
+| `sonner` / toast                                            | **A**    | Over `@rn-primitives/portal` + Reanimated. Must respect safe-area insets on native.                                                                                                               |
+| `slider`                                                    | **N**    | Wraps `@react-native-community/slider`.                                                                                                                                                           |
+| `spinner`                                                   | **S**    | `ActivityIndicator` native / CSS spinner web.                                                                                                                                                     |
+| `form`                                                      | **A**    | `react-hook-form` is platform-agnostic — wire it to `Field`.                                                                                                                                      |
+| `field`                                                     | **A**    | Label + control + description + error. The workhorse; build before `form`.                                                                                                                        |
+| `item`                                                      | **A**    | List-row primitive. Trivial on web, **essential** on mobile — most mobile UI is rows.                                                                                                             |
+| `empty`                                                     | **A**    | Icon + title + description + action. Trivial.                                                                                                                                                     |
+| `input-group`                                               | **A**    | Input + affixes.                                                                                                                                                                                  |
+| `button-group`                                              | **A**    | Trivial composition.                                                                                                                                                                              |
+| `input-otp`                                                 | **A**    | RN `TextInput` with per-char boxes + `autoComplete="one-time-code"`.                                                                                                                              |
+| `scroll-area`                                               | **S**    | Native `ScrollView` / web styled scrollbars.                                                                                                                                                      |
+| `typography`                                                | **A**    | Heading/prose variants on your existing `Text`.                                                                                                                                                   |
+| `breadcrumb`                                                | **M**    | Full trail on web; on mobile collapse to back-affordance + current page.                                                                                                                          |
+| `table` / `data-table`                                      | **M**    | There is no `<table>` in RN. Mobile = `FlatList` of `Item` cards; web = real table. Same props, two renderers.                                                                                    |
+| `command`                                                   | **M**    | Web = overlay palette; mobile = full-screen search sheet. `FlatList` + fuzzy filter.                                                                                                              |
+| `combobox`                                                  | **A**    | Composition of `popover` + `command`. Build after both.                                                                                                                                           |
+| `calendar`                                                  | **S**    | `react-native-calendars` or **N** date-picker native; `react-day-picker` web.                                                                                                                     |
+| `date-picker`                                               | **S**    | `calendar` inside `popover` (web) / bottom sheet (native).                                                                                                                                        |
+| `carousel`                                                  | **S**    | `FlatList` `pagingEnabled` native; embla web.                                                                                                                                                     |
+| `chart`                                                     | **S**    | `victory-native` (Skia) native; `recharts` web. **Heavy — defer to last.**                                                                                                                        |
+| `pagination`                                                | **M**    | Web = page controls; mobile = infinite scroll. You already use `useInfiniteQuery`.                                                                                                                |
+| `navigation-menu`                                           | **M**    | Mobile = expo-router tabs/drawer, not a component. Web-only component + documented native pattern.                                                                                                |
+| `sidebar`                                                   | **M**    | Mobile = drawer navigation. Web/desktop = real sidebar.                                                                                                                                           |
+| `menubar`                                                   | **W**    | Desktop-only pattern. Ships via RNR, but document it as desktop/web.                                                                                                                              |
+| `resizable`                                                 | **W**    | Pointer-only. Desktop/web only.                                                                                                                                                                   |
+| `kbd`                                                       | **W**    | No meaning without a keyboard. Renders `null` on native.                                                                                                                                          |
+| `native-select`                                             | **S**    | Web `<select>`; native = the platform picker (iOS wheel / Android dialog). **Prefer this over `select` for mobile forms** — the OS control is faster, accessible for free, and what users expect. |
+| `direction`                                                 | **A**    | LTR/RTL provider. Cheap now, expensive to retrofit — on RN it needs `I18nManager` and logical properties wired together. Build in wave 1 even if you ship English-only.                           |
+| `message` `message-scroller` `bubble` `attachment` `marker` | —        | shadcn's own chat set (June 2026). **Overlaps the AI surface — see the foundation decision below.**                                                                                               |
 
-### AI surface
+`data-table`, `date-picker` and `typography` are docs _recipes_ upstream, not registry files.
+They're treated as components here because on mobile they need real implementations, not just a
+composition guide.
 
-The runtime — streaming, message parts, tool calls, branching, attachments, thread management
-— comes from **`@assistant-ui/react-native`** (unstyled primitives over `View`/`TextInput`/
-`FlatList`/`Pressable`, sharing runtime and adapters with `@assistant-ui/react`). You author
-the styled layer over it, exactly like RNR primitives → `packages/ui`.
+### AI surface (48 in AI Elements)
 
 Lives in `packages/ui/src/components/ai/`, kept separate from `ui/` primitives.
+
+#### First: pick the chat foundation
+
+Three sources now overlap on the same core chat components. Pick one, deliberately:
+
+| Foundation                                                                            | What it gives                                                                                                                                                                                                            | Verdict for this product                                                                                                               |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **`@assistant-ui/react-native`**                                                      | Unstyled RN primitives (`View`/`TextInput`/`FlatList`/`Pressable`) + the **runtime**: streaming, message parts, tool calls, branching, attachments, thread management. Shares runtime and adapters with its web package. | ✅ **Use this.** The only option that is actually native, and the runtime is the expensive part.                                       |
+| **shadcn chat set** (`message`, `message-scroller`, `bubble`, `attachment`, `marker`) | Scroll anchoring, streamed replies, history prepend, jump-to-message. Radix/Base UI, DOM.                                                                                                                                | Reference only. `message-scroller`'s anchoring behaviour is the best spec available for what our `conversation` must do on `FlatList`. |
+| **AI Elements** (Vercel)                                                              | The widest surface (48), but DOM — `radix-ui`, `motion`, `streamdown`, `@xyflow/react`, `media-chrome`.                                                                                                                  | Reference only — the API surface below is drawn from it.                                                                               |
 
 **Presentational only.** These components take plain props. The runtime/adapter wiring belongs
 in `packages/core` (plumbing, product-agnostic — products pass their config in), never here.
 
-| Component                    | Built on                | Notes                                                                               |
-| ---------------------------- | ----------------------- | ----------------------------------------------------------------------------------- |
-| `conversation`               | `ThreadPrimitive`       | Inverted `FlatList`. Handles auto-scroll natively — replaces `use-stick-to-bottom`. |
-| `message`                    | `MessagePrimitive`      | Role variants via cva.                                                              |
-| `prompt-input`               | `ComposerPrimitive`     | **Keyboard avoidance is the hard part on mobile** — budget for it.                  |
-| `actions`                    | `ActionBarPrimitive`    | Copy / regenerate / feedback row.                                                   |
-| `branch`                     | `BranchPickerPrimitive` |                                                                                     |
-| `thread-list`                | `ThreadListPrimitive`   | Pairs with drawer nav on mobile.                                                    |
-| `attachment`                 | `AttachmentPrimitive`   | `expo-image-picker` + `expo-document-picker` already in the template.               |
-| `response`                   | — (author)              | **Streaming markdown. The single hardest item — see §8 spike.**                     |
-| `code-block`                 | — (author)              | Horizontal `ScrollView` + highlighter, copy via `expo-clipboard`. See §8.           |
-| `reasoning`                  | — (author)              | `Collapsible` + `Text`. Pure composition.                                           |
-| `tool`                       | — (author)              | `Collapsible` + `Badge` + `CodeBlock`.                                              |
-| `sources`, `inline-citation` | — (author)              | `Badge` + `popover`/sheet.                                                          |
-| `task`, `chain-of-thought`   | — (author)              | `Collapsible` + `Item`.                                                             |
-| `suggestion`                 | — (author)              | Horizontal `ScrollView` of chips.                                                   |
-| `loader`                     | — (author)              | Shimmer over `Skeleton`.                                                            |
-| `context`                    | — (author)              | Token-usage meter over `Progress`.                                                  |
-| `artifact`                   | — (author)              | Full-screen sheet on mobile, side panel on web. **S**                               |
-| `image`                      | — (author)              | `expo-image`.                                                                       |
-| `web-preview`                | **W**                   | `react-native-webview` on native if genuinely needed; otherwise web/desktop only.   |
-| `toolbar`, `open-in-chat`    | **skip**                | Web-product-specific.                                                               |
+#### Scope decision: "all AI components" is 48, and you don't want 48
 
-`ai-elements`, `shadcn.io/ai` and assistant-ui's Tool UI are all Radix/DOM — **reference
-material for markup and prop naming only**, never dependencies.
+AI Elements' surface has grown well past chat. Roughly half of it is a **coding-agent IDE**
+surface and a **workflow-graph canvas** — neither has a sensible mobile form, and neither is
+implied by "an AI product." Build groups 1–3; take groups 4–6 only if the product turns out to
+need them.
+
+**Group 1 — Core chat (18). Build all.**
+`conversation` `message` `prompt-input` `reasoning` `tool` `sources` `inline-citation` `task`
+`chain-of-thought` `suggestion` `code-block` `context` `attachments` `artifact` `image`
+`shimmer` `confirmation` `queue`
+
+**Group 2 — Voice + audio (5). Build all — this is where mobile beats web.**
+`speech-input` `transcription` `mic-selector` `voice-selector` `audio-player`
+
+Native mic and audio are a genuine advantage of shipping mobile-first; `expo-audio` /
+`expo-speech` do what `media-chrome` does on web, better. Do not treat these as optional.
+
+**Group 3 — Agent/model config (4). Build — cheap compositions.**
+`model-selector` `persona` `agent` `schema-display`
+
+**Group 4 — Coding-agent surface (12). Defer.**
+`terminal` `file-tree` `stack-trace` `test-results` `sandbox` `commit`
+`environment-variables` `package-info` `plan` `checkpoint` `snippet` `jsx-preview`
+
+Only if you are building a coding agent. `terminal` and `file-tree` on a phone are a bad idea
+regardless.
+
+**Group 5 — Workflow canvas (6). Skip on mobile.**
+`canvas` `node` `edge` `connection` `controls` `panel`
+
+Pan/zoom node graphs (`@xyflow/react` on web) are a desktop interaction. If the product needs
+one on mobile, it needs a bespoke design, not a port.
+
+**Group 6 — Web-only (3). Fallback or skip.**
+`web-preview` (**W** — `react-native-webview` if truly needed) · `toolbar` (**W**) ·
+`open-in-chat` (skip)
+
+#### Group 1–3 build notes
+
+| Component                        | Built on                | Notes                                                                               |
+| -------------------------------- | ----------------------- | ----------------------------------------------------------------------------------- |
+| `conversation`                   | `ThreadPrimitive`       | Inverted `FlatList`. Handles auto-scroll natively — replaces `use-stick-to-bottom`. |
+| `message`                        | `MessagePrimitive`      | Role variants via cva.                                                              |
+| `prompt-input`                   | `ComposerPrimitive`     | **Keyboard avoidance is the hard part on mobile** — budget for it.                  |
+| `actions`                        | `ActionBarPrimitive`    | Copy / regenerate / feedback row.                                                   |
+| `branch`                         | `BranchPickerPrimitive` |                                                                                     |
+| `thread-list`                    | `ThreadListPrimitive`   | Pairs with drawer nav on mobile.                                                    |
+| `attachment`                     | `AttachmentPrimitive`   | `expo-image-picker` + `expo-document-picker` already in the template.               |
+| `response`                       | — (author)              | **Streaming markdown. The single hardest item — see §8 spike.**                     |
+| `code-block`                     | — (author)              | Horizontal `ScrollView` + highlighter, copy via `expo-clipboard`. See §8.           |
+| `reasoning`                      | — (author)              | `Collapsible` + `Text`. Pure composition.                                           |
+| `tool`                           | — (author)              | `Collapsible` + `Badge` + `CodeBlock`.                                              |
+| `sources`, `inline-citation`     | — (author)              | `Badge` + `popover`/sheet.                                                          |
+| `task`, `chain-of-thought`       | — (author)              | `Collapsible` + `Item`.                                                             |
+| `suggestion`                     | — (author)              | Horizontal `ScrollView` of chips.                                                   |
+| `loader`                         | — (author)              | Shimmer over `Skeleton`.                                                            |
+| `context`                        | — (author)              | Token-usage meter over `Progress`.                                                  |
+| `artifact`                       | — (author)              | Full-screen sheet on mobile, side panel on web. **S**                               |
+| `image`                          | — (author)              | `expo-image`.                                                                       |
+| `confirmation`                   | — (author)              | Tool-call approval gate. `alert-dialog` on web, bottom sheet on native. **S**       |
+| `queue`                          | — (author)              | Pending-message list. `Item` rows.                                                  |
+| `shimmer`                        | — (author)              | Live-status text shimmer ("Thinking…"). Reanimated native / CSS web. **S**          |
+| `speech-input`                   | — (author)              | `expo-audio` recording + waveform. Native mic permission flow.                      |
+| `transcription`                  | — (author)              | Streaming partial transcript — same incremental-render problem as `response`.       |
+| `mic-selector`, `voice-selector` | — (author)              | `native-select` / bottom sheet + preview playback.                                  |
+| `audio-player`                   | — (author)              | `expo-audio` native / `media-chrome` web. **S**                                     |
+| `model-selector`, `persona`      | — (author)              | `native-select` or sheet + `Item`.                                                  |
+| `agent`, `schema-display`        | — (author)              | Read-only config display. `Collapsible` + `CodeBlock`.                              |
+
+`actions`, `branch` and `thread-list` are no longer standalone entries in AI Elements (folded
+into `message`), but `@assistant-ui/react-native` exposes `ActionBarPrimitive`,
+`BranchPickerPrimitive` and `ThreadListPrimitive` — so we ship them as our own components.
+Likewise AI Elements' `response` is `MessageResponse`; ours is a separate component because the
+RN markdown renderer is a substantial thing of its own (§8).
+
+`ai-elements`, the shadcn chat set, `shadcn.io/ai` and assistant-ui's Tool UI are all Radix/DOM
+— **reference material for markup, anatomy and prop naming only**, never dependencies.
 
 ---
 
@@ -329,11 +394,12 @@ Ordered so that mobile-critical work lands first and nothing waits on a dependen
 | Wave                                 | Contents                                                                                                                                                                | Gate to clear before moving on                                          |
 | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | **0 — Tokens**                       | Author all three `tokens/*.json` layers. Regenerate. Add the §7 gates.                                                                                                  | Coverage test green; no-literal-color rule live. **Blocks everything.** |
-| **1 — Foundations**                  | `text` + `typography`, `icon`, `native-only-animated-view`, `PortalHost` in the app root, reconcile the existing 5.                                                     | Portal renders on iOS, Android and web.                                 |
+| **1 — Foundations**                  | `text` + `typography`, `icon`, `direction` (LTR/RTL), `native-only-animated-view`, `PortalHost` in the app root, reconcile the existing 5.                              | Portal renders on iOS, Android and web.                                 |
 | **2 — Atoms (R)**                    | `label` `separator` `skeleton` `aspect-ratio` `avatar` `progress` `checkbox` `switch` `radio-group` `toggle` `textarea` `alert` `badge` `input` `card` `button`         | All green in Storybook light+dark.                                      |
 | **3 — Layered (R)**                  | `collapsible` `accordion` `tabs` `toggle-group` `dialog` `alert-dialog` `popover` `tooltip` `hover-card` `dropdown-menu` `context-menu` `select`                        | Overlays position correctly on device, incl. safe-area.                 |
-| **4 — Mobile-critical gaps (A/N/S)** | `sheet` `drawer` `toast` `item` `field` `form` `spinner` `empty` `input-group` `button-group` `input-otp` `slider` `scroll-area`                                        | **This is the wave that makes it a real mobile app toolkit.**           |
-| **5 — AI**                           | assistant-ui runtime in `packages/core`, then the AI ledger. Presentational components first, `response`/`code-block` after their spikes resolve.                       | A working chat screen on iOS.                                           |
+| **4 — Mobile-critical gaps (A/N/S)** | `sheet` `drawer` `toast` `item` `field` `form` `native-select` `spinner` `empty` `input-group` `button-group` `input-otp` `slider` `scroll-area`                        | **This is the wave that makes it a real mobile app toolkit.**           |
+| **5a — AI core chat**                | assistant-ui runtime in `packages/core`, then AI group 1 (18). Presentational components first; `response`/`code-block` after their spikes resolve.                     | A working chat screen on iOS.                                           |
+| **5b — AI voice + config**           | AI groups 2 (voice/audio, 5) and 3 (model/agent config, 4).                                                                                                             | Push-to-talk working on a real device.                                  |
 | **6 — Web/desktop-heavy**            | `table`/`data-table` `command` `combobox` `sidebar` `navigation-menu` `breadcrumb` `pagination` `calendar` `date-picker` `carousel` `menubar` `resizable` `kbd` `chart` | `chart` last — heaviest, least mobile-critical.                         |
 
 Waves 2 and 3 are mechanical and parallelize well across sessions. Waves 4–6 need real design
@@ -364,17 +430,17 @@ covering your actual brands.
 
 ## 7. Gates
 
-Add these in wave 0, before the component work starts. Retrofitting them across 57 components
+Add these in wave 0, before the component work starts. Retrofitting them across 90+ components
 is not fun.
 
-| Gate                          | What it does                                                                                                                                                                                                                                                                                      |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Token coverage test**       | Every `var(--x)` referenced by `tailwind-preset.cjs` has a value in every brand × {light, dark}. Catches today's `--accent`/`--popover`/`--radius` hole and every future one.                                                                                                                     |
-| **No-literal-color lint**     | ESLint rule rejecting hex / `rgb()` / `hsl()` literals in `className` strings and style objects under `src/components/`. Makes invariant #1 real instead of aspirational.                                                                                                                         |
-| **Platform-parity typecheck** | For **S** components, both `.native.tsx` and `.web.tsx` must satisfy the shared `.types.ts`. Free — just don't skip the types file.                                                                                                                                                               |
-| **Barrel completeness**       | Every `src/components/**/<name>.tsx` is exported from `src/index.ts`. Trivial test, catches the most common omission.                                                                                                                                                                             |
-| **VR matrix — capped**        | 57 components × ~4 variants × 2 themes × N brands × 2 platforms explodes. **Cap at {light, dark} × 2 representative brands × linux CI baselines**, with the per-platform local set only for components whose type rendering actually differs. Decide this before generating baselines, not after. |
-| **RNTL per component**        | Already the standard; keep it non-negotiable for authored (**A**) components especially, since they have no upstream test heritage.                                                                                                                                                               |
+| Gate                          | What it does                                                                                                                                                                                                                                                                                       |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Token coverage test**       | Every `var(--x)` referenced by `tailwind-preset.cjs` has a value in every brand × {light, dark}. Catches today's `--accent`/`--popover`/`--radius` hole and every future one.                                                                                                                      |
+| **No-literal-color lint**     | ESLint rule rejecting hex / `rgb()` / `hsl()` literals in `className` strings and style objects under `src/components/`. Makes invariant #1 real instead of aspirational.                                                                                                                          |
+| **Platform-parity typecheck** | For **S** components, both `.native.tsx` and `.web.tsx` must satisfy the shared `.types.ts`. Free — just don't skip the types file.                                                                                                                                                                |
+| **Barrel completeness**       | Every `src/components/**/<name>.tsx` is exported from `src/index.ts`. Trivial test, catches the most common omission.                                                                                                                                                                              |
+| **VR matrix — capped**        | 90+ components × ~4 variants × 2 themes × N brands × 2 platforms explodes. **Cap at {light, dark} × 2 representative brands × linux CI baselines**, with the per-platform local set only for components whose type rendering actually differs. Decide this before generating baselines, not after. |
+| **RNTL per component**        | Already the standard; keep it non-negotiable for authored (**A**) components especially, since they have no upstream test heritage.                                                                                                                                                                |
 
 ---
 
