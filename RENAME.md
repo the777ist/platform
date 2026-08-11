@@ -326,20 +326,14 @@ git status --porcelain products/*/api-client/src products/*/api/openapi.json  # 
 # every authed call (the HS256 fallback rejecting the ES256 token).
 cd products/_template/app && CI=1 pnpm exec playwright test     # full-stack E2E
 cd products/demo/app      && CI=1 pnpm exec playwright test     # full-stack E2E (stamp)
-# The api pytest suites read TEST_DATABASE_URL and default to localhost:5432 (the CI
-# service-container port mapping). Locally each product's DB is on its own port
-# (54322 + 100·portIndex) and 5432 may be a FOREIGN Postgres — one turbo invocation
-# cannot carry two URLs, so run the api tests per product. The var only survives into
-# pytest because root turbo.json declares `test.env: ["TEST_DATABASE_URL"]` — under
-# turbo's strict env mode an undeclared var is stripped SILENTLY and the suite runs
-# green against :5432 (or a foreign Postgres). ORDER MATTERS: run them
-# AFTER the E2E — pytest's create_all() tolerates the alembic-built schema, but
-# alembic (the E2E's migrate step) dies with DuplicateTable on a create_all-built one
-# (`supabase db reset` in the product dir un-wedges a contaminated stack DB).
-TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:54322/postgres \
-  pnpm turbo run test --filter=@<repo>/template-api --force
-TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:54422/postgres \
-  pnpm turbo run test --filter=@<repo>/demo-api --force
+# The api suites need no env: each reads its product.json and targets that product's own
+# stack locally (54322 + 100·portIndex), CI's :5432 service container when CI is set.
+# Do NOT set CI=1 for this line — that would point both suites at a :5432 that is either
+# nothing or a FOREIGN Postgres. ORDER MATTERS: run them AFTER the E2E — pytest's
+# create_all() tolerates the alembic-built schema, but alembic (the E2E's migrate step)
+# dies with DuplicateTable on a create_all-built one (`supabase db reset` in the product
+# dir un-wedges a contaminated stack DB).
+pnpm turbo run test --filter=@<repo>/template-api --filter=@<repo>/demo-api --force
 pnpm --filter @<repo>/ui build-storybook                        # VR serves storybook-static —
 cd packages/ui            && pnpm exec playwright test          #   build it first (as CI does),
                                                                 #   else webServer times out
