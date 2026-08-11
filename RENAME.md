@@ -7,8 +7,17 @@ procedure: extracted from the actual rename of THIS repo to `the777incident` (co
 `fa2eb9f` → `eea8a91` → `114a0ed`, PRs #6–#8, 117 file changes), then validated by
 running it in REVERSE and reproducing the pre-rename tree **byte-exactly**.
 
+It is a SUPERSET of that run, not a transcript of it: four spots the original rename
+missed are folded in (each marked **Missed by the real run**), so following this
+end-to-end lands a more complete rename than `the777incident` itself carries.
+
 Throughout, `<repo>` = your new identity (worked example: `the777incident`). One identity
 serves as repo name, org, and scope here; if yours differ, substitute per layer.
+
+Scope: this renames the IDENTITY only. Anything the real repo grew afterwards — products
+stamped post-rename, a logo, scratchpad notes — is separate work and deliberately absent
+here. Run the playbook and the tree is byte-identical to a renamed template, not to a
+particular repo's later history.
 
 ## The identity model
 
@@ -91,7 +100,13 @@ serves as repo name, org, and scope here; if yours differ, substitute per layer.
 | `PHILOSOPHY.md`        | title gains the repo name                                                                                                                                                                    |
 | `products/*/README.md` | "in the platform monorepo" → "in the `<repo>` monorepo" — `_template` AND `demo` identically (stamp-invariant pair). MISSED by the original `fa2eb9f` run; found by the `sevenfold` test run |
 
-## Layer 2 — bake the org (29 files, 80 lines — commit `eea8a91`)
+`PHILOSOPHY.md`'s title RESHAPES rather than just gaining a prefix — the interior em-dash
+moves to the front: `# Multi-Product Cross-Platform Monorepo — Philosophy` →
+`# <repo> — Multi-Product Cross-Platform Monorepo Philosophy`.
+
+## Layer 2 — bake the org (commit `eea8a91` = 29 files / 80 lines; 2b widens it)
+
+Values first (below), then the prose that describes them (2b) — one commit, two halves.
 
 Per product — `products/_template` AND `products/demo`, identically:
 
@@ -122,6 +137,83 @@ Root level:
 - **`scripts/remove-product.mjs`** — `const org = "..."` + the hardcoded
   `com.supabase.cli.project=<org>-${name}` docker-volume hint (post-dates the original
   run — added on main after the `sevenfold` verification)
+
+### Layer 2b — de-placeholder the prose (same commit, easiest half to miss)
+
+The tables above say where the org's VALUE lives. This half is where the org's STATUS is
+asserted — every sentence, comment, and `<org>` token that calls the org a placeholder.
+Baking the org makes those claims FALSE, so they change with the values or the tree
+contradicts itself (`owner: <repo> # PLACEHOLDER org`). A value-only sweep passes every
+gate and still leaves ~25 lines lying about the repo.
+
+**The rule:** the ORG is now known, so any "placeholder" wording or `<org>` token that
+refers to the ORG resolves. Wording about infra that still does not exist — Fly apps, the
+desktop-releases repo, the EAS project id, Sentry projects/DSNs, signing certs, CI
+secrets, brand assets — STAYS a marked placeholder. That distinction is what makes the
+post-rename audit `git grep TODO` (not `git grep example`).
+
+Keep `<org>` only where it is the naming-convention PATTERN (`<org>-<product>-<env>`,
+`<org>/<product>-desktop-releases` as a shape); substitute it wherever it stands in for
+THIS repo's actual owner in a concrete name or path.
+
+Per product — `products/_template` AND `products/demo`, identically:
+
+- `app/app.config.ts` — the two Sentry trailing comments:
+  - `// PLACEHOLDER org slug` → `// the org (Sentry org created on infra day)`
+  - `// PLACEHOLDER Sentry project slug` → `// Sentry project slug (created on infra day)`
+- `desktop/electron-builder.yml` — three spots, not one (and a fourth that stays):
+  - header line 3, "…the `<org>` owner is a marked placeholder until a real org exists"
+    → the owner is the `<repo>` org (only the appId/publish-repo halves stay generator
+    placeholders). **Missed by the real run** — it still contradicts line 47 there
+  - `owner: <repo> # PLACEHOLDER org` → `# the org (releases repo created on infra day)`
+  - the `repo:` line's trailing comment `# <org>/<product>-desktop-releases (per-product)`
+    → `# <repo>/<product>-desktop-releases (per-product)`. **Missed by the real run**
+  - line 42's `# PLACEHOLDER until a real releases repo exists (Key ruling #3)` STAYS —
+    the repo genuinely does not exist yet
+- `CLAUDE.md` — 2 spots beyond the value swaps:
+  - on the desktop line, `<org>` resolves AND the ``(org placeholder `example`)``
+    parenthetical is DELETED, not reworded — the sentence just ends after the repo path
+  - ``(`example` = org placeholder.)`` → ``(`<repo>` = the org.)``
+- `.claude/commands/release.md` — `` `<org>/<product>-desktop-releases` `` →
+  `` `<repo>/<product>-desktop-releases` ``
+
+Root level:
+
+- `CLAUDE.md` — the naming line is REWRITTEN, not swapped (this is also layer 3's semantic
+  follow-up; do it once, in whichever layer you reach first): "Naming derives from the
+  PRODUCT, never the repo: … (org placeholder `example`)" → "Naming: the org prefix is
+  `<repo>` (`@<repo>/*` packages, `com.<repo>.*` bundle ids, infra
+  `<repo>-<product>-<env>`); the PRODUCT segment always derives from the product name,
+  never the repo."
+- `PHILOSOPHY.md` — 4 prose rewrites on top of the value swaps already listed:
+  - naming-conventions header block: `com.example.*` loses "(placeholder until a real
+    reverse-domain is chosen)" → "(the org reverse-domain)"; "(org placeholder `example`)"
+    → "(org `<repo>`)"; and the keep-placeholders sentence narrows to the survivors —
+    "Keep the remaining placeholders (`TODO-EAS-PROJECT-ID` and friends) clearly marked;
+    the org `<repo>` is baked in — create its infra accounts on infra day."
+  - the Multi-product stack bullet's `infra naming <org>-<product>-<env>` gains
+    "(org `<repo>`)"
+  - key ruling #3: "`<org>/<product>-desktop-releases` repo (placeholder until real
+    org/repo exists)" → "`<repo>/<product>-desktop-releases` repo (created on infra day)"
+  - verification item #5: the audit itself narrows from `git grep -inE 'example|TODO'` to
+    `git grep -inE 'TODO'`, and "with clearly marked `example` org placeholders" becomes
+    "with the org `<repo>` baked in"
+- `.claude/commands/release.md` + `.claude/commands/ptfm-product.md` — the `<org>` tokens
+  in `<org>/<product>-desktop-releases` and `<org>-<product>-<env>` resolve to `<repo>`
+- `.github/workflows/deploy-api.yml` — the header comment: "All secrets/app names are
+  clearly-marked placeholders (org placeholder `example`) until real infra exists." →
+  "All secrets/app names carry the org `<repo>`; the Fly apps themselves are created on
+  infra day."
+- **`.github/workflows/electron-release.yml`** — 3 `<org>/<product>-desktop-releases`
+  mentions (header comment, the DESKTOP_RELEASES_TOKEN comment, the `GH_TOKEN:` trailing
+  comment). The `# PLACEHOLDER` markers on the secrets themselves STAY. **The file was
+  absent from the original layer-2 commit entirely** — it is still un-renamed there
+- `scripts/new-product.mjs` — beyond `const org`: the comment `// placeholder org` →
+  `// the org`; the checklist banner "(swap the ${org} placeholders for real org values)"
+  → "(create these under the ${org} org)"; and the desktop line's literal
+  `<org>/${name}-desktop-releases` → `${org}/${name}-desktop-releases` (interpolate it —
+  the checklist now prints a real repo path)
+- `scripts/remove-product.mjs` — the same `// placeholder org` → `// the org` comment
 
 ## Layer 3 — package scope (84 files, 239 occurrences + lockfile — commit `114a0ed`)
 
@@ -166,6 +258,13 @@ stamps come out `@<repo>/<name>-app` automatically — proven by the first post-
   worked example. Exclude them from every layer's replacements AND from the residual
   audits (`':!RENAME.md'`), or layer 3 corrupts the playbook and the
   239-occurrence count won't reproduce
+- **placeholder wording that is still TRUE after the rename** (layer 2b's rule): the
+  `# PLACEHOLDER` secret markers in every workflow, `.env.staging|production`'s "Values
+  are MARKED PLACEHOLDERS until real infra exists", electron-builder's cert/notarization
+  and releases-repo markers, `TODO-EAS-PROJECT-ID`, the Figma placeholder modeIds, the
+  brand-asset placeholders, `seed.py`'s placeholder user, `export_openapi.py`'s inert
+  placeholder DB URLs, and NativeWind/RN `placeholder` props + Playwright
+  `getByPlaceholder` — none of these are about the ORG
 - the word `platform` outside the identity spots: generic prose ("each platform's native
   store", PHILOSOPHY's "platform/template monorepo"), APIs (`process.platform`,
   Playwright's `{platform}` token), and the `PATCH(platform)` tag inside
@@ -209,6 +308,10 @@ pnpm --filter @<repo>/ui build-storybook                        # VR serves stor
 cd packages/ui            && pnpm exec playwright test          #   build it first (as CI does),
                                                                 #   else webServer times out
 git grep -in '<old-tokens>' -- ':!pnpm-lock.yaml' ':!RENAME.md'  # residual → keep-list only
+# Layer 2b completeness — these three must come back EMPTY (except this playbook):
+git grep -inE 'org placeholder|PLACEHOLDER org|placeholder org' -- ':!RENAME.md'
+git grep -inF '<org>' -- ':!RENAME.md'   # only the <org>-<product>-<env> PATTERN may remain
+git grep -in 'placeholder' -- ':!pnpm-lock.yaml' ':!RENAME.md'  # every hit must be keep-list
 ```
 
 Plus the stamp-invariant script (constraint 4) over every changed product-file pair.
