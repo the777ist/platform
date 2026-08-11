@@ -88,6 +88,11 @@ every one of these before importing components** — `--accent` and `--popover` 
 declared in the preset with no value anywhere, so any component using `bg-accent` renders
 transparent today.
 
+> **This list is mirrored, designer-facing, in [FIGMA.md](./FIGMA.md) §1.** That copy is the
+> contract handed to a design team, and it is the same contract — hand it to them _before_ they
+> start, not at handover. **Change one, change both.** The §7 coverage test catches a token that
+> has no value; it cannot catch these two lists disagreeing.
+
 **Colors** — HSL channel triplets (`240 6% 10%`), consumed as `hsl(var(--x))`:
 
 ```
