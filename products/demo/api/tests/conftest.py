@@ -12,26 +12,14 @@ from demo_api.db import get_session
 from demo_api.main import create_app
 from demo_api.schemas.user import MeRead
 
-from . import DB_HOST_PORT
+# Real Postgres (Supabase local in dev; postgres service container in CI). NOT sqlite.
+# tests/__init__.py resolves the URL + database name and exports the DATABASE_URL /
+# DATABASE_MIGRATION_URL defaults — it must run first, because demo_api.main reads
+# Settings at import time. An explicit TEST_DATABASE_URL is respected verbatim there.
+# Re-exported here so `from tests.conftest import TEST_DB_URL` keeps working.
+from . import TEST_DB_NAME, TEST_DB_URL
 
 TEST_OWNER = "11111111-1111-1111-1111-111111111111"
-
-# Real Postgres (Supabase local in dev; postgres service container in CI). NOT sqlite.
-# (tests/__init__.py already exported DATABASE_URL/DATABASE_MIGRATION_URL defaults —
-# demo_api.main reads Settings at import time.)
-#
-# The DEFAULT (no TEST_DATABASE_URL set) targets a PER-PRODUCT database on whichever
-# host tests/__init__.py resolved — CI's shared service container, or this product's own
-# local Supabase stack. Per-product because in CI every suite shares one :5432 container
-# and turbo runs them in parallel, so concurrent create_all() against ONE database races
-# on the pg_type catalog (UniqueViolation on pg_type_typname_nsp_index). Concatenated
-# name so the product token stays a whole word (same reason as RLS_DB in
-# test_migration_rls). An explicit TEST_DATABASE_URL is still respected verbatim.
-_TEST_DB = "demo_api" + "_test"
-TEST_DB_URL = os.environ.get(
-    "TEST_DATABASE_URL",
-    f"postgresql+psycopg://postgres:postgres@{DB_HOST_PORT}/{_TEST_DB}",
-)
 
 
 @pytest.fixture(scope="session")
@@ -45,10 +33,10 @@ def engine() -> Engine:
         )
         with admin.connect() as conn:
             present = conn.execute(
-                text("SELECT 1 FROM pg_database WHERE datname = :n"), {"n": _TEST_DB}
+                text("SELECT 1 FROM pg_database WHERE datname = :n"), {"n": TEST_DB_NAME}
             ).scalar()
             if present is None:
-                conn.execute(text(f'CREATE DATABASE "{_TEST_DB}"'))
+                conn.execute(text(f'CREATE DATABASE "{TEST_DB_NAME}"'))
         admin.dispose()
     eng = create_engine(TEST_DB_URL, poolclass=NullPool, connect_args={"prepare_threshold": None})
     SQLModel.metadata.create_all(

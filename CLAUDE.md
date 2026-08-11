@@ -60,9 +60,10 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   key, then `alembic upgrade head` + `python -m <name>_api.seed` from `api/`. NEVER leave
   `SUPABASE_JWKS_URL=` / `SUPABASE_JWT_SECRET=` as empty-string lines — pydantic reads ""
   (not None), it passes the `is not None` checks in `auth.py`, and every authed call 401s.
-- Local API tests need NO env. `tests/__init__.py` reads the product's `portIndex` and
-  targets CI's `:5432` service container when `CI` is set, else THAT product's own stack
-  (`54322+100i`), auto-creating a per-product `<module>_api_test` database on it — so
+- Local API tests need NO env. `tests/__init__.py` targets CI's `:5432` service container
+  when `CI` is set, else THAT product's own stack — reading `db.port` from its
+  `supabase/config.toml` rather than re-deriving `54322+100i` — and auto-creates a
+  per-product `<module>_api_test` database on it, so
   `pnpm turbo run test` and `uv run pytest` both just work with the stack up. Never
   default to a bare `:5432` locally: it is either nothing or a FOREIGN Postgres, and the
   suite passes green against the wrong database. `TEST_DATABASE_URL` still overrides

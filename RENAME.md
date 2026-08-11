@@ -326,8 +326,8 @@ git status --porcelain products/*/api-client/src products/*/api/openapi.json  # 
 # every authed call (the HS256 fallback rejecting the ES256 token).
 cd products/_template/app && CI=1 pnpm exec playwright test     # full-stack E2E
 cd products/demo/app      && CI=1 pnpm exec playwright test     # full-stack E2E (stamp)
-# The api suites need no env: each reads its product.json and targets that product's own
-# stack locally (54322 + 100·portIndex), CI's :5432 service container when CI is set.
+# The api suites need no env: each targets that product's own stack locally (db.port from
+# its supabase/config.toml), CI's :5432 service container when CI is set.
 # Do NOT set CI=1 for this line — that would point both suites at a :5432 that is either
 # nothing or a FOREIGN Postgres. ORDER MATTERS: run them AFTER the E2E — pytest's
 # create_all() tolerates the alembic-built schema, but alembic (the E2E's migrate step)
