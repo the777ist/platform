@@ -4,7 +4,7 @@ A repo carrying the template's generic identity — README `# Cross-Platform Tem
 root package `platform`, org placeholder `example`, package scope `@platform/*` — gets
 renamed to its real identity with this playbook. It is the complete, commit-verified
 procedure: extracted from the actual rename of THIS repo to `the777incident` (commits
-`fa2eb9f` → `eea8a91` → `114a0ed`, PRs #6–#8, 117 file changes), then validated by
+`fa2eb9f` → `eea8a91` → `114a0ed`, PRs #6–#8), then validated by
 running it in REVERSE and reproducing the pre-rename tree **byte-exactly**.
 
 It is a SUPERSET of that run, not a transcript of it: four spots the original rename
@@ -53,6 +53,19 @@ particular repo's later history.
 2. **Exact-count, per-file replacements — never a blind repo-wide sed.** Assert the
    expected occurrence count per string per file (a script that dies on mismatch). The
    keep-list below is exactly what a blind sed corrupts.
+
+   **Measure your OWN tree; never take a count from this document.** This doc names WHAT
+   changes; the run derives HOW MANY from the tree in front of it. Pre-flight each layer —
+
+   ```bash
+   git grep -oF '<string>' -- ':!pnpm-lock.yaml' ':!RENAME.md' | sort | uniq -c
+   ```
+
+   — save that per-file manifest, replace, then assert the tree matches it. Counts baked
+   into prose rot the moment anything else lands: the layer-3 total was exactly right at
+   `114a0ed` and was already off by four before the next feature branch merged. A stale
+   number turns a correct run red and trains you to ignore the assertion.
+
 3. **Whole-word tokens only.** Rewrites (yours and the generator's) cannot see into longer
    identifiers — `template_api_rls_test` survived a stamp untouched once and collided on
    CI's shared Postgres. Derived names in `_template` keep the token word-delimited
@@ -90,7 +103,7 @@ particular repo's later history.
    `[auth.mfa.phone]` message template) are config-schema names, not product tokens — the
    generator masks them; your edits must not touch them either.
 
-## Layer 1 — repo identity (6 files, 7 lines — commit `fa2eb9f` + one gap fix)
+## Layer 1 — repo identity (commit `fa2eb9f` + one gap fix)
 
 | File                   | Change                                                                                                                                                                                       |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -104,7 +117,7 @@ particular repo's later history.
 moves to the front: `# Multi-Product Cross-Platform Monorepo — Philosophy` →
 `# <repo> — Multi-Product Cross-Platform Monorepo Philosophy`.
 
-## Layer 2 — bake the org (commit `eea8a91` = 29 files / 80 lines; 2b widens it)
+## Layer 2 — bake the org (commit `eea8a91`, widened by 2b)
 
 Values first (below), then the prose that describes them (2b) — one commit, two halves.
 
@@ -113,20 +126,20 @@ Per product — `products/_template` AND `products/demo`, identically:
 | File                                               | What carries the org                                                                      |
 | -------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | `api/fly.staging.toml` + `api/fly.production.toml` | `app = "<org>-<product>-api-stg\|prod"`                                                   |
-| `api/src/<module>/tasks.py`                        | 4× fly-run docstring app names                                                            |
+| `api/src/<module>/tasks.py`                        | the fly-run docstring app names                                                           |
 | `app/app.config.ts`                                | `bundleIdentifier` + `package` (`com.<org>.<product>`), Sentry `organization` + `project` |
 | `app/.env.staging` / `.env.production`             | API URL value + its comment (2 each)                                                      |
 | `app/.maestro/login.yaml`                          | `appId`                                                                                   |
 | `desktop/electron-builder.yml`                     | `appId`, `copyright`, publish `owner`                                                     |
 | `supabase/config.toml`                             | `project_id` (+ its comment) — STACKS STOPPED FIRST                                       |
-| `CLAUDE.md`                                        | 6 spots: desktop appId, releases repo, project_id, Fly/Supabase/Sentry names, org note    |
+| `CLAUDE.md`                                        | desktop appId, releases repo, project_id, Fly/Supabase/Sentry names, org note             |
 | `.claude/commands/release.md`                      | desktop-releases repo owner                                                               |
 
 Root level:
 
-- `README.md` — the create-a-product infra checklist (3 `<org>` mentions)
+- `README.md` — the create-a-product infra checklist (every `<org>` mention)
 - `CLAUDE.md` — the naming-convention line
-- `PHILOSOPHY.md` — 11 spots: naming-conventions header block, keep-placeholders sentence,
+- `PHILOSOPHY.md` — naming-conventions header block, keep-placeholders sentence,
   key ruling #3 (desktop-releases), directory-tree annotations (project_id, bundle ids,
   appId, publish target, fly app), generator checklist spec, the naming-audit verification
   item (post-rename it becomes `git grep TODO`), the multi-product infra-naming line
@@ -144,7 +157,7 @@ The tables above say where the org's VALUE lives. This half is where the org's S
 asserted — every sentence, comment, and `<org>` token that calls the org a placeholder.
 Baking the org makes those claims FALSE, so they change with the values or the tree
 contradicts itself (`owner: <repo> # PLACEHOLDER org`). A value-only sweep passes every
-gate and still leaves ~25 lines lying about the repo.
+gate and still leaves a couple of dozen lines lying about the repo.
 
 **The rule:** the ORG is now known, so any "placeholder" wording or `<org>` token that
 refers to the ORG resolves. Wording about infra that still does not exist — Fly apps, the
@@ -170,7 +183,7 @@ Per product — `products/_template` AND `products/demo`, identically:
     → `# <repo>/<product>-desktop-releases (per-product)`. **Missed by the real run**
   - line 42's `# PLACEHOLDER until a real releases repo exists (Key ruling #3)` STAYS —
     the repo genuinely does not exist yet
-- `CLAUDE.md` — 2 spots beyond the value swaps:
+- `CLAUDE.md` — beyond the value swaps:
   - on the desktop line, `<org>` resolves AND the ``(org placeholder `example`)``
     parenthetical is DELETED, not reworded — the sentence just ends after the repo path
   - ``(`example` = org placeholder.)`` → ``(`<repo>` = the org.)``
@@ -185,7 +198,7 @@ Root level:
   `<repo>` (`@<repo>/*` packages, `com.<repo>.*` bundle ids, infra
   `<repo>-<product>-<env>`); the PRODUCT segment always derives from the product name,
   never the repo."
-- `PHILOSOPHY.md` — 4 prose rewrites on top of the value swaps already listed:
+- `PHILOSOPHY.md` — prose rewrites on top of the value swaps already listed:
   - naming-conventions header block: `com.example.*` loses "(placeholder until a real
     reverse-domain is chosen)" → "(the org reverse-domain)"; "(org placeholder `example`)"
     → "(org `<repo>`)"; and the keep-placeholders sentence narrows to the survivors —
@@ -204,7 +217,7 @@ Root level:
   clearly-marked placeholders (org placeholder `example`) until real infra exists." →
   "All secrets/app names carry the org `<repo>`; the Fly apps themselves are created on
   infra day."
-- **`.github/workflows/electron-release.yml`** — 3 `<org>/<product>-desktop-releases`
+- **`.github/workflows/electron-release.yml`** — the `<org>/<product>-desktop-releases`
   mentions (header comment, the DESKTOP_RELEASES_TOKEN comment, the `GH_TOKEN:` trailing
   comment). The `# PLACEHOLDER` markers on the secrets themselves STAY. **The file was
   absent from the original layer-2 commit entirely** — it is still un-renamed there
@@ -215,28 +228,46 @@ Root level:
   the checklist now prints a real repo path)
 - `scripts/remove-product.mjs` — the same `// placeholder org` → `// the org` comment
 
-## Layer 3 — package scope (84 files, 239 occurrences + lockfile — commit `114a0ed`)
+**Not on this list yet, but coming.** `app/app.config.ts` carries no user-facing copy
+today — only ids, slugs and asset paths. The design-system build-out's voice and
+attachment waves pull in `expo-audio`, `expo-speech`, `expo-image-picker` and
+`expo-document-picker`, each of which needs an iOS usage-description string configured as
+a plugin prop. Those are sentences shown to a user that name the app, landing in a file
+that is both stamp-invariant and identity-bearing — the first place a real org name can
+reach shipped UI. Keep the product token word-delimited in that copy (constraint 3) so
+the generator's `\btemplate\b` rewrite can still see it, and add the strings here when
+they land.
+
+## Layer 3 — package scope (commit `114a0ed`)
 
 Method: uniform string replace `@platform` → `@<repo>` in every tracked file EXCEPT
 `pnpm-lock.yaml` AND this playbook itself (`RENAME.md` documents the GENERIC
 identity; rewriting it corrupts the procedure), then
-`pnpm install` to regenerate the lockfile. Expected: exactly 239 occurrences across
-83 files (the lockfile is the 84th changed file). The one string uniformly covers
-every context it hides in — the full hiding-spot list from the real commit:
+`pnpm install` to regenerate the lockfile. Measure the occurrence count first
+(constraint 2) — the lockfile is one changed file beyond whatever that manifest lists.
+The one string uniformly covers every context it hides in; this is the hiding-spot list,
+not a file list, so it stays valid as the tree grows:
 
-- 11 package.json `name`s + all `workspace:*` dependency entries
+- every package.json `name` + all `workspace:*` dependency entries
 - every TS/TSX import in `packages/*` and both products' app/feature/route files
-- `tsconfig.json` `extends` (`@<repo>/config/tsconfig/expo`) — 5 files
+- `tsconfig.json` `extends` (`@<repo>/config/tsconfig/expo`)
 - `tailwind.config.js` preset `require`s AND the content-glob
   `require.resolve("@<repo>/ui/package.json")` — ui + both apps
 - `packages/ui/jest.config.js` — the `transformIgnorePatterns` REGEX (`@<repo>/.*`)
-- `.github/workflows/e2e-nightly.yml` — 4 `pnpm --filter @<repo>/...` lines
+- `.github/workflows/e2e-nightly.yml` — the `pnpm --filter @<repo>/...` lines
 - root `eslint.config.mjs` (re-exports `@<repo>/config/eslint`) + `lefthook.yml` comment
 - `packages/config/tailwind-preset.cjs`, `packages/core/src/api.ts`,
   `products/*/desktop/turbo.json` — scope in comments
 - `packages/ui/.storybook/visual-regression.spec.ts` — command strings in comments/errors
-- all docs: root + product README/CLAUDE.md, `packages/ui` CLAUDE.md, every ptfm command,
-  the thin commands (`add-component`, `dev`, `add-feature`)
+- all docs: root + product README/CLAUDE.md, `packages/ui` CLAUDE.md **and BUILDOUT.md**
+  (its H1 is literally `# @<repo>/ui — build-out`, and its recipe embeds
+  `pnpm --filter @<repo>/ui dlx …` command strings), every ptfm command, the thin commands
+  (`add-component`, `dev`, `add-feature`)
+- **whatever `packages/ui` has grown since** — the design-system build-out adds a
+  per-component docs tree (`packages/ui/docs/components/*.md`, one file per component), an
+  `src/components/ai/` tree and `tokens/*.json`. None of these exist while the build-out is
+  pending, which is exactly why this list is by KIND (docs, imports, config, command
+  strings) rather than by path: new trees under `packages/*` inherit it for free
 
 Semantic follow-up: reword the root `CLAUDE.md` naming line — the org prefix now derives
 from the repo, but the PRODUCT segment still always derives from the product name.
@@ -255,9 +286,11 @@ stamps come out `@<repo>/<name>-app` automatically — proven by the first post-
 - the English words "example"/"template" in prose; `snapshotPathTemplate` (Playwright API)
 - TOML `template =` keys (constraint 7)
 - **`RENAME.md` itself** — it documents the generic identity and the
-  worked example. Exclude them from every layer's replacements AND from the residual
-  audits (`':!RENAME.md'`), or layer 3 corrupts the playbook and the
-  239-occurrence count won't reproduce
+  worked example. Exclude it from every layer's replacements AND from the residual
+  audits (`':!RENAME.md'`), or layer 3 corrupts the playbook and the measured count
+  won't reproduce. **`packages/ui/BUILDOUT.md` is NOT keep-listed** — the two are easy to
+  conflate (both meta-docs about the repo), but BUILDOUT.md describes the REAL design
+  system and its scope references must be rewritten like any other doc
 - **placeholder wording that is still TRUE after the rename** (layer 2b's rule): the
   `# PLACEHOLDER` secret markers in every workflow, `.env.staging|production`'s "Values
   are MARKED PLACEHOLDERS until real infra exists", electron-builder's cert/notarization
@@ -293,17 +326,14 @@ git status --porcelain products/*/api-client/src products/*/api/openapi.json  # 
 # every authed call (the HS256 fallback rejecting the ES256 token).
 cd products/_template/app && CI=1 pnpm exec playwright test     # full-stack E2E
 cd products/demo/app      && CI=1 pnpm exec playwright test     # full-stack E2E (stamp)
-# The api pytest suites read TEST_DATABASE_URL and default to localhost:5432 (the CI
-# service-container port mapping). Locally each product's DB is on its own port
-# (54322 + 100·portIndex) and 5432 may be a FOREIGN Postgres — one turbo invocation
-# cannot carry two URLs, so run the api tests per product. ORDER MATTERS: run them
-# AFTER the E2E — pytest's create_all() tolerates the alembic-built schema, but
-# alembic (the E2E's migrate step) dies with DuplicateTable on a create_all-built one
-# (`supabase db reset` in the product dir un-wedges a contaminated stack DB).
-TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:54322/postgres \
-  pnpm turbo run test --filter=@<repo>/template-api --force
-TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:54422/postgres \
-  pnpm turbo run test --filter=@<repo>/demo-api --force
+# The api suites need no env: each reads its product.json and targets that product's own
+# stack locally (54322 + 100·portIndex), CI's :5432 service container when CI is set.
+# Do NOT set CI=1 for this line — that would point both suites at a :5432 that is either
+# nothing or a FOREIGN Postgres. ORDER MATTERS: run them AFTER the E2E — pytest's
+# create_all() tolerates the alembic-built schema, but alembic (the E2E's migrate step)
+# dies with DuplicateTable on a create_all-built one (`supabase db reset` in the product
+# dir un-wedges a contaminated stack DB).
+pnpm turbo run test --filter=@<repo>/template-api --filter=@<repo>/demo-api --force
 pnpm --filter @<repo>/ui build-storybook                        # VR serves storybook-static —
 cd packages/ui            && pnpm exec playwright test          #   build it first (as CI does),
                                                                 #   else webServer times out
@@ -326,6 +356,11 @@ and a broken hook environment (e.g. an untrusted `mise.toml` on a fresh clone �
 going — the next layer then silently amends/mixes into the wrong commit. After merging: the main-push deploy
 workflows skip green (secret-gated until infra day); dispatch `e2e-nightly` once to prove
 the full nightly path on the renamed state.
+
+"CI-green" proves less than it used to for the docs-heavy layers: `turbo.json` excludes
+`**/*.md` / `**/docs/**` from every task's `inputs`, so an almost-all-markdown layer-1 or
+layer-2 PR legitimately selects near-zero tasks. The Verify block's `--force` run is what
+actually exercises those layers — do not read an empty CI as coverage.
 
 ## Aftermath — post-rename symptoms that are NOT bugs
 

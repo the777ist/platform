@@ -50,10 +50,11 @@ via `TODO-EAS-PROJECT-ID` in `app/app.config.ts`. (`example` = org placeholder.)
 `.claude/commands/`.
 
 Tests: `pnpm --filter @platform/template-app test` (Jest) ·
-API pytest (real Postgres): run from `api/` with `TEST_DATABASE_URL` pointing at this
-product's local direct db port (`db.port` in `supabase/config.toml`) —
-`TEST_DATABASE_URL=... uv run pytest`. The default URL assumes CI's :5432, and
-`pnpm turbo run test` drops the variable (strict env mode), so invoke pytest directly ·
+API pytest (real Postgres): `uv run pytest` from `api/`, or `pnpm turbo run test` — both
+need NO env. The suite resolves its own Postgres from `product.json`: CI's `:5432`
+service container when `CI` is set, otherwise THIS product's stack (`db.port` in
+`supabase/config.toml`), auto-creating a `template_api_test` database there. The stack
+must be up. `TEST_DATABASE_URL` still overrides verbatim ·
 `pnpm --filter @platform/template-app exec playwright test` (full-stack web E2E —
 starts/reuses the local stack itself; ports derive from product.json).
 

@@ -12,31 +12,34 @@ from template_api.db import get_session
 from template_api.main import create_app
 from template_api.schemas.user import MeRead
 
+from . import DB_HOST_PORT
+
 TEST_OWNER = "11111111-1111-1111-1111-111111111111"
 
 # Real Postgres (Supabase local in dev; postgres service container in CI). NOT sqlite.
 # (tests/__init__.py already exported DATABASE_URL/DATABASE_MIGRATION_URL defaults —
 # template_api.main reads Settings at import time.)
 #
-# The DEFAULT (no TEST_DATABASE_URL set — i.e. CI) targets a PER-PRODUCT database:
-# every product's suite shares CI's single :5432 service container and turbo runs the
-# suites in parallel, so concurrent create_all() against ONE database races on the
-# pg_type catalog (UniqueViolation on pg_type_typname_nsp_index). Concatenated name so
-# the product token stays a whole word (same reason as RLS_DB in test_migration_rls).
-# An explicit TEST_DATABASE_URL is respected verbatim — local runs target the
-# product's OWN stack, which is isolated from other products by construction.
+# The DEFAULT (no TEST_DATABASE_URL set) targets a PER-PRODUCT database on whichever
+# host tests/__init__.py resolved — CI's shared service container, or this product's own
+# local Supabase stack. Per-product because in CI every suite shares one :5432 container
+# and turbo runs them in parallel, so concurrent create_all() against ONE database races
+# on the pg_type catalog (UniqueViolation on pg_type_typname_nsp_index). Concatenated
+# name so the product token stays a whole word (same reason as RLS_DB in
+# test_migration_rls). An explicit TEST_DATABASE_URL is still respected verbatim.
 _TEST_DB = "template_api" + "_test"
 TEST_DB_URL = os.environ.get(
     "TEST_DATABASE_URL",
-    f"postgresql+psycopg://postgres:postgres@localhost:5432/{_TEST_DB}",
+    f"postgresql+psycopg://postgres:postgres@{DB_HOST_PORT}/{_TEST_DB}",
 )
 
 
 @pytest.fixture(scope="session")
 def engine() -> Engine:
     if "TEST_DATABASE_URL" not in os.environ:
-        # CI default path: ensure the per-product database exists. No cross-suite race:
-        # each product creates only its OWN database name.
+        # Default path (CI container or the product's own local stack): ensure the
+        # per-product database exists. No cross-suite race — each product creates only
+        # its OWN database name.
         admin = create_engine(
             TEST_DB_URL.rsplit("/", 1)[0] + "/postgres", isolation_level="AUTOCOMMIT"
         )

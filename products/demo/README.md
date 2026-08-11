@@ -50,10 +50,10 @@ pnpm --filter @platform/demo-app test        # Jest + RNTL
 pnpm --filter @platform/demo-app exec playwright test   # web E2E (full local stack)
 maestro test app/.maestro/login.yaml             # mobile flow (dev build, local only)
 
-# API tests: pytest defaults TEST_DATABASE_URL to CI's :5432 — locally, point it at
-# THIS product's direct DB port and run from api/ (going through `pnpm turbo run test`
-# also fails locally: turbo's strict env mode drops the variable):
-cd api && TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:54422/postgres uv run pytest
+# API tests need no env: the suite reads product.json and targets CI's :5432 service
+# container when CI is set, otherwise THIS product's own stack (must be running),
+# auto-creating a template_api_test database on it. TEST_DATABASE_URL still overrides.
+cd api && uv run pytest
 ```
 
 Run pytest AFTER the schema exists via Alembic (`uv run alembic upgrade head`) — its

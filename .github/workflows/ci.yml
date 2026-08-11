@@ -29,6 +29,12 @@ jobs:
       - uses: jdx/mise-action@v4 # installs Node 24 / pnpm 11 / Python 3.13 / uv from mise.toml
         # v4 = Node-24 action runtime (Node 20 is EOL on GH runners)
       - run: pnpm install --frozen-lockfile
+      - name: Prettier (whole repo — deliberately NOT affected-scoped)
+        # Every turbo task's `inputs` exclude **/*.md and **/docs/**, so a docs-only PR
+        # legitimately selects ZERO tasks — without this step it would land with no CI
+        # checks at all. Formatting is otherwise enforced only by the lefthook pre-commit
+        # hook, which `--no-verify` and a broken hook env both bypass.
+        run: pnpm run format:check
       - name: uv sync (affected APIs)
         run: |
           for api in products/*/api; do

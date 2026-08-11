@@ -60,10 +60,13 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   key, then `alembic upgrade head` + `python -m <name>_api.seed` from `api/`. NEVER leave
   `SUPABASE_JWKS_URL=` / `SUPABASE_JWT_SECRET=` as empty-string lines — pydantic reads ""
   (not None), it passes the `is not None` checks in `auth.py`, and every authed call 401s.
-- Local API tests: `TEST_DATABASE_URL` now passes through turbo (root `turbo.json` declares
-  it as `test.env`; strict env mode used to strip it). Export it with the product's direct
-  db port (`54322+100i`) before `pnpm turbo run test` — unset, it still defaults to CI's
-  `:5432`. Running `uv run pytest` from `api/` also works.
+- Local API tests need NO env. `tests/__init__.py` reads the product's `portIndex` and
+  targets CI's `:5432` service container when `CI` is set, else THAT product's own stack
+  (`54322+100i`), auto-creating a per-product `<module>_api_test` database on it — so
+  `pnpm turbo run test` and `uv run pytest` both just work with the stack up. Never
+  default to a bare `:5432` locally: it is either nothing or a FOREIGN Postgres, and the
+  suite passes green against the wrong database. `TEST_DATABASE_URL` still overrides
+  verbatim (turbo passes it through — root `turbo.json` declares it as `test.env`).
 - `turbo.json` sets `futureFlags.affectedUsingTaskInputs` + per-task `inputs`
   (`$TURBO_DEFAULT$` minus `**/*.md`, `**/docs/**`, `**/*-snapshots/**`) so docs and
   committed VR baselines don't invalidate code tasks. Without BOTH, `--affected` selects
