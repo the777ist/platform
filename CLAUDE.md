@@ -60,10 +60,15 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   key, then `alembic upgrade head` + `python -m <name>_api.seed` from `api/`. NEVER leave
   `SUPABASE_JWKS_URL=` / `SUPABASE_JWT_SECRET=` as empty-string lines — pydantic reads ""
   (not None), it passes the `is not None` checks in `auth.py`, and every authed call 401s.
-- Local API tests: turbo's strict env mode drops `TEST_DATABASE_URL` (no turbo.json
-  declares `env`) and its default is CI's `:5432` — run `uv run pytest` from `api/` with
-  the var set to the product's direct db port (`54322+100i`). The lefthook pre-push turbo
-  gate is therefore red locally on api-package changes; CI's service container is fine.
+- Local API tests: `TEST_DATABASE_URL` now passes through turbo (root `turbo.json` declares
+  it as `test.env`; strict env mode used to strip it). Export it with the product's direct
+  db port (`54322+100i`) before `pnpm turbo run test` — unset, it still defaults to CI's
+  `:5432`. Running `uv run pytest` from `api/` also works.
+- `turbo.json` sets `futureFlags.affectedUsingTaskInputs` + per-task `inputs`
+  (`$TURBO_DEFAULT$` minus `**/*.md`, `**/docs/**`, `**/*-snapshots/**`) so docs and
+  committed VR baselines don't invalidate code tasks. Without BOTH, `--affected` selects
+  every task in a touched package and `api-client#build`'s `^openapi` edge drags each
+  product's Python OpenAPI export into a docs-only change.
 - `deploy-api.yml` / `eas-update.yml` enumerate products by name in their `changes:`
   filters — add each new product there or pushes to main never deploy it.
 - Expo Go cannot receive push tokens — the push loop needs a dev build on a real device.
