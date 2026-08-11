@@ -8,24 +8,33 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "src/**/*.gen.ts", "renderer/**"]
+      "outputs": ["dist/**", "src/**/*.gen.ts", "renderer/**"],
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md", "!**/docs/**", "!**/*-snapshots/**"]
     },
     "export:web": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**"],
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md", "!**/docs/**", "!**/*-snapshots/**"]
     },
     "lint": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md", "!**/docs/**", "!**/*-snapshots/**"]
     },
     "typecheck": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md", "!**/docs/**", "!**/*-snapshots/**"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md", "!**/docs/**", "!**/*-snapshots/**"],
+      "env": ["TEST_DATABASE_URL"]
     },
     "dev": {
       "cache": false,
       "persistent": true
     }
+  },
+  "futureFlags": {
+    "affectedUsingTaskInputs": true
   }
 }
