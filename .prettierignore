@@ -10,3 +10,8 @@ products/*/api-client/src/
 # .prettierignore, so nested git ignores don't reach it; list them here explicitly.
 products/*/supabase/.temp/
 products/*/supabase/.branches/
+# Machine-local Claude Code settings. Git-ignores it via the user's GLOBAL excludes file
+# (~/.config/git/ignore) — and "Prettier respects .gitignore" means the ROOT one only, so
+# a globally-ignored file still reaches Prettier and turns `format:check` red on a clean
+# tree. Same class of gap as the nested supabase ignores above.
+.claude/settings.local.json
