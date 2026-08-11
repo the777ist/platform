@@ -1,4 +1,4 @@
-# @platform/ui — build-out playbook
+# @platform/ui — build-out
 
 How to take `packages/ui` from 5 components to a complete, cross-platform, themed design
 system: the full shadcn/ui surface **plus** the full AI-chat surface, on iOS + Android + web +
