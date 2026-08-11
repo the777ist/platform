@@ -50,9 +50,9 @@ pnpm --filter @platform/template-app test        # Jest + RNTL
 pnpm --filter @platform/template-app exec playwright test   # web E2E (full local stack)
 maestro test app/.maestro/login.yaml             # mobile flow (dev build, local only)
 
-# API tests need no env: the suite reads product.json and targets CI's :5432 service
-# container when CI is set, otherwise THIS product's own stack (must be running),
-# auto-creating a template_api_test database on it. TEST_DATABASE_URL still overrides.
+# API tests need no env: the suite targets CI's :5432 service container when CI is set,
+# otherwise THIS product's own stack (must be running) at the db.port read from
+# supabase/config.toml, auto-creating template_api_test on it. TEST_DATABASE_URL wins.
 cd api && uv run pytest
 ```
 

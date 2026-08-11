@@ -51,10 +51,10 @@ via `TODO-EAS-PROJECT-ID` in `app/app.config.ts`. (`example` = org placeholder.)
 
 Tests: `pnpm --filter @platform/demo-app test` (Jest) ·
 API pytest (real Postgres): `uv run pytest` from `api/`, or `pnpm turbo run test` — both
-need NO env. The suite resolves its own Postgres from `product.json`: CI's `:5432`
-service container when `CI` is set, otherwise THIS product's stack (`db.port` in
-`supabase/config.toml`), auto-creating a `template_api_test` database there. The stack
-must be up. `TEST_DATABASE_URL` still overrides verbatim ·
+need NO env. The suite resolves its own Postgres: CI's `:5432` service container when
+`CI` is set, otherwise THIS product's stack — reading `db.port` straight out of
+`supabase/config.toml` — and auto-creates a `template_api_test` database there. The
+stack must be up. `TEST_DATABASE_URL` still overrides verbatim ·
 `pnpm --filter @platform/demo-app exec playwright test` (full-stack web E2E —
 starts/reuses the local stack itself; ports derive from product.json).
 
