@@ -44,25 +44,84 @@ Build the token system as **two collections**:
 - **`semantic`** — the names components actually bind to. Every component fill/stroke/spacing
   references a semantic variable, which in turn points at a primitive.
 
-**The semantic color set (exact names — these are the contract):**
+> _Engineering note:_ this contract is mirrored in [BUILDOUT.md](./BUILDOUT.md) §1, which is the
+> code-side view of the same list. **Change one, change both.**
+
+**Core semantic colors — always required (exact names, these are the contract):**
 
 ```
 --background            --foreground
+--card                  --card-foreground
+--popover               --popover-foreground
 --primary               --primary-foreground
 --secondary             --secondary-foreground
 --muted                 --muted-foreground
+--accent                --accent-foreground
 --destructive           --destructive-foreground
+--success               --success-foreground
+--warning               --warning-foreground
 --border
 --input
 --ring
+--overlay
 ```
 
 > A `*-foreground` token is the text/icon color that sits **on top of** its pair (e.g.
 > `--primary-foreground` is the label color on a `--primary` button). Always define them as a
-> legible pair.
+> legible pair — every pair must clear **WCAG AA** (4.5:1 for body text, 3:1 for large text and UI
+> elements) in **both** light and dark. This is checked at reconcile.
+
+`--overlay` is the scrim behind modals, dialogs and bottom sheets. It has no automatic default on
+mobile, so it must be defined explicitly.
+
+**Surface-specific colors — required only if the product uses that surface:**
+
+```
+--chart-1  --chart-2  --chart-3  --chart-4  --chart-5     (data visualisation)
+
+--sidebar                   --sidebar-foreground           (desktop / web sidebar)
+--sidebar-primary           --sidebar-primary-foreground
+--sidebar-accent            --sidebar-accent-foreground
+--sidebar-border            --sidebar-ring
+```
+
+Skip these and engineering ships neutral defaults. Supply them and they follow the same rule as
+everything else: **a value in every mode, no blanks.**
+
+**Non-color semantic tokens:**
+
+| Token                        | You define               | Notes                                                                                                                                                                                                 |
+| ---------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--radius`                   | one base corner radius   | Everything else (`sm`/`md`/`lg`/`xl`) is derived in code. After `--primary`, this is the single biggest lever on how the product _feels_.                                                             |
+| `--font-sans`, `--font-mono` | family names             | Tell engineering the actual font files. A family that isn't bundled **fails silently** on iOS/Android — it just falls back, with no error.                                                            |
+| `--elevation-1`, `-2`, `-3`  | three levels of _intent_ | Give us "resting / raised / floating", **not** iOS shadow values. Shadows are implemented per-platform (iOS shadow, Android elevation, web box-shadow) — one set of numbers cannot express all three. |
 
 **Rule:** components bind to **`semantic` only**. If a component references a primitive or a raw
 hex directly, the brand-swap mechanism breaks for that element.
+
+### Adding tokens of your own
+
+The list above is a **floor, not a ceiling** — please extend it where the design needs it.
+
+- **Extra `primitives` are free.** Add as many ramp steps, spacing values or radii as you like.
+  Nothing downstream cares, because components never reference primitives directly.
+- **Extra `semantic` tokens are welcome, but need a heads-up.** Each new semantic name has to be
+  registered on the code side before a component can bind to it, so flag additions to engineering
+  rather than adding them silently the day before handover. It's a small change — the point is
+  that it isn't automatic.
+
+When you add a semantic token, four rules keep it compatible:
+
+1. **Kebab-case, no brand or product name in it.** `--surface-raised`, never `--acme-blue` —
+   product differences are expressed by _modes_, not by token names.
+2. **Pair it if it carries text.** Anything used as a background needs a matching `*-foreground`.
+3. **Give it a value in every mode.** A blank in one mode fails the automated coverage check.
+4. **Don't invent one where an existing token fits.** Token sprawl is the main way a system rots —
+   if `--muted` already means "recessed surface", use it.
+
+Renaming or removing a semantic token later is a **breaking change** (§ _Names are the API_).
+Adding one is not — so err toward proposing a new token rather than quietly overloading an
+existing one with a second meaning.
 
 ---
 
@@ -174,8 +233,15 @@ Before handing the library over, confirm:
 
 - [ ] **Two published team libraries**: Foundations (Variables) + Components.
 - [ ] **Two collections**: `primitives` (raw, never referenced by components) + `semantic`.
-- [ ] **All semantic color tokens present** with the exact names in §1.
-- [ ] Every `*-foreground` token is a **legible pair** with its base.
+- [ ] **All core semantic color tokens present** with the exact names in §1.
+- [ ] **Surface-specific tokens** (`--chart-*`, `--sidebar-*`) present _if_ the product uses charts
+      or a desktop sidebar — otherwise deliberately omitted, not half-filled.
+- [ ] **Non-color tokens defined**: `--radius`, `--font-sans` / `--font-mono` (with the actual font
+      files handed over), `--elevation-1/2/3` as intent levels.
+- [ ] Every `*-foreground` token is a **legible pair** with its base, clearing **WCAG AA in both
+      light and dark**.
+- [ ] **Any semantic tokens you added beyond §1** have been flagged to engineering, and follow the
+      four rules in §1.
 - [ ] **Modes = light/dark × brand**, and **every token has a value in every mode** (no blanks).
 - [ ] **No raw hex on any component** — every component color bound to a `semantic` variable.
 - [ ] **Variant/Size property values** use the exact strings in §3.
