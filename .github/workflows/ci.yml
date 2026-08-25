@@ -84,6 +84,9 @@ jobs:
           # when the base is not a resolvable commit. NOTE: `--affected` is deliberately not used
           # here; it is mutually exclusive with `--filter` and cannot express either escalation.
           echo "filter=$(node scripts/affected.mjs scope "$BASE" "$HEAD")" >> "$GITHUB_OUTPUT"
+          # The task list comes from the same module the hook imports, so a task can never be added
+          # to one tier and silently missed by the other.
+          echo "tasks=$(node scripts/affected.mjs tasks)" >> "$GITHUB_OUTPUT"
           node scripts/affected.mjs apis "$BASE" "$HEAD" > "$RUNNER_TEMP/affected-apis.txt"
           echo "affected APIs:"; cat "$RUNNER_TEMP/affected-apis.txt"; echo
       - name: uv sync (affected APIs only)
@@ -107,13 +110,18 @@ jobs:
       - name: Lint / typecheck / test / build / openapi (affected only)
         env:
           SCOPE: ${{ steps.scope.outputs.filter }}
+          TASKS: ${{ steps.scope.outputs.tasks }}
         run: |
           # Passed via env, not interpolated into the command, and quoted only when non-empty: the
           # filter contains [ ] that bash would glob, and an empty "" is not the same as no argument.
+          # An empty task list would make `turbo run` a no-op that still exits 0 -- the exact
+          # "gate that silently does nothing" this pipeline is built to avoid. Fail loudly instead.
+          [ -n "$TASKS" ] || { echo "::error::affected.mjs returned an empty task list"; exit 1; }
+          echo "tasks: $TASKS"
           if [ -n "$SCOPE" ]; then
-            pnpm turbo run lint typecheck test build openapi "$SCOPE"
+            pnpm turbo run $TASKS "$SCOPE"
           else
-            pnpm turbo run lint typecheck test build openapi
+            pnpm turbo run $TASKS
           fi
       - name: Typegen drift check
         run: |

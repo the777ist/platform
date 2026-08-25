@@ -39,6 +39,14 @@ for (const script of scripts) {
     execFileSync("sh", ["-n", script], { stdio: ["ignore", "pipe", "pipe"] });
   } catch (error) {
     failed += 1;
+    // ENOENT means `sh` itself is missing, not that the script is broken. Say which, or the next
+    // person spends an hour looking for a syntax error that is not there.
+    if (error.code === "ENOENT") {
+      console.error(
+        `❌ cannot run \`sh\` — no POSIX shell on PATH (needed to check ${relative(ROOT, script)})`,
+      );
+      continue;
+    }
     console.error(`❌ ${relative(ROOT, script)}`);
     const detail = (error.stderr ?? "").toString().trim();
     if (detail) console.error(detail);

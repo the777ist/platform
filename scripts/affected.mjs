@@ -34,6 +34,11 @@ function turboDry(filter = "") {
   return JSON.parse(out.slice(out.indexOf("{")));
 }
 
+// The task list the gate runs, in ONE place. The pre-push hook imports it; ci.yml asks for it via
+// `node scripts/affected.mjs tasks`. Keeping a second copy in the workflow YAML is how a task gets
+// added to one tier and silently not the other.
+export const TURBO_TASKS = ["lint", "typecheck", "test", "build", "openapi"];
+
 export function changedFiles(base, head = "HEAD") {
   return capture(`git diff --name-only ${base}...${head}`)
     .split(/\r?\n/)
@@ -96,8 +101,14 @@ export function affectedApiDirs(filter) {
 // --- CLI ---------------------------------------------------------------------------------------
 if (process.argv[1] && posix(process.argv[1]).endsWith("scripts/affected.mjs")) {
   const [mode, base, head = "HEAD"] = process.argv.slice(2);
+  // `tasks` takes no base and must not compute a scope — it is a constant, and resolving a scope
+  // would spend two turbo dry runs to print five words.
+  if (mode === "tasks") {
+    process.stdout.write(TURBO_TASKS.join(" "));
+    process.exit(0);
+  }
   if (!mode || !base) {
-    console.error("usage: node scripts/affected.mjs <scope|apis> <base> [head]");
+    console.error("usage: node scripts/affected.mjs <scope|apis> <base> [head]  |  tasks");
     process.exit(2);
   }
   const { filter, reason } = scopeFilter(base, head);
@@ -110,7 +121,7 @@ if (process.argv[1] && posix(process.argv[1]).endsWith("scripts/affected.mjs")) 
     const dirs = affectedApiDirs(filter).map((a) => a.dir);
     process.stdout.write(dirs.length ? dirs.join("\n") + "\n" : "");
   } else {
-    console.error(`affected: unknown mode '${mode}' (expected: scope | apis)`);
+    console.error(`affected: unknown mode '${mode}' (expected: scope | apis | tasks)`);
     process.exit(2);
   }
 }

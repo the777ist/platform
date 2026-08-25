@@ -15,7 +15,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createConnection } from "node:net";
-import { scopeFilter, affectedApiDirs } from "./affected.mjs";
+import { scopeFilter, affectedApiDirs, TURBO_TASKS } from "./affected.mjs";
 import { checkAlembicHeads, reportFailures, allApiDirs } from "./alembic-heads.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -105,7 +105,7 @@ const started = Date.now();
 // this list rather than filtering the desktop package out: turbo ignores a task-scoped negative
 // filter (`--filter=!<pkg>#build` silently changes nothing), and excluding the whole package would
 // take desktop's cheap lint and typecheck down with it.
-const TASKS = ["lint", "typecheck", "test", "build", "openapi"];
+const TASKS = TURBO_TASKS; // shared with ci.yml via `affected.mjs tasks`
 
 try {
   if (down.length === 0) {
