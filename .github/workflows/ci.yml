@@ -53,6 +53,23 @@ jobs:
           else
             echo "base '$BASE' is not resolvable — skipping commit-message lint"
           fi
+      - name: Deploy path filters generate cleanly
+        run: |
+          # deploy-api.yml / eas-update.yml derive their per-product path filters from this script,
+          # but those workflows only run on push-to-main and on tags -- so it would otherwise go
+          # unexercised on Linux until the moment a deploy depends on it. Prove it here, where a
+          # failure is a red PR check instead of a broken deploy.
+          for surface in api app; do
+            out=$(node scripts/product-filters.mjs "$surface")
+            expected=$(find products -mindepth 2 -maxdepth 2 -type d -name "$surface" | wc -l)
+            actual=$(echo "$out" | grep -c . || true)
+            echo "$surface: $actual filter line(s) for $expected product(s)"
+            echo "$out"
+            if [ "$actual" != "$expected" ]; then
+              echo "::error::product-filters emitted $actual lines for $expected products"
+              exit 1
+            fi
+          done
       - name: Resolve affected scope
         id: scope
         env:
