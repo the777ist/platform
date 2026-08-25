@@ -47,13 +47,14 @@ jobs:
         # never reaches them — including the gate scripts themselves. Same script the pre-push hook
         # calls, so the two cannot diverge on flags or config resolution.
         run: pnpm run lint:root
-      - name: Focused tests + stamped-product tokens
+      - name: Focused tests + stamped tokens + committed secrets
         # Both are FALSE-GREEN guards: a stray `.only` makes a suite pass having run almost
         # nothing, and an embedded template token makes a stamped product carry the template's
         # names. Playwright has forbidOnly in CI; Jest has no such flag, hence the explicit check.
         run: |
           node scripts/check-focused-tests.mjs
           node scripts/check-stamp-tokens.mjs
+          node scripts/check-committed-secrets.mjs
       - name: commitlint (the commit-msg hook is bypassable)
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
