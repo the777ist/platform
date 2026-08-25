@@ -5,8 +5,8 @@
 // checks, builds, unit tests, generated-artifact drift. Nothing that needs a container, a
 // browser, or a device; those live in CI (PHILOSOPHY "Testing strategy").
 //
-// Invoked with the diff base derived from git's pre-push refs, which becomes TURBO_SCM_BASE so
-// `--affected` selects exactly the commits the remote has not seen. Run it by hand with:
+// Invoked with the diff base derived from git's pre-push refs, so the turbo selection covers
+// exactly the commits the remote has not seen. Run it by hand with:
 //   node scripts/pre-push.mjs origin/main
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
@@ -21,8 +21,6 @@ if (!BASE) {
   process.exit(2);
 }
 
-const env = { ...process.env, TURBO_SCM_BASE: BASE };
-
 // HOW the scope is expressed: turbo's `--affected` flag is MUTUALLY EXCLUSIVE with `--filter` —
 // pass both and the filters are SILENTLY dropped (verified with --dry=json: the selection comes
 // back byte-identical with and without them). Every exclusion below is a filter, so spell out
@@ -31,9 +29,9 @@ const env = { ...process.env, TURBO_SCM_BASE: BASE };
 // One behavioural difference is deliberate: the flag also counts UNCOMMITTED work, while a
 // pre-push gate should judge the commits actually being pushed.
 const SCOPE = `"--filter=...[${BASE}...HEAD]"`;
-const run = (cmd, cwd = ROOT) => execSync(cmd, { cwd, env, stdio: "inherit" });
+const run = (cmd, cwd = ROOT) => execSync(cmd, { cwd, stdio: "inherit" });
 const capture = (cmd, cwd = ROOT) =>
-  execSync(cmd, { cwd, env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  execSync(cmd, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 const posix = (p) => p.replaceAll("\\", "/");
 
 // --- selection -------------------------------------------------------------------------------
@@ -61,10 +59,17 @@ const desktopPackages = existsSync(join(ROOT, "products"))
   : [];
 
 const dry = turboDry("test");
-const affectedApis = dry.tasks
-  .filter((t) => t.command && t.command !== "<NONEXISTENT>")
-  .map((t) => ({ pkg: t.package, dir: posix(t.directory) }))
-  .filter((t) => /^products\/[^/]+\/api$/.test(t.dir));
+// `task === "test"` matters: a dry run of `test` also reports the dependency tasks it pulls in
+// (openapi, ^build), so matching on the package alone counts each api twice.
+const affectedApis = [
+  ...new Map(
+    dry.tasks
+      .filter((t) => t.task === "test" && t.command && t.command !== "<NONEXISTENT>")
+      .map((t) => ({ pkg: t.package, dir: posix(t.directory) }))
+      .filter((t) => /^products\/[^/]+\/api$/.test(t.dir))
+      .map((t) => [t.pkg, t]),
+  ).values(),
+];
 
 // --- is that product's Postgres actually up? -------------------------------------------------
 // Local API tests run against THAT product's own Supabase stack, on the port the CLI listens on.

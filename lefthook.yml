@@ -83,4 +83,8 @@ commit-msg:
 pre-push:
   jobs:
     - name: affected-gate
+      # use_stdin is what actually hands the hook's ref lines to the script. WITHOUT it lefthook
+      # swallows stdin, the read comes back empty, and the gate silently degrades to its
+      # @{upstream}/origin/main fallback instead of the exact sha the remote has.
+      use_stdin: true
       run: sh .lefthook/pre-push.sh

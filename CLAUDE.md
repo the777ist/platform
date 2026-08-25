@@ -82,15 +82,22 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   container, browser or device stays in CI. Hooks are a FLOOR, not a mirror of CI.
 - pre-push scopes itself from the REFS: `.lefthook/pre-push.sh` reads git's
   `<local ref> <local sha> <remote ref> <remote sha>` lines off stdin BEFORE `exec < /dev/null`
-  (detaching first throws them away) and passes the remote sha to `scripts/pre-push.mjs` as
-  `TURBO_SCM_BASE`. It falls back to `@{upstream}` then `origin/main`, never to "skip".
+  (detaching first throws them away) and hands the remote sha to `scripts/pre-push.mjs`. That only
+  works because the job sets **`use_stdin: true`** — without it lefthook swallows stdin, the read
+  returns empty, and the gate silently degrades to its `@{upstream}` → `origin/main` fallback. It
+  never falls back to "skip"; a deletion-only push is the one case that exits 0.
+- turbo's `--affected` is MUTUALLY EXCLUSIVE with `--filter`: pass both and the filters are
+  SILENTLY dropped (the selection comes back byte-identical). Since the gate needs exclusions, it
+  spells out what the flag is shorthand for — `--filter=...[<base>...HEAD]` — which composes.
+  Anything combining affected-ness with a filter must do the same, and must confirm it with
+  `--dry=json` rather than trusting the flag.
 - Desktop packages are EXCLUDED from pre-push: `desktop#build` dependsOn `^export:web`, i.e. a
-  full `expo export --platform web` (minutes). turbo silently IGNORES a task-scoped negative
-  filter — `--filter=!./products/*/desktop#build` selects the identical graph (verify with
-  `--dry=json`) — so only excluding the whole package works. Desktop lint/typecheck/build is a
-  CI-tier gate.
+  full `expo export --platform web` (minutes). turbo also IGNORES a task-scoped negative filter —
+  `--filter=!./products/*/desktop#build` selects the identical graph — so only whole-package
+  exclusion works, and excluding the package drops `app#export:web` with it. Cost: desktop
+  lint/typecheck is now a CI-tier gate.
 - pyright lives in each api's `typecheck` script, NOT `lint`. That is what makes
-  `turbo run typecheck --affected` enforce it at pre-push as PHILOSOPHY requires; while it sat
+  the pre-push `typecheck` task enforce it as PHILOSOPHY requires; while it sat
   inside `lint` (a task pre-push never ran) the strict-typing gate did nothing locally.
 - pre-push SKIPS a product's pytest when that product's Supabase Postgres is unreachable
   (probed on `db.port` from its `supabase/config.toml` — same source the suite reads), prints
