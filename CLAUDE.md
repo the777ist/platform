@@ -94,6 +94,14 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   spells out what the flag is shorthand for — `--filter=...[<base>...HEAD]` — which composes.
   Anything combining affected-ness with a filter must do the same, and must confirm it with
   `--dry=json` rather than trusting the flag.
+- Per-task `inputs` overrides must be fail-SAFE (`$TURBO_DEFAULT$` plus exclusions), never an
+  allowlist. An allowlist makes every unnamed file invisible to the cache key: the api packages
+  listed `src/` + `tests/` + `pyproject.toml`, so editing an Alembic migration left `test` and
+  `lint` hashes BYTE-IDENTICAL and replayed a stale PASS — even though `ruff check .` lints
+  `alembic/` and `tests/test_migration_rls.py` applies the migrations to assert RLS deny-all.
+  `uv.lock` was likewise missing from lint/typecheck, so a ruff/pyright bump reused old results.
+  api `openapi` is the ONE justified allowlist: its input really is only `src/`, and `openapi.json`
+  is its own output.
 - `scripts/affected.mjs` is the SINGLE source of scope for the pre-push hook AND `ci.yml` — never
   compute "what changed" a second time anywhere. Two rules it encodes are non-obvious: a change to
   a `globalDependencies` file (`tsconfig.base.json`, `eslint.config.mjs`, `pnpm-workspace.yaml`,
