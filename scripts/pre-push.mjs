@@ -13,6 +13,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createConnection } from "node:net";
+import { scopeFilter, affectedApiDirs } from "./affected.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BASE = process.argv[2];
@@ -21,43 +22,21 @@ if (!BASE) {
   process.exit(2);
 }
 
-// HOW the scope is expressed: turbo's `--affected` flag is MUTUALLY EXCLUSIVE with `--filter` —
-// pass both and the filters are SILENTLY dropped (verified with --dry=json: the selection comes
-// back byte-identical with and without them). Every exclusion below is a filter, so spell out
-// what the flag is shorthand for instead: `...[<base>...HEAD]` — changed packages AND their
-// dependents, which is the co-evolve guard. Written as a filter, it composes.
-// One behavioural difference is deliberate: the flag also counts UNCOMMITTED work, while a
-// pre-push gate should judge the commits actually being pushed.
-const SCOPE = `"--filter=...[${BASE}...HEAD]"`;
+// Scope and affected-API detection live in scripts/affected.mjs, shared verbatim with the CI
+// workflow so the hook and CI can never select different things. That module also carries the
+// two turbo traps this gate depends on: `--affected` is mutually exclusive with `--filter` (pass
+// both and the filters are silently dropped), and a change to a GLOBAL input selects no package
+// at all unless the scope is widened to everything.
+const { filter: SCOPE, reason: scopeReason } = scopeFilter(BASE);
+if (scopeReason) console.warn(`pre-push: selecting EVERY package — ${scopeReason}`);
+// Same rule as affected.mjs: quote when present, omit entirely when not.
+const SCOPE_ARG = SCOPE ? `"${SCOPE}"` : "";
 const run = (cmd, cwd = ROOT) => execSync(cmd, { cwd, stdio: "inherit" });
 const capture = (cmd, cwd = ROOT) =>
   execSync(cmd, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 const posix = (p) => p.replaceAll("\\", "/");
 
-// --- selection -------------------------------------------------------------------------------
-// Every list below is DERIVED from the workspace. A hardcoded package list drifts silently, and
-// every new product would opt out of the gate by default (CLAUDE.md: the generator stamps
-// products; nothing should need editing here when it does).
-
-// turbo's own answer to "what does --affected select", so the gate and the scheduler can never
-// disagree about it. The banner line before the JSON is turbo's, not ours.
-function turboDry(tasks) {
-  const out = capture(`pnpm turbo run ${tasks} ${SCOPE} --dry=json`);
-  return JSON.parse(out.slice(out.indexOf("{")));
-}
-
-const dry = turboDry("test");
-// `task === "test"` matters: a dry run of `test` also reports the dependency tasks it pulls in
-// (openapi, ^build), so matching on the package alone counts each api twice.
-const affectedApis = [
-  ...new Map(
-    dry.tasks
-      .filter((t) => t.task === "test" && t.command && t.command !== "<NONEXISTENT>")
-      .map((t) => ({ pkg: t.package, dir: posix(t.directory) }))
-      .filter((t) => /^products\/[^/]+\/api$/.test(t.dir))
-      .map((t) => [t.pkg, t]),
-  ).values(),
-];
+const affectedApis = affectedApiDirs(SCOPE);
 
 // --- is that product's Postgres actually up? -------------------------------------------------
 // Local API tests run against THAT product's own Supabase stack, on the port the CLI listens on.
@@ -120,7 +99,7 @@ try {
   if (down.length === 0) {
     // Fast path: ONE scheduler invocation. Three sequential turbo calls would be two artificial
     // barriers — lint has no dependencies at all and would sit idle behind a build it never needed.
-    run(`pnpm turbo run ${TASKS.join(" ")} ${SCOPE}`);
+    run(`pnpm turbo run ${TASKS.join(" ")} ${SCOPE_ARG}`);
   } else {
     // Degraded path only: a product's local stack is down, so its pytest cannot run. Excluding the
     // package would also drop its ruff + pyright, so instead the run splits — everything except
@@ -133,8 +112,8 @@ try {
     }
     const holdBack = down.map((a) => `--filter=!${a.pkg}`).join(" ");
     const withoutTest = TASKS.filter((t) => t !== "test").join(" ");
-    run(`pnpm turbo run ${withoutTest} ${SCOPE}`);
-    run(`pnpm turbo run test ${SCOPE} ${holdBack}`);
+    run(`pnpm turbo run ${withoutTest} ${SCOPE_ARG}`);
+    run(`pnpm turbo run test ${SCOPE_ARG} ${holdBack}`);
   }
 
   // Generated-artifact drift — the SAME command CI runs. `api-client#build` dependsOn `^openapi`,

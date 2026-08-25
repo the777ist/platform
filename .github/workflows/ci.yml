@@ -35,18 +35,42 @@ jobs:
         # checks at all. Formatting is otherwise enforced only by the lefthook pre-commit
         # hook, which `--no-verify` and a broken hook env both bypass.
         run: pnpm run format:check
-      - name: uv sync (affected APIs)
+      - name: Resolve affected scope
+        id: scope
+        env:
+          # Explicit base/head so scoping survives squash-merge histories: PR base sha on
+          # pull_request, the pushed-from sha on push to main.
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
         run: |
-          for api in products/*/api; do
+          # scripts/affected.mjs is the SAME module the pre-push hook uses, so the hook and CI can
+          # never disagree about what a change affects. Empty output means "select everything" —
+          # emitted when a global input (tsconfig.base.json, eslint.config.mjs, ...) changed, or
+          # when the base is not a resolvable commit. NOTE: `--affected` is deliberately not used
+          # here; it is mutually exclusive with `--filter` and cannot express either escalation.
+          echo "filter=$(node scripts/affected.mjs scope "$BASE" "$HEAD")" >> "$GITHUB_OUTPUT"
+          node scripts/affected.mjs apis "$BASE" "$HEAD" > "$RUNNER_TEMP/affected-apis.txt"
+          echo "affected APIs:"; cat "$RUNNER_TEMP/affected-apis.txt"; echo
+      - name: uv sync (affected APIs only)
+        run: |
+          # Only the products actually in play. Looping every products/*/api costs one venv sync per
+          # product on every PR — a bill that grows with the product count and buys nothing.
+          while read -r api; do
+            [ -n "$api" ] || continue
+            echo "-> uv sync $api"
             uv sync --frozen --project "$api"
-          done
+          done < "$RUNNER_TEMP/affected-apis.txt"
       - name: Lint / typecheck / test / build / openapi (affected only)
         env:
-          # Explicit base/head so `--affected` scopes correctly regardless of squash-merge
-          # histories: PR base sha on pull_request, the pushed-from sha on push to main.
-          TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-          TURBO_SCM_HEAD: ${{ github.sha }}
-        run: pnpm turbo run lint typecheck test build openapi --affected
+          SCOPE: ${{ steps.scope.outputs.filter }}
+        run: |
+          # Passed via env, not interpolated into the command, and quoted only when non-empty: the
+          # filter contains [ ] that bash would glob, and an empty "" is not the same as no argument.
+          if [ -n "$SCOPE" ]; then
+            pnpm turbo run lint typecheck test build openapi "$SCOPE"
+          else
+            pnpm turbo run lint typecheck test build openapi
+          fi
       - name: Typegen drift check
         run: |
           git diff --exit-code products/*/api-client products/*/api/openapi.json

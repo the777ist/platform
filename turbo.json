@@ -1,6 +1,20 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
+  // Root files that affect EVERY package but live in no package directory. Without this list
+  // they are invisible to turbo twice over: they do not invalidate any task hash (a real
+  // `strict`/`noUnusedLocals` edit to tsconfig.base.json left every hash byte-identical), and
+  // they select no package, so an affected-scoped gate runs ZERO tasks on a change that alters
+  // how every package compiles. scripts/affected.mjs reads this same list back out of the dry
+  // run to widen the selection, so caching and scoping can never disagree about it.
+  // The chain that makes tsconfig.base.json global: every package tsconfig extends
+  // @platform/config/tsconfig/* -> packages/config/tsconfig/base.json -> ../../../tsconfig.base.json
+  "globalDependencies": [
+    "tsconfig.base.json",
+    "eslint.config.mjs",
+    "pnpm-workspace.yaml",
+    "mise.toml"
+  ],
   "tasks": {
     "openapi": {
       "inputs": ["src/**/*.py", "pyproject.toml", "uv.lock"],
