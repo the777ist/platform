@@ -73,6 +73,12 @@ commit-msg:
     - name: commitlint
       run: pnpm exec commitlint --edit {1}
 
+# NOTE on .git/hooks/prepare-commit-msg: `lefthook install` writes that dispatcher unconditionally,
+# even though it reports syncing only the three hooks configured here. It is lefthook's own file,
+# not a leftover from a previous hook runner — with no `prepare-commit-msg` section it dispatches to
+# `lefthook run prepare-commit-msg`, finds nothing, and exits 0. Deleting it is futile: the next
+# `pnpm install` (→ `pnpm prepare` → `lefthook install`) recreates it.
+
 # ── pre-push ────────────────────────────────────────────────────────────────────────────────────
 # One job: git hands a pre-push hook the refs being pushed on STDIN, and the remote sha in them is
 # the exact diff base CI is about to see for the first time. The script reads those refs BEFORE
