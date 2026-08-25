@@ -6,6 +6,7 @@
       "outputs": ["openapi.json"]
     },
     "lint": { "inputs": ["src/**/*.py", "tests/**/*.py", "pyproject.toml"] },
+    "typecheck": { "inputs": ["src/**/*.py", "tests/**/*.py", "pyproject.toml"] },
     "test": {
       "inputs": ["src/**/*.py", "tests/**/*.py", "pyproject.toml", "uv.lock"]
     },

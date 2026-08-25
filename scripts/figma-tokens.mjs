@@ -19,10 +19,9 @@ async function loadSource() {
     if (!process.env.FIGMA_TOKEN) {
       throw new Error('source:"rest" requires FIGMA_TOKEN (Enterprise plan).');
     }
-    const res = await fetch(
-      `https://api.figma.com/v1/files/${cfg.fileKey}/variables/local`,
-      { headers: { "X-Figma-Token": process.env.FIGMA_TOKEN } },
-    );
+    const res = await fetch(`https://api.figma.com/v1/files/${cfg.fileKey}/variables/local`, {
+      headers: { "X-Figma-Token": process.env.FIGMA_TOKEN },
+    });
     if (!res.ok) throw new Error(`Figma REST ${res.status}`);
     return toDtcg(normalizeRest(await res.json()));
   }
@@ -36,15 +35,12 @@ async function loadSource() {
 function normalizeRest(json) {
   const { variables, variableCollections } = json.meta ?? {};
   if (!variables || !variableCollections) {
-    throw new Error(
-      "Unexpected REST payload: missing meta.variables/variableCollections",
-    );
+    throw new Error("Unexpected REST payload: missing meta.variables/variableCollections");
   }
   const semantic = Object.values(variableCollections).find(
     (c) => c.name.toLowerCase() === "semantic",
   );
-  if (!semantic)
-    throw new Error('No "semantic" variable collection in the Figma file.');
+  if (!semantic) throw new Error('No "semantic" variable collection in the Figma file.');
   const out = {};
   for (const mode of semantic.modes) {
     const setName = mode.name.toLowerCase(); // expected: light / dark (per FIGMA.md)
@@ -53,11 +49,7 @@ function normalizeRest(json) {
       if (v.variableCollectionId !== semantic.id) continue;
       let value = v.valuesByMode[mode.modeId];
       // Dereference VARIABLE_ALIAS chains (semantic -> primitives).
-      while (
-        value &&
-        typeof value === "object" &&
-        value.type === "VARIABLE_ALIAS"
-      ) {
+      while (value && typeof value === "object" && value.type === "VARIABLE_ALIAS") {
         value = variables[value.id]?.valuesByMode[mode.modeId];
       }
       if (value && typeof value === "object" && "r" in value) {
@@ -93,8 +85,7 @@ function toDtcg(json) {
 
 // "H S% L%" channel string from hex ("#0a0a0b"), hsl() wrapper, or already-channels input.
 function toHslChannels(value) {
-  if (typeof value !== "string")
-    throw new Error(`Unsupported color value: ${value}`);
+  if (typeof value !== "string") throw new Error(`Unsupported color value: ${value}`);
   const channels = /^\d+(\.\d+)?\s+\d+(\.\d+)?%\s+\d+(\.\d+)?%$/;
   if (channels.test(value.trim())) return value.trim();
   const hslWrap = value.match(/^hsl\(\s*([^)]+)\)$/i);
@@ -213,9 +204,7 @@ const sd = new StyleDictionary({
     native: {
       transforms: ["color/hsl-channels"],
       buildPath: "packages/ui/src/lib/",
-      files: [
-        { destination: "theme.ts", format: "javascript/nativewind-theme" },
-      ],
+      files: [{ destination: "theme.ts", format: "javascript/nativewind-theme" }],
     },
   },
 });

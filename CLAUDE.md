@@ -75,6 +75,26 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   product's Python OpenAPI export into a docs-only change.
 - `deploy-api.yml` / `eas-update.yml` enumerate products by name in their `changes:`
   filters — add each new product there or pushes to main never deploy it.
+- Git hooks are TIERED, and the budgets are the design constraint (`lefthook.yml`'s header is
+  authoritative): pre-commit ~5s = staged-file AUTO-FIXERS only, piped semantic-fixer →
+  formatter so the formatter gets the last write; commit-msg = commitlint (Conventional
+  Commits, header ≤120); pre-push ~90s = affected-scoped correctness; everything needing a
+  container, browser or device stays in CI. Hooks are a FLOOR, not a mirror of CI.
+- pre-push scopes itself from the REFS: `.lefthook/pre-push.sh` reads git's
+  `<local ref> <local sha> <remote ref> <remote sha>` lines off stdin BEFORE `exec < /dev/null`
+  (detaching first throws them away) and passes the remote sha to `scripts/pre-push.mjs` as
+  `TURBO_SCM_BASE`. It falls back to `@{upstream}` then `origin/main`, never to "skip".
+- Desktop packages are EXCLUDED from pre-push: `desktop#build` dependsOn `^export:web`, i.e. a
+  full `expo export --platform web` (minutes). turbo silently IGNORES a task-scoped negative
+  filter — `--filter=!./products/*/desktop#build` selects the identical graph (verify with
+  `--dry=json`) — so only excluding the whole package works. Desktop lint/typecheck/build is a
+  CI-tier gate.
+- pyright lives in each api's `typecheck` script, NOT `lint`. That is what makes
+  `turbo run typecheck --affected` enforce it at pre-push as PHILOSOPHY requires; while it sat
+  inside `lint` (a task pre-push never ran) the strict-typing gate did nothing locally.
+- pre-push SKIPS a product's pytest when that product's Supabase Postgres is unreachable
+  (probed on `db.port` from its `supabase/config.toml` — same source the suite reads), prints
+  which product it skipped, and lets CI run them. It never skips ruff/pyright for that api.
 - Expo Go cannot receive push tokens — the push loop needs a dev build on a real device.
 - Web deploys have NO workflow (Vercel git integration) — do not add one.
 - `products/demo` is a STAMP of `products/_template` (snapshot, byte-derived). Never
@@ -98,6 +118,7 @@ pnpm new-product demo`; preserve the untracked `demo/api/.env` first). The gener
 pnpm bootstrap                                                # start EVERY product's local Supabase stack
 pnpm turbo run lint typecheck test build openapi --affected   # the CI gate, scoped to changes
 git diff --exit-code products/*/api-client products/*/api/openapi.json  # typegen drift check
+node scripts/pre-push.mjs origin/main                           # run the pre-push gate by hand
 pnpm run format:check                                         # prettier gate (`pnpm run format` to fix)
 ```
 
