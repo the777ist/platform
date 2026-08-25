@@ -8,9 +8,16 @@ on:
   push:
     branches: [main] # JS-only OTA → staging channel
     tags: ["*-ota-v*"] # <product>-ota-v* → production channel
+# Least privilege for GITHUB_TOKEN. The repo default is currently `read`, but that is a repo
+# SETTING someone can change; declaring it here makes the guarantee travel with the workflow.
+# Nothing in these jobs writes to this repo (deploys authenticate with their own secrets).
+permissions:
+  contents: read
+
 jobs:
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       products: ${{ steps.filter.outputs.changes }}
       has-expo-token: ${{ steps.secret-gate.outputs.has-expo-token }}
@@ -43,6 +50,7 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.products != '[]' && needs.changes.outputs.has-expo-token == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       matrix:
         product: ${{ fromJSON(needs.changes.outputs.products) }}

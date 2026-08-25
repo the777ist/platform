@@ -7,9 +7,16 @@ on:
   push:
     branches: [main] # → staging
     tags: ["*-api-v*"] # <product>-api-v* → production
+# Least privilege for GITHUB_TOKEN. The repo default is currently `read`, but that is a repo
+# SETTING someone can change; declaring it here makes the guarantee travel with the workflow.
+# Nothing in these jobs writes to this repo (deploys authenticate with their own secrets).
+permissions:
+  contents: read
+
 jobs:
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       products: ${{ steps.filter.outputs.changes }}
       has-fly-token: ${{ steps.secret-gate.outputs.has-fly-token }}
@@ -42,12 +49,15 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.products != '[]' && needs.changes.outputs.has-fly-token == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       matrix:
         product: ${{ fromJSON(needs.changes.outputs.products) }}
     steps:
       - uses: actions/checkout@v6
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+      # Pinned to a release, not @master: this job holds FLY_API_TOKEN, and a moving branch
+      # means whatever that branch becomes runs with the deploy credential.
+      - uses: superfly/flyctl-actions/setup-flyctl@v1.4
       - name: Deploy (staging on main, production on tag)
         working-directory: products/${{ matrix.product == 'template' && '_template' || matrix.product }}/api
         env:

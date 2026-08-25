@@ -10,9 +10,16 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+# Least privilege for GITHUB_TOKEN. The repo default is currently `read`, but that is a repo
+# SETTING someone can change; declaring it here makes the guarantee travel with the workflow.
+# Nothing in these jobs writes to this repo (deploys authenticate with their own secrets).
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     services:
       postgres: # real Postgres for API integration tests (testing strategy)
         image: postgres:16

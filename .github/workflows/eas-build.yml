@@ -10,12 +10,19 @@ on:
       profile: { description: "EAS build profile", required: true, default: "production" }
   push:
     tags: ["*-app-v*"] # <product>-app-v* → store build
+# Least privilege for GITHUB_TOKEN. The repo default is currently `read`, but that is a repo
+# SETTING someone can change; declaring it here makes the guarantee travel with the workflow.
+# Nothing in these jobs writes to this repo (deploys authenticate with their own secrets).
+permissions:
+  contents: read
+
 jobs:
   # `secrets` isn't readable in a job-level `if` — surface the gate as an output. A tag
   # push without EXPO_TOKEN (placeholder infra) SKIPS green; an explicit dispatch still
   # runs and fails loudly (a requested build cannot happen without the token).
   gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       has-expo-token: ${{ steps.secret-gate.outputs.has-expo-token }}
     steps:
@@ -28,6 +35,7 @@ jobs:
     needs: gate
     if: ${{ github.event_name == 'workflow_dispatch' || needs.gate.outputs.has-expo-token == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v4

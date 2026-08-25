@@ -7,12 +7,19 @@ name: Electron Release
 on:
   push:
     tags: ["*-desktop-v*"] # <product>-desktop-v* → 3-OS matrix
+# Least privilege for GITHUB_TOKEN. The repo default is currently `read`, but that is a repo
+# SETTING someone can change; declaring it here makes the guarantee travel with the workflow.
+# Nothing in these jobs writes to this repo (deploys authenticate with their own secrets).
+permissions:
+  contents: read
+
 jobs:
   release:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     env:
       MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }} # PLACEHOLDER (empty until certs exist)
       DESKTOP_RELEASES_TOKEN: ${{ secrets.DESKTOP_RELEASES_TOKEN }} # PLACEHOLDER (empty → build-only, no publish)

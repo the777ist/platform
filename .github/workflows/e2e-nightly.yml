@@ -11,6 +11,12 @@ on:
         description: "Regenerate the linux VR baselines on this runner and upload them as an artifact (instead of asserting)"
         type: boolean
         default: false
+# Least privilege for GITHUB_TOKEN. The repo default is currently `read`, but that is a repo
+# SETTING someone can change; declaring it here makes the guarantee travel with the workflow.
+# Nothing in these jobs writes to this repo (deploys authenticate with their own secrets).
+permissions:
+  contents: read
+
 jobs:
   # Which products get E2E — derived from products/*, so a newly stamped product is covered the
   # night it lands with no workflow edit. This job exists because the E2E used to be hardcoded to
@@ -19,6 +25,7 @@ jobs:
   # from, so a break there is born into all of them.
   products:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       list: ${{ steps.list.outputs.products }}
     steps:
@@ -37,6 +44,7 @@ jobs:
       matrix:
         product: ${{ fromJSON(needs.products.outputs.list) }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     services:
       postgres: # the API's DB (auth/realtime come from the Supabase CLI stack below)
         image: postgres:16
@@ -84,6 +92,7 @@ jobs:
           if-no-files-found: ignore # a pre-test failure produces no results dir
   visual-regression:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v4
