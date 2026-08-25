@@ -52,7 +52,8 @@ maestro test app/.maestro/login.yaml             # mobile flow (dev build, local
 
 # API tests need no env: the suite targets CI's :5432 service container when CI is set,
 # otherwise THIS product's own stack (must be running) at the db.port read from
-# supabase/config.toml, auto-creating template_api_test on it. TEST_DATABASE_URL wins.
+# supabase/config.toml, auto-creating this api's own <module>_test database on it
+# (the api's Python module name plus _test). TEST_DATABASE_URL wins.
 cd api && uv run pytest
 ```
 

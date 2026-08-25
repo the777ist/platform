@@ -16,7 +16,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createConnection } from "node:net";
 import { scopeFilter, affectedApiDirs } from "./affected.mjs";
-import { checkAlembicHeads, reportFailures } from "./alembic-heads.mjs";
+import { checkAlembicHeads, reportFailures, allApiDirs } from "./alembic-heads.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BASE = process.argv[2];
@@ -30,7 +30,13 @@ if (!BASE) {
 // two turbo traps this gate depends on: `--affected` is mutually exclusive with `--filter` (pass
 // both and the filters are silently dropped), and a change to a GLOBAL input selects no package
 // at all unless the scope is widened to everything.
-const { filter: SCOPE, reason: scopeReason } = scopeFilter(BASE);
+// `__ALL__` is the sentinel .lefthook/pre-push.sh sends when it could not derive ONE range —
+// several refs pushed at once, or no resolvable base at all. It means "gate every package", never
+// "gate nothing".
+const { filter: SCOPE, reason: scopeReason } =
+  BASE === "__ALL__"
+    ? { filter: "", reason: "the push could not be scoped to a single range" }
+    : scopeFilter(BASE);
 if (scopeReason) console.warn(`pre-push: selecting EVERY package — ${scopeReason}`);
 // Same rule as affected.mjs: quote when present, omit entirely when not.
 const SCOPE_ARG = SCOPE ? `"${SCOPE}"` : "";
@@ -141,12 +147,21 @@ try {
   // One alembic head per api, through the SAME checker CI runs: a gate that lives only in a hook is
   // not actually enforced, because --no-verify skips it. Driven off the pushed diff rather than
   // turbo's selection so a migration-only change is covered no matter what got selected.
-  const changed = capture(`git diff --name-only ${BASE}...HEAD`).split(/\r?\n/).filter(Boolean);
-  const migrationApis = [
-    ...new Set(
-      changed.map((f) => posix(f).match(/^(products\/[^/]+\/api)\//)?.[1]).filter(Boolean),
-    ),
-  ];
+  // When the push could not be scoped (the __ALL__ sentinel), there is no range to diff — check
+  // every api rather than letting `git diff __ALL__...HEAD` blow up and block the push on a raw
+  // git error.
+  const migrationApis =
+    SCOPE === "" && BASE === "__ALL__"
+      ? allApiDirs()
+      : [
+          ...new Set(
+            capture(`git diff --name-only ${BASE}...HEAD`)
+              .split(/\r?\n/)
+              .filter(Boolean)
+              .map((f) => posix(f).match(/^(products\/[^/]+\/api)\//)?.[1])
+              .filter(Boolean),
+          ),
+        ];
   const headFailures = checkAlembicHeads(migrationApis);
   if (headFailures.length > 0) {
     reportFailures(headFailures);

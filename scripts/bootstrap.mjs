@@ -11,6 +11,12 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PRODUCTS = join(ROOT, "products");
 const run = (cmd, cwd = ROOT) => execSync(cmd, { cwd, stdio: "inherit" });
 
+// mise refuses to read a config it has not been told to trust, and trust is keyed to the
+// ABSOLUTE PATH — so every fresh clone starts untrusted and `mise install` exits 1 with
+// "Config files ... are not trusted". That made the documented one-command onboarding fail on
+// its very first command in every new clone. Trusting here adds no new trust boundary: running
+// `pnpm bootstrap` is already running this repo's code.
+run("mise trust"); // fresh clones start untrusted; keyed to the absolute path, so re-clones too
 run("mise install"); // pin & install Node 24 / pnpm 11 / Python 3.13 / uv
 run("pnpm install"); // single JS dependency universe (one lockfile)
 

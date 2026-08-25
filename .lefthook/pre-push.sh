@@ -15,14 +15,17 @@ set -eu
 
 ZERO=0000000000000000000000000000000000000000
 DEFAULT_BASE=origin/main
+ALL=__ALL__ # sentinel: "cannot scope — gate EVERY package"
 base=""
 src=""
 saw_ref=0
+nrefs=0
 
 while read -r _lref lsha _rref rsha; do
   saw_ref=1
   # Branch deletion — there is no content to gate.
   if [ "$lsha" = "$ZERO" ]; then continue; fi
+  nrefs=$((nrefs + 1))
   if [ "$rsha" = "$ZERO" ] || ! git cat-file -e "${rsha}^{commit}" 2>/dev/null; then
     # New branch (or a remote sha this clone does not have): diff against the trunk.
     base="$DEFAULT_BASE"
@@ -41,20 +44,33 @@ if [ -z "$base" ] && [ "$saw_ref" = "1" ]; then
   exit 0
 fi
 
+# More than one ref in a single push (`git push --all`, a branch plus a tag, several branches at
+# once): the loop can only carry ONE base, and scoping to whichever ref happened to come last would
+# leave every other ref's commits ungated. Widen instead.
+if [ "$nrefs" -gt 1 ]; then
+  base="$ALL"
+  src="$nrefs refs pushed at once — cannot scope to a single range"
+fi
+
 # Fallback chain, reached only when NO ref line arrived (the job's `use_stdin: true` missing, or a
 # lefthook that does not forward it). That means "could not scope", NOT "nothing to push" — so fail
-# CLOSED to a wider base rather than skipping the gate entirely.
-if [ -z "$base" ]; then
-  base=$(git rev-parse --verify --quiet '@{upstream}' 2>/dev/null || true)
-  if [ -n "$base" ]; then src="@{upstream} fallback (stdin was empty)"; fi
-fi
-if [ -z "$base" ] || ! git rev-parse --verify --quiet "${base}^{commit}" >/dev/null 2>&1; then
-  base="$DEFAULT_BASE"
-  src="$DEFAULT_BASE fallback"
-fi
-if ! git rev-parse --verify --quiet "${base}^{commit}" >/dev/null 2>&1; then
-  echo "pre-push: no usable diff base (tried stdin refs, @{upstream}, $DEFAULT_BASE) — skipping" >&2
-  exit 0
+# toward a WIDER base rather than skipping the gate.
+if [ "$base" != "$ALL" ]; then
+  if [ -z "$base" ]; then
+    base=$(git rev-parse --verify --quiet '@{upstream}' 2>/dev/null || true)
+    if [ -n "$base" ]; then src="@{upstream} fallback (stdin was empty)"; fi
+  fi
+  if [ -z "$base" ] || ! git rev-parse --verify --quiet "${base}^{commit}" >/dev/null 2>&1; then
+    base="$DEFAULT_BASE"
+    src="$DEFAULT_BASE fallback"
+  fi
+  # Still unusable — a fork whose default branch is not `main`, a remote that is not `origin`, a
+  # clone that has never fetched. Gate EVERY package rather than exiting 0: a gate that cannot
+  # scope must run more, never nothing. (This used to `exit 0`, i.e. skip silently.)
+  if ! git rev-parse --verify --quiet "${base}^{commit}" >/dev/null 2>&1; then
+    base="$ALL"
+    src="no usable diff base (tried stdin refs, @{upstream}, $DEFAULT_BASE)"
+  fi
 fi
 
 echo "pre-push: diff base $base [$src]"

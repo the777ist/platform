@@ -78,6 +78,10 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   workflow edit. (They used to hardcode the roster, which meant a new product silently never
   deployed.) The matrix key drops the leading underscore, so `_template` stays addressable as
   `template` and the deploy jobs' expressions are unchanged.
+- A FRESH CLONE starts untrusted by mise: trust is keyed to the ABSOLUTE PATH, so `mise install`
+  exits 1 with "Config files ... are not trusted" and the whole `pnpm bootstrap` chain dies on its
+  first command. `scripts/bootstrap.mjs` runs `mise trust` first; if you invoke tools without
+  bootstrapping, run `mise trust` by hand. CI is unaffected (`jdx/mise-action` trusts it).
 - Git hooks are TIERED, and the budgets are the design constraint (`lefthook.yml`'s header is
   authoritative): pre-commit ~5s = staged-file AUTO-FIXERS only, piped semantic-fixer →
   formatter so the formatter gets the last write; commit-msg = commitlint (Conventional
@@ -87,8 +91,11 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   `<local ref> <local sha> <remote ref> <remote sha>` lines off stdin BEFORE `exec < /dev/null`
   (detaching first throws them away) and hands the remote sha to `scripts/pre-push.mjs`. That only
   works because the job sets **`use_stdin: true`** — without it lefthook swallows stdin, the read
-  returns empty, and the gate silently degrades to its `@{upstream}` → `origin/main` fallback. It
-  never falls back to "skip"; a deletion-only push is the one case that exits 0.
+  returns empty, and the gate silently degrades to its `@{upstream}` → `origin/main` fallback.
+  When it cannot derive ONE range it sends the `__ALL__` sentinel and every package is gated —
+  that covers several refs pushed at once (`git push --all`, a branch plus a tag, where the loop
+  can only carry one base) and a base that never resolves (a fork whose default branch is not
+  `main`, a remote that is not `origin`). A deletion-only push is the ONLY case that exits 0.
 - turbo's `--affected` is MUTUALLY EXCLUSIVE with `--filter`: pass both and the filters are
   SILENTLY dropped (the selection comes back byte-identical). Since the gate needs exclusions, it
   spells out what the flag is shorthand for — `--filter=...[<base>...HEAD]` — which composes.
@@ -102,6 +109,15 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   `uv.lock` was likewise missing from lint/typecheck, so a ruff/pyright bump reused old results.
   api `openapi` is the ONE justified allowlist: its input really is only `src/`, and `openapi.json`
   is its own output.
+- `.gitattributes` pins LF in the repo AND in every working tree. Do not delete it: without it the
+  behaviour depends on each developer's global git config, and `core.autocrlf=true` is the DEFAULT
+  for Git for Windows — that checkout becomes CRLF, Prettier (whose `endOfLine` defaults to `lf`)
+  then reports nearly every file as unformatted, and `pnpm run format:check` fails on a CLEAN clone.
+- `pnpm run lint:root` covers what NO package owns — `scripts/` and root `*.{mjs,cjs,js,ts}` by
+  GLOB (not a named list, so a new root config is covered the day it lands), plus `sh -n` on every
+  `.lefthook/*.sh` via `scripts/lint-shell.mjs`. A syntax error in a hook script does not fail one
+  test; it blocks every developer from committing at all, and nothing else in the repo reads shell.
+  Both the hook and CI call this one script.
 - `scripts/affected.mjs` is the SINGLE source of scope for the pre-push hook AND `ci.yml` — never
   compute "what changed" a second time anywhere. Two rules it encodes are non-obvious: a change to
   a `globalDependencies` file (`tsconfig.base.json`, `eslint.config.mjs`, `pnpm-workspace.yaml`,

@@ -58,7 +58,10 @@ separate web or desktop app** — it's one frontend codebase plus a Python backe
 ## Prerequisites
 
 - **[mise](https://mise.jdx.dev/)** — pins the toolchain: **Node 24 LTS · pnpm 11 · Python
-  3.13 · uv**. Run `mise install` to get them all.
+  3.13 · uv**. Run `mise install` to get them all. On a **fresh clone run `mise trust` first**:
+  mise refuses to read a config it has not been told to trust, and trust is keyed to the absolute
+  path, so a brand-new clone starts untrusted and `mise install` exits 1. `pnpm bootstrap` now
+  does the `mise trust` for you.
 - **[Supabase CLI](https://supabase.com/docs/guides/local-development)** + **Docker** — the
   local backend stack (Postgres, auth, storage) runs in Docker, so **Docker must be running**
   for `supabase start` / `pnpm bootstrap`.

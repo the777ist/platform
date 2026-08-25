@@ -17,7 +17,7 @@
     "test": "turbo run test",
     "build": "turbo run build",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,md,yml,yaml,css}\"",
-    "lint:root": "eslint scripts commitlint.config.mjs eslint.config.mjs",
+    "lint:root": "eslint --no-error-on-unmatched-pattern scripts \"*.{mjs,cjs,js,ts}\" && node scripts/lint-shell.mjs",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,md,yml,yaml,css}\""
   },
   "devDependencies": {
