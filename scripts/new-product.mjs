@@ -306,9 +306,6 @@ function printChecklist(name, portIndex) {
  [ ] Sentry: create 4 projects (app stg/prod, api stg/prod) -> paste DSNs into env
  [ ] GitHub Actions: add per-product secrets (FLY_API_TOKEN_${name.toUpperCase().replace(/-/g, "_")},
           EXPO_TOKEN, VERCEL_*, GH_TOKEN, SENTRY_AUTH_TOKEN, ...)
- [ ] CI deploy filters: add "${name}" entries to the hardcoded \`changes:\` filters in
-          .github/workflows/deploy-api.yml and eas-update.yml — without them,
-          pushes to main NEVER deploy this product
  [ ] BRAND: replace placeholder assets in products/${name}/app/assets/brand/source.svg
           then run: node products/${name}/app/assets/brand/gen-brand.mjs
  [ ] FIGMA: ask design to create the "${name}" brand mode, then replace the

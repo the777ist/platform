@@ -85,7 +85,7 @@ function printChecklist(name) {
  [ ] Desktop: archive/delete the ${org}/${name}-desktop-releases repo
  [ ] Sentry: delete the 4 ${name} projects (app stg/prod, api stg/prod)
  [ ] GitHub Actions: remove per-product secrets (FLY_API_TOKEN_${name.toUpperCase().replace(/-/g, "_")}, ...)
-     and the "${name}" filter entries in deploy-api.yml / eas-update.yml (if added)
+     (the deploy path filters need no edit — they derive from products/*)
  [ ] FIGMA: ask design to retire the "${name}" brand mode
  [ ] git: the deletion is in your working tree — review and commit it
 ────────────────────────────────────────────────────────────────────

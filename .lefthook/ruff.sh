@@ -16,6 +16,14 @@ mode="$1"
 shift
 [ "$#" -gt 0 ] || exit 0
 
+case "$mode" in
+  check | format) ;;
+  *)
+    echo "ruff.sh: unknown mode '$mode' (expected: check | format)" >&2
+    exit 2
+    ;;
+esac
+
 # Walk UP from a file to the nearest pyproject.toml. (A bare `dirname`/.. only works for files
 # exactly one level deep — src/<mod>/routers/items.py is four.)
 project_of() {
@@ -26,25 +34,34 @@ project_of() {
   if [ -f "$d/pyproject.toml" ]; then printf '%s\n' "$d"; fi
 }
 
+# Run one project's share of the staged files. Selection happens through the POSITIONAL parameters
+# rather than a space-joined string: appending matches to "$@" and then shifting the originals off
+# keeps each path a single argument, so a path containing a space stays one path instead of
+# becoming two broken ones.
+run_project() {
+  project="$1"
+  shift
+  original=$#
+  for f in "$@"; do
+    if [ "$(project_of "$f")" = "$project" ]; then set -- "$@" "$f"; fi
+  done
+  shift "$original"
+  [ "$#" -gt 0 ] || return 0
+
+  # No --exit-non-zero-on-fix: this tier REPAIRS, it does not report. A violation ruff cannot fix
+  # still exits non-zero and blocks the commit, which is the behaviour we want.
+  if [ "$mode" = "check" ]; then
+    uv run --project "$project" ruff check --fix "$@"
+  else
+    uv run --project "$project" ruff format "$@"
+  fi
+}
+
 projects=$(for f in "$@"; do project_of "$f"; done | sort -u)
 [ -n "$projects" ] || exit 0
 
 status=0
 for p in $projects; do
-  files=""
-  for f in "$@"; do
-    if [ "$(project_of "$f")" = "$p" ]; then files="$files $f"; fi
-  done
-  [ -n "$files" ] || continue
-  case "$mode" in
-    # No --exit-non-zero-on-fix: this tier REPAIRS, it does not report. A violation ruff cannot
-    # fix still exits non-zero and blocks the commit, which is the behaviour we want.
-    check) uv run --project "$p" ruff check --fix $files || status=$? ;;
-    format) uv run --project "$p" ruff format $files || status=$? ;;
-    *)
-      echo "ruff.sh: unknown mode '$mode' (expected: check | format)" >&2
-      exit 2
-      ;;
-  esac
+  run_project "$p" "$@" || status=$?
 done
 exit "$status"
