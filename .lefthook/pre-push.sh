@@ -1,6 +1,6 @@
 #!/bin/sh
 # .lefthook/pre-push.sh — derive the push's diff base from the refs git hands us, then run the
-# gate. Run it by hand with:  echo "" | sh .lefthook/pre-push.sh
+# gate. Run it by hand with:  sh .lefthook/pre-push.sh </dev/null
 #
 # git feeds a pre-push hook one line per ref on STDIN:
 #   <local ref> <local sha> <remote ref> <remote sha>
@@ -13,7 +13,6 @@
 # a hook — throws the refs away and the scoping becomes impossible.
 set -eu
 
-ZERO=0000000000000000000000000000000000000000
 DEFAULT_BASE=origin/main
 ALL=__ALL__ # sentinel: "cannot scope — gate EVERY package"
 base=""
@@ -21,12 +20,23 @@ src=""
 saw_ref=0
 nrefs=0
 
+# git marks "no such ref" with an all-zero sha. Matched by SHAPE rather than against a 40-zero
+# constant, because a SHA-256 repository uses 64 zeros — a hardcoded 40 would silently stop
+# recognising deletions and new branches there.
+is_zero_sha() {
+  case "$1" in
+    "") return 1 ;;
+    *[!0]*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
 while read -r _lref lsha _rref rsha; do
   saw_ref=1
   # Branch deletion — there is no content to gate.
-  if [ "$lsha" = "$ZERO" ]; then continue; fi
+  if is_zero_sha "$lsha"; then continue; fi
   nrefs=$((nrefs + 1))
-  if [ "$rsha" = "$ZERO" ] || ! git cat-file -e "${rsha}^{commit}" 2>/dev/null; then
+  if is_zero_sha "$rsha" || ! git cat-file -e "${rsha}^{commit}" 2>/dev/null; then
     # New branch (or a remote sha this clone does not have): diff against the trunk.
     base="$DEFAULT_BASE"
     src="new branch -> $DEFAULT_BASE"
