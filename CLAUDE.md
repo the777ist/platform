@@ -82,6 +82,12 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   exits 1 with "Config files ... are not trusted" and the whole `pnpm bootstrap` chain dies on its
   first command. `scripts/bootstrap.mjs` runs `mise trust` first; if you invoke tools without
   bootstrapping, run `mise trust` by hand. CI is unaffected (`jdx/mise-action` trusts it).
+- `core.hooksPath` SILENTLY disables every hook. If it is set (some corporate git configs and a
+  few dev tools set it globally), git ignores `.git/hooks` — where lefthook installs — while
+  `lefthook install` still reports "sync hooks ✔️". Verified: a commit with a deliberately invalid
+  message went straight through, ungated. `pnpm prepare` now runs `scripts/verify-hooks.mjs`, which
+  WARNS loudly (it does not fail the install — a deliberate org-wide hooksPath is legitimate, and
+  CI re-runs every gate regardless). Fix for one repo: `git config --local core.hooksPath .git/hooks`.
 - Git hooks are TIERED, and the budgets are the design constraint (`lefthook.yml`'s header is
   authoritative): pre-commit ~5s = staged-file AUTO-FIXERS only, piped semantic-fixer →
   formatter so the formatter gets the last write; commit-msg = commitlint (Conventional

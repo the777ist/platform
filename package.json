@@ -8,7 +8,7 @@
   },
   "prettier": "@platform/config/prettier",
   "scripts": {
-    "prepare": "lefthook install",
+    "prepare": "lefthook install && node scripts/verify-hooks.mjs",
     "bootstrap": "node scripts/bootstrap.mjs",
     "new-product": "node scripts/new-product.mjs",
     "remove-product": "node scripts/remove-product.mjs",
