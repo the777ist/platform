@@ -16,6 +16,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createConnection } from "node:net";
 import { scopeFilter, affectedApiDirs } from "./affected.mjs";
+import { checkAlembicHeads, reportFailures } from "./alembic-heads.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BASE = process.argv[2];
@@ -133,34 +134,23 @@ try {
     process.exit(1);
   }
 
-  // One alembic head per api. `heads` reads the script directory only — no DB, ~1s — and catches a
-  // multi-head merge while it is still one branch's problem. Driven off the pushed diff rather than
-  // turbo's selection: the api `test` inputs cover src/ and tests/, so a migration-only change
-  // would not select the task that is supposed to guard migrations.
+  // Root-owned files (scripts/, *.config.mjs) belong to NO package, so `turbo run lint` never
+  // reaches them — including these gate scripts themselves. Same entry point CI calls.
+  run("pnpm run lint:root");
+
+  // One alembic head per api, through the SAME checker CI runs: a gate that lives only in a hook is
+  // not actually enforced, because --no-verify skips it. Driven off the pushed diff rather than
+  // turbo's selection so a migration-only change is covered no matter what got selected.
   const changed = capture(`git diff --name-only ${BASE}...HEAD`).split(/\r?\n/).filter(Boolean);
   const migrationApis = [
     ...new Set(
       changed.map((f) => posix(f).match(/^(products\/[^/]+\/api)\//)?.[1]).filter(Boolean),
     ),
   ];
-  for (const apiDir of migrationApis) {
-    let heads;
-    try {
-      heads = capture(`uv run alembic heads`, join(ROOT, apiDir));
-    } catch {
-      console.warn(
-        `⚠️  ${apiDir}: could not run \`alembic heads\` — skipping the multi-head check`,
-      );
-      continue;
-    }
-    const found = heads.split(/\r?\n/).filter((l) => l.includes("(head)"));
-    if (found.length > 1) {
-      console.error(
-        `❌ ${apiDir}: ${found.length} alembic heads — merge them before pushing:\n` +
-          found.map((l) => `     ${l.trim()}`).join("\n"),
-      );
-      process.exit(1);
-    }
+  const headFailures = checkAlembicHeads(migrationApis);
+  if (headFailures.length > 0) {
+    reportFailures(headFailures);
+    process.exit(1);
   }
 } catch (error) {
   if (typeof error?.status === "number") process.exit(error.status || 1);

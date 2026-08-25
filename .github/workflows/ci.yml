@@ -35,6 +35,24 @@ jobs:
         # checks at all. Formatting is otherwise enforced only by the lefthook pre-commit
         # hook, which `--no-verify` and a broken hook env both bypass.
         run: pnpm run format:check
+      - name: ESLint (root-owned files no package covers)
+        # scripts/ and the root *.config.mjs belong to no workspace package, so `turbo run lint`
+        # never reaches them — including the gate scripts themselves. Same script the pre-push hook
+        # calls, so the two cannot diverge on flags or config resolution.
+        run: pnpm run lint:root
+      - name: commitlint (the commit-msg hook is bypassable)
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          # A gate that runs ONLY in a hook is not enforced: --no-verify skips it. Merge commits are
+          # ignored by commitlint's defaults. An unresolvable base (first push / force-push) skips
+          # rather than fails, since there is no range to judge.
+          if git rev-parse --verify --quiet "$BASE^{commit}" >/dev/null; then
+            pnpm exec commitlint --from "$BASE" --to "$HEAD" --verbose
+          else
+            echo "base '$BASE' is not resolvable — skipping commit-message lint"
+          fi
       - name: Resolve affected scope
         id: scope
         env:
@@ -60,6 +78,15 @@ jobs:
             echo "-> uv sync $api"
             uv sync --frozen --project "$api"
           done < "$RUNNER_TEMP/affected-apis.txt"
+      - name: Alembic single-head check (affected APIs)
+        run: |
+          # Same checker the pre-push hook runs. `alembic heads` reads the migration directory only
+          # -- no database -- and two heads mean two branches each added a migration.
+          if [ -s "$RUNNER_TEMP/affected-apis.txt" ]; then
+            node scripts/alembic-heads.mjs $(cat "$RUNNER_TEMP/affected-apis.txt")
+          else
+            echo "no affected APIs — skipping the alembic head check"
+          fi
       - name: Lint / typecheck / test / build / openapi (affected only)
         env:
           SCOPE: ${{ steps.scope.outputs.filter }}
