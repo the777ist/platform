@@ -73,8 +73,11 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   committed VR baselines don't invalidate code tasks. Without BOTH, `--affected` selects
   every task in a touched package and `api-client#build`'s `^openapi` edge drags each
   product's Python OpenAPI export into a docs-only change.
-- `deploy-api.yml` / `eas-update.yml` enumerate products by name in their `changes:`
-  filters — add each new product there or pushes to main never deploy it.
+- `deploy-api.yml` / `eas-update.yml` DERIVE their per-product `changes:` filters from
+  `products/*` via `scripts/product-filters.mjs`, so a newly stamped product deploys with no
+  workflow edit. (They used to hardcode the roster, which meant a new product silently never
+  deployed.) The matrix key drops the leading underscore, so `_template` stays addressable as
+  `template` and the deploy jobs' expressions are unchanged.
 - Git hooks are TIERED, and the budgets are the design constraint (`lefthook.yml`'s header is
   authoritative): pre-commit ~5s = staged-file AUTO-FIXERS only, piped semantic-fixer →
   formatter so the formatter gets the last write; commit-msg = commitlint (Conventional
@@ -91,6 +94,18 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   spells out what the flag is shorthand for — `--filter=...[<base>...HEAD]` — which composes.
   Anything combining affected-ness with a filter must do the same, and must confirm it with
   `--dry=json` rather than trusting the flag.
+- `scripts/affected.mjs` is the SINGLE source of scope for the pre-push hook AND `ci.yml` — never
+  compute "what changed" a second time anywhere. Two rules it encodes are non-obvious: a change to
+  a `globalDependencies` file (`tsconfig.base.json`, `eslint.config.mjs`, `pnpm-workspace.yaml`,
+  `mise.toml`) selects NO package, so the scope widens to everything; and an unresolvable base
+  (all-zero `github.event.before` on a first push, or a force-push) also widens, because a gate
+  must fail toward running MORE, never toward running nothing.
+- `turbo.json` MUST list every root file that affects all packages under `globalDependencies`.
+  Root files are otherwise invisible twice over: not in any task's cache key, and in no package
+  directory. Proven before it was added — appending `noUnusedLocals` to `tsconfig.base.json` (which
+  every package inherits via `@platform/config/tsconfig/*` → `packages/config/tsconfig/base.json` →
+  `../../../tsconfig.base.json`) left `@platform/core#typecheck`'s hash byte-identical, so every
+  task would have replayed a STALE cache hit while the gate ran zero tasks.
 - pre-push runs `lint typecheck test openapi` and deliberately NOT `build`. `desktop#build`
   dependsOn `^export:web` — a full `expo export --platform web` (minutes) — and nothing depends on
   `desktop#build`, so leaving the task off the list keeps it out while desktop still gets its lint

@@ -16,12 +16,21 @@ jobs:
       has-expo-token: ${{ steps.secret-gate.outputs.has-expo-token }}
     steps:
       - uses: actions/checkout@v6
+      - name: Derive per-product path filters
+        id: gen
+        # Derived from products/* so a newly stamped product is covered the moment it exists. The
+        # hardcoded roster that used to live here meant a new product silently never deployed until
+        # somebody remembered to edit BOTH workflows. Plain node: builtins only, no install needed.
+        run: |
+          {
+            echo "filters<<PRODUCT_FILTERS_EOF"
+            node scripts/product-filters.mjs app
+            echo "PRODUCT_FILTERS_EOF"
+          } >> "$GITHUB_OUTPUT"
       - uses: dorny/paths-filter@v4
         id: filter
         with:
-          filters: |
-            template: ['products/_template/app/**', 'packages/**']
-            demo: ['products/demo/app/**', 'packages/**']
+          filters: ${{ steps.gen.outputs.filters }}
       # `secrets` isn't readable in a job-level `if`, so surface the gate as an output:
       # until EXPO_TOKEN is configured (real infra day), the OTA job SKIPS green instead
       # of failing against the placeholder EAS project.

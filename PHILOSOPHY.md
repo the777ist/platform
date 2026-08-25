@@ -169,6 +169,9 @@ that's a new architecture decision, not a default.
 │   └── electron-release.yml       # tag <product>-desktop-v* → 3-OS matrix
 ├── scripts/new-product.mjs        # generator (plain Node, zero deps)
 ├── scripts/bootstrap.mjs          # one-command onboarding: mise → install → per-product supabase start
+├── scripts/affected.mjs           # ONE scope answer, shared by the pre-push hook and ci.yml
+├── scripts/pre-push.mjs           # the pre-push gate body (turbo + drift + alembic heads)
+├── scripts/product-filters.mjs    # per-product deploy path filters, derived from products/*
 ├── scripts/figma-tokens.mjs       # Figma Variables API → Style Dictionary → CSS-var theme
 │                                  #   files (one-way, committed); reads figma.config.json
 ├── figma.config.json              # fileKey + variable-collection → product mode mapping
