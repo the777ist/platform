@@ -144,6 +144,12 @@ try {
   // reaches them — including these gate scripts themselves. Same entry point CI calls.
   run("pnpm run lint:root");
 
+  // Two false-GREEN guards. A focused test makes the suite pass having run almost nothing, and an
+  // embedded template token makes a stamped product document the template's own names. Both are
+  // silent by nature, which is exactly why they are asserted rather than reviewed for.
+  run("node scripts/check-focused-tests.mjs");
+  run("node scripts/check-stamp-tokens.mjs");
+
   // One alembic head per api, through the SAME checker CI runs: a gate that lives only in a hook is
   // not actually enforced, because --no-verify skips it. Driven off the pushed diff rather than
   // turbo's selection so a migration-only change is covered no matter what got selected.

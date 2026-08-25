@@ -40,6 +40,13 @@ jobs:
         # never reaches them — including the gate scripts themselves. Same script the pre-push hook
         # calls, so the two cannot diverge on flags or config resolution.
         run: pnpm run lint:root
+      - name: Focused tests + stamped-product tokens
+        # Both are FALSE-GREEN guards: a stray `.only` makes a suite pass having run almost
+        # nothing, and an embedded template token makes a stamped product carry the template's
+        # names. Playwright has forbidOnly in CI; Jest has no such flag, hence the explicit check.
+        run: |
+          node scripts/check-focused-tests.mjs
+          node scripts/check-stamp-tokens.mjs
       - name: commitlint (the commit-msg hook is bypassable)
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -83,7 +90,11 @@ jobs:
           # emitted when a global input (tsconfig.base.json, eslint.config.mjs, ...) changed, or
           # when the base is not a resolvable commit. NOTE: `--affected` is deliberately not used
           # here; it is mutually exclusive with `--filter` and cannot express either escalation.
-          echo "filter=$(node scripts/affected.mjs scope "$BASE" "$HEAD")" >> "$GITHUB_OUTPUT"
+          # Assigned first, THEN echoed: `echo "x=$(cmd)"` hides a crash because echo succeeds,
+          # so a broken resolver would look like "no filter" and quietly pass for a different
+          # reason than it should. A plain assignment trips `set -e`.
+          filter=$(node scripts/affected.mjs scope "$BASE" "$HEAD")
+          echo "filter=$filter" >> "$GITHUB_OUTPUT"
           # The task list comes from the same module the hook imports, so a task can never be added
           # to one tier and silently missed by the other.
           echo "tasks=$(node scripts/affected.mjs tasks)" >> "$GITHUB_OUTPUT"
