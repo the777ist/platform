@@ -81,7 +81,7 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
 - Git hooks are TIERED, and the budgets are the design constraint (`lefthook.yml`'s header is
   authoritative): pre-commit ~5s = staged-file AUTO-FIXERS only, piped semantic-fixer →
   formatter so the formatter gets the last write; commit-msg = commitlint (Conventional
-  Commits, header ≤120); pre-push ~90s = affected-scoped correctness; everything needing a
+  Commits, header ≤120); pre-push (seconds cached, ~83s per affected product when the web bundle rebuilds) = affected-scoped correctness; everything needing a
   container, browser or device stays in CI. Hooks are a FLOOR, not a mirror of CI.
 - pre-push scopes itself from the REFS: `.lefthook/pre-push.sh` reads git's
   `<local ref> <local sha> <remote ref> <remote sha>` lines off stdin BEFORE `exec < /dev/null`
@@ -114,13 +114,13 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   every package inherits via `@platform/config/tsconfig/*` → `packages/config/tsconfig/base.json` →
   `../../../tsconfig.base.json`) left `@platform/core#typecheck`'s hash byte-identical, so every
   task would have replayed a STALE cache hit while the gate ran zero tasks.
-- pre-push runs `lint typecheck test openapi` and deliberately NOT `build`. `desktop#build`
-  dependsOn `^export:web` — a full `expo export --platform web` (minutes) — and nothing depends on
-  `desktop#build`, so leaving the task off the list keeps it out while desktop still gets its lint
-  and typecheck. `api-client#build` still runs regardless, pulled in by app/desktop `typecheck`'s
-  `^build` edge (which drags `^openapi` too), so the drift check still diffs freshly regenerated
-  artifacts. Do NOT "fix" this by filtering instead: `--filter=!<pkg>#build` is silently ignored,
-  and excluding the desktop PACKAGE takes its cheap gates down with the expensive one.
+- pre-push runs `lint typecheck test build openapi`. `build` is the expensive one —
+  `desktop#build` dependsOn `^export:web`, a full `expo export --platform web`, measured at 83s
+  cold per affected product — and it is included ON PURPOSE: a Metro bundle fails in ways no type
+  check sees (an import that does not resolve at bundle time, a native-only module dragged into
+  web, a path-alias/metro/NativeWind break). If it ever has to go, drop `"build"` from `TASKS` in
+  `scripts/pre-push.mjs`; do NOT filter instead — `--filter=!<pkg>#build` is silently ignored, and
+  excluding the desktop PACKAGE takes its cheap lint/typecheck down with the expensive build.
 - pyright lives in each api's `typecheck` script, NOT `lint`. That is what makes
   the pre-push `typecheck` task enforce it as PHILOSOPHY requires; while it sat
   inside `lint` (a task pre-push never ran) the strict-typing gate did nothing locally.

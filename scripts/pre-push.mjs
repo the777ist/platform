@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 // scripts/pre-push.mjs — the pre-push gate body (lefthook pre-push → .lefthook/pre-push.sh → here).
 //
-// TIER BUDGET: ~90s, scoped to what is actually being pushed. Correctness on the diff — type
-// checks, builds, unit tests, generated-artifact drift. Nothing that needs a container, a
-// browser, or a device; those live in CI (PHILOSOPHY "Testing strategy").
+// TIER BUDGET: seconds when cached, ~83s per affected product when the web bundle has to rebuild.
+// Scoped to what is actually being pushed. Correctness on the diff — type checks, the web bundle,
+// unit tests, generated-artifact drift, alembic heads. Nothing that needs a container, a browser,
+// or a device; those live in CI (PHILOSOPHY "Testing strategy"). The budget was deliberately
+// raised rather than the coverage narrowed.
 //
 // Invoked with the diff base derived from git's pre-push refs, so the turbo selection covers
 // exactly the commits the remote has not seen. Run it by hand with:
@@ -81,19 +83,22 @@ for (const api of affectedApis) {
 
 // --- the gate --------------------------------------------------------------------------------
 const started = Date.now();
-// `build` is deliberately NOT a top-level task. The only two real build scripts are the generated
-// api-client (openapi-ts) and the Electron shell, and:
-//   - api-client#build arrives anyway as a dependency edge — app/desktop `typecheck` and `lint`
-//     dependsOn `^build` — which drags `^openapi` with it, so the drift check below still diffs
-//     freshly regenerated artifacts.
-//   - desktop#build is the one thing that cannot fit this tier: it dependsOn `^export:web`, a full
-//     `expo export --platform web`. NOTHING depends on it, so leaving `build` off the list is all
-//     it takes to keep it out — and desktop KEEPS its lint and typecheck.
-// Dropping the task beats filtering the package: turbo ignores a task-scoped negative filter, so
-// `--filter=!<pkg>#build` would have silently changed nothing, and excluding the whole package
-// would have taken desktop's cheap gates down along with the expensive one. Nothing is lost —
-// `desktop#typecheck` is the same tsc as its `compile`, with --noEmit.
-const TASKS = ["lint", "typecheck", "test", "openapi"];
+// `build` IS included, and it is the expensive part of this tier: desktop#build dependsOn
+// `^export:web`, so a full `expo export --platform web` runs for every affected product —
+// measured at 83s cold for one product, ~0s cached.
+//
+// It earns that. `expo export` is a Metro BUNDLE, and bundling fails in ways typecheck cannot
+// see: an import that does not resolve at bundle time, a native-only module dragged into the web
+// target, a path-alias or metro/NativeWind config break. Those are exactly the failures that are
+// most annoying to discover after a push. It was omitted here at first purely to defend a 90s
+// budget; correctness wins over the budget.
+//
+// The cost scales with the number of AFFECTED products, so a single-product change pays it once —
+// only a shared packages/* change fans it out. If it ever becomes intolerable, drop "build" from
+// this list rather than filtering the desktop package out: turbo ignores a task-scoped negative
+// filter (`--filter=!<pkg>#build` silently changes nothing), and excluding the whole package would
+// take desktop's cheap lint and typecheck down with it.
+const TASKS = ["lint", "typecheck", "test", "build", "openapi"];
 
 try {
   if (down.length === 0) {
@@ -162,6 +167,4 @@ try {
   throw error;
 }
 
-console.log(
-  `✅ pre-push gate passed in ${Math.round((Date.now() - started) / 1000)}s (budget 90s)`,
-);
+console.log(`✅ pre-push gate passed in ${Math.round((Date.now() - started) / 1000)}s`);

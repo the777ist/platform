@@ -8,12 +8,15 @@
 #   pre-commit  ~5s   staged files only   auto-fixers exclusively — never type-aware, never
 #                                         whole-repo, never a build, never the network
 #   commit-msg  ~0s   the message         Conventional Commits
-#   pre-push    ~90s  affected packages   correctness on what you are pushing: lint, pyright/tsc,
-#                                         unit tests, generated-artifact drift, alembic heads
+#   pre-push    <=5m   affected packages  correctness on what you are pushing: lint, pyright/tsc,
+#                                         unit tests, the web BUNDLE, generated-artifact drift,
+#                                         alembic heads
 #   ci           ∞    whole repo, cold    everything else — real Postgres, Playwright, VR, EAS
 #
-# The ~5s pre-commit figure is MEASURED, not aspirational (one staged .ts: eslint 2.9s +
-# prettier 2.1s). Almost all of it is Node process startup — the linting itself is milliseconds —
+# Both figures are MEASURED, not aspirational. pre-commit ~5s: one staged .ts is eslint 2.9s +
+# prettier 2.1s. pre-push is seconds when cached and ~83s per affected product when the web bundle
+# has to rebuild — deliberately chosen over a tighter budget, because `expo export` catches Metro
+# bundling failures that no type check can see. Almost all of it is Node process startup — the linting itself is milliseconds —
 # so it does not grow with the size of the commit. Keep it that way: the moment something
 # type-aware or whole-repo lands here, the tier stops being free and starts being bypassed.
 #
