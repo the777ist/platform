@@ -151,6 +151,17 @@ products/
   events and clients refetch through the API.
 - **Promote to `packages/*` on the 2nd use**, not the first. Features start product-local.
 - **Per-platform overrides** via `*.ios.tsx` / `*.web.tsx` / `*.native.tsx` extensions.
+- **Git hooks are tiered, and CI re-runs all of it.** `pre-commit` (~5s) only ever runs
+  auto-fixers on staged files — eslint/ruff first, then prettier/ruff-format so the formatter
+  gets the last write. `commit-msg` enforces Conventional Commits. `pre-push` runs the real gate
+  (lint · pyright/tsc · unit tests · the web bundle · typegen drift · one Alembic head), scoped to
+  the commits you are actually pushing. `--no-verify` skips a hook, but every one of those gates
+  has a CI counterpart that runs unconditionally — so it buys you a faster local loop, not a way
+  around the gate. Run it by hand any time with `/affected` or
+  `node scripts/pre-push.mjs origin/main`.
+- **A product's pytest needs that product's stack up.** If its Postgres is unreachable, pre-push
+  says so loudly and skips only that product's API tests (its ruff and pyright still run); CI runs
+  them against a real Postgres regardless.
 
 Fixed recipes (enforced, exposed as slash commands): **`/add-component`** (cli-add → story →
 Code Connect map → export → VR baseline) and **`/add-feature`**

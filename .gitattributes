@@ -16,6 +16,11 @@
 # Executed rather than formatted: belt and braces for the files where CRLF is fatal.
 *.sh text eol=lf
 
+# Patches are applied byte-for-byte by pnpm and their content hash is recorded in pnpm-lock.yaml.
+# Never let line-ending normalisation touch one: it would silently change the hash and break the
+# patched install. (`-text` = do not treat as text at all.)
+*.patch -text
+
 # Never line-ending-convert binary assets. `text=auto` already detects these, but brand assets grow
 # over time and an explicit list is cheaper than debugging a corrupted icon.
 *.png binary
