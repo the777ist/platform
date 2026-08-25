@@ -91,11 +91,13 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   spells out what the flag is shorthand for — `--filter=...[<base>...HEAD]` — which composes.
   Anything combining affected-ness with a filter must do the same, and must confirm it with
   `--dry=json` rather than trusting the flag.
-- Desktop packages are EXCLUDED from pre-push: `desktop#build` dependsOn `^export:web`, i.e. a
-  full `expo export --platform web` (minutes). turbo also IGNORES a task-scoped negative filter —
-  `--filter=!./products/*/desktop#build` selects the identical graph — so only whole-package
-  exclusion works, and excluding the package drops `app#export:web` with it. Cost: desktop
-  lint/typecheck is now a CI-tier gate.
+- pre-push runs `lint typecheck test openapi` and deliberately NOT `build`. `desktop#build`
+  dependsOn `^export:web` — a full `expo export --platform web` (minutes) — and nothing depends on
+  `desktop#build`, so leaving the task off the list keeps it out while desktop still gets its lint
+  and typecheck. `api-client#build` still runs regardless, pulled in by app/desktop `typecheck`'s
+  `^build` edge (which drags `^openapi` too), so the drift check still diffs freshly regenerated
+  artifacts. Do NOT "fix" this by filtering instead: `--filter=!<pkg>#build` is silently ignored,
+  and excluding the desktop PACKAGE takes its cheap gates down with the expensive one.
 - pyright lives in each api's `typecheck` script, NOT `lint`. That is what makes
   the pre-push `typecheck` task enforce it as PHILOSOPHY requires; while it sat
   inside `lint` (a task pre-push never ran) the strict-typing gate did nothing locally.

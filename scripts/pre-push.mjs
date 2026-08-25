@@ -9,7 +9,7 @@
 // exactly the commits the remote has not seen. Run it by hand with:
 //   node scripts/pre-push.mjs origin/main
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createConnection } from "node:net";
@@ -45,18 +45,6 @@ function turboDry(tasks) {
   const out = capture(`pnpm turbo run ${tasks} ${SCOPE} --dry=json`);
   return JSON.parse(out.slice(out.indexOf("{")));
 }
-
-// products/<name>/desktop — `desktop#build` dependsOn `^export:web`, i.e. a full
-// `expo export --platform web` (minutes). It cannot hit this tier's budget, so the whole package
-// moves out to CI. NOTE: turbo silently IGNORES a task-scoped negative filter
-// (`--filter=!./products/*/desktop#build` selects the identical graph — verified with --dry=json),
-// so excluding the package is the only mechanism that actually works.
-const desktopPackages = existsSync(join(ROOT, "products"))
-  ? readdirSync(join(ROOT, "products"))
-      .map((p) => join(ROOT, "products", p, "desktop", "package.json"))
-      .filter(existsSync)
-      .map((f) => JSON.parse(readFileSync(f, "utf8")).name)
-  : [];
 
 const dry = turboDry("test");
 // `task === "test"` matters: a dry run of `test` also reports the dependency tasks it pulls in
@@ -114,14 +102,25 @@ for (const api of affectedApis) {
 
 // --- the gate --------------------------------------------------------------------------------
 const started = Date.now();
-const filters = desktopPackages.map((p) => `--filter=!${p}`).join(" ");
-const TASKS = ["lint", "typecheck", "test", "build", "openapi"];
+// `build` is deliberately NOT a top-level task. The only two real build scripts are the generated
+// api-client (openapi-ts) and the Electron shell, and:
+//   - api-client#build arrives anyway as a dependency edge — app/desktop `typecheck` and `lint`
+//     dependsOn `^build` — which drags `^openapi` with it, so the drift check below still diffs
+//     freshly regenerated artifacts.
+//   - desktop#build is the one thing that cannot fit this tier: it dependsOn `^export:web`, a full
+//     `expo export --platform web`. NOTHING depends on it, so leaving `build` off the list is all
+//     it takes to keep it out — and desktop KEEPS its lint and typecheck.
+// Dropping the task beats filtering the package: turbo ignores a task-scoped negative filter, so
+// `--filter=!<pkg>#build` would have silently changed nothing, and excluding the whole package
+// would have taken desktop's cheap gates down along with the expensive one. Nothing is lost —
+// `desktop#typecheck` is the same tsc as its `compile`, with --noEmit.
+const TASKS = ["lint", "typecheck", "test", "openapi"];
 
 try {
   if (down.length === 0) {
     // Fast path: ONE scheduler invocation. Three sequential turbo calls would be two artificial
     // barriers — lint has no dependencies at all and would sit idle behind a build it never needed.
-    run(`pnpm turbo run ${TASKS.join(" ")} ${SCOPE} ${filters}`);
+    run(`pnpm turbo run ${TASKS.join(" ")} ${SCOPE}`);
   } else {
     // Degraded path only: a product's local stack is down, so its pytest cannot run. Excluding the
     // package would also drop its ruff + pyright, so instead the run splits — everything except
@@ -134,8 +133,8 @@ try {
     }
     const holdBack = down.map((a) => `--filter=!${a.pkg}`).join(" ");
     const withoutTest = TASKS.filter((t) => t !== "test").join(" ");
-    run(`pnpm turbo run ${withoutTest} ${SCOPE} ${filters}`);
-    run(`pnpm turbo run test ${SCOPE} ${filters} ${holdBack}`);
+    run(`pnpm turbo run ${withoutTest} ${SCOPE}`);
+    run(`pnpm turbo run test ${SCOPE} ${holdBack}`);
   }
 
   // Generated-artifact drift — the SAME command CI runs. `api-client#build` dependsOn `^openapi`,
