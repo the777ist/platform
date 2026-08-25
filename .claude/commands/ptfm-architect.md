@@ -216,7 +216,7 @@ A non-negotiable checklist the implementer must satisfy. Pre-populate from PHILO
 - [ ] Realtime is **broadcast-only** (FastAPI broadcasts invalidation → `packages/core` subscribe-and-invalidate → TanStack `invalidateQueries`); no Postgres-Changes subscriptions, no RLS holes.
 - [ ] **slowapi** rate limiting on every paid / public endpoint (per-user on JWT `sub`, falling back to IP).
 - [ ] **Pydantic v2 strict** + **pyright strict** on all new code; Zod only for the occasional frontend form.
-- [ ] Quality gates green at every phase boundary: **`turbo run lint typecheck test build`** (JS, `--filter=...<product>...`) AND **`ruff check && ruff format --check && pyright && pytest`** (API) AND the **typegen drift check** — zero `.only`, zero `.skip`, zero new ignores.
+- [ ] Quality gates green at every phase boundary: **`turbo run lint typecheck test build`** (JS, `--filter=...*<product>*...`) AND **`ruff check && ruff format --check && pyright && pytest`** (API) AND the **typegen drift check** — zero `.only`, zero `.skip`, zero new ignores.
 - [ ] Plus any phase-specific adherence items the architecture introduces.
 
 ### `## Phased delivery`

@@ -74,7 +74,7 @@ The plan's `## Implementation sequence` section is dependency-ordered — follow
 4. **Implement the changes per the plan** to turn the new tests RED → GREEN. For an endpoint, follow the canonical add-an-endpoint recipe in order: **model → service → schema → router → openapi → typegen → hook → screen**. Watch each test transition; if a test refuses to go green, the implementation is wrong — fix it before moving on.
 5. **Add edge-case tests as the implementation surfaces them.** Building often reveals cases the plan didn't anticipate — write the new test in this step (not later), watch it fail, then make it pass.
 6. **Honour every approval gate** the plan calls out — **Alembic migrations**, env-var additions, anything explicitly flagged. If the plan says "show migration to user before applying", you SHOW the generated Alembic migration and WAIT for explicit approval before running it; you do not auto-apply. (Alembic runs over the direct 5432 connection via `DATABASE_MIGRATION_URL`.)
-7. **Regenerate the typed client and run a quick sanity check** before closing out the step — if the step changed the API surface, run typegen (`@hey-api/openapi-ts`) to regenerate `products/<product>/api-client/`; **NEVER hand-edit the generated client.** Then run `turbo run typecheck --filter=...<product>...` (and `pyright` for API changes).
+7. **Regenerate the typed client and run a quick sanity check** before closing out the step — if the step changed the API surface, run typegen (`@hey-api/openapi-ts`) to regenerate `products/<product>/api-client/`; **NEVER hand-edit the generated client.** Then run `turbo run typecheck --filter=...*<product>*...` (and `pyright` for API changes).
 8. **Mark the todo `completed`** only once every test for this sequence step is green.
 9. **Move to the next sequence step.** Do not jump ahead, do not batch multiple sequence steps' tests up front — each step gets its own red → green cycle, in order.
 
@@ -84,7 +84,7 @@ Adherence rules (non-negotiable, per `PHILOSOPHY.md`):
 - **Backend STRICTLY conforms to existing patterns.** FastAPI layered services: thin routers `Depends` a service; the service owns business logic AND data access (no repository layer); models are persistence-only. **DTOs are ALWAYS separate from ORM models** — never serialize a SQLModel row to the client. User-facing errors cross the boundary as **RFC 9457 problem+json** (services raise typed errors mapped to problem+json) — **never raise a raw error string** across the boundary. **One Alembic migration per schema change** (show-before-apply gate). **slowapi** rate limits on every paid / public endpoint (key per verified JWT `sub`, fall back to IP). Validate every input with **Pydantic v2 strict mode**. DELETE/UPDATE via `session.execute(delete(...))`, never `session.exec(...)`. The **generated typed client is never hand-edited** — change the endpoint, run typegen, regenerate.
 - **Cross-target + theme coverage.** For every UI surface you touch, make explicit decisions for **iOS, Android, web (react-native-web), and desktop (Electron)**, plus **light / dark**, plus **brand modes**, plus responsive on web / tablet — consistent with how similar surfaces handle it elsewhere. A change that "works on web only" or "light mode only" is INCOMPLETE.
 - **Honor the plan's performance & scale decisions.** Build the indexes the plan specifies (in the Alembic migration), keep `list_*` on a **bounded cursor keyset** (never OFFSET / unbounded scan), avoid **N+1** (one query/join, not per-row), don't over-fetch columns, and keep heavy work (large fan-out, transcode, third-party batch) **off the request path** — on a background job. If you discover a surface the plan didn't size, size it (or surface it) rather than shipping an unindexed scan.
-- **Run tests frequently.** `turbo run test --filter=...<product>...` (and the targeted `pytest`) after every meaningful batch. Going from green to green is much cheaper to debug than going from red to red after 30 changes.
+- **Run tests frequently.** `turbo run test --filter=...*<product>*...` (and the targeted `pytest`) after every meaningful batch. Going from green to green is much cheaper to debug than going from red to red after 30 changes.
 
 "I'll add the tests in a follow-up" is a rule violation. Tests come BEFORE code at every sequence step. **Edge cases are as important as test cases.**
 
@@ -114,7 +114,7 @@ Anything you learned mid-implementation worth surfacing — hidden invariants, s
 ### `## Verification`
 
 - Manual run-through (golden path)
-- `turbo run lint typecheck test build --filter=...<product>...` output (+ `ruff check && pyright && pytest` for API changes) — all gates green
+- `turbo run lint typecheck test build --filter=...*<product>*...` output (+ `ruff check && pyright && pytest` for API changes) — all gates green
 - Typegen drift check (`git diff --exit-code` on the regenerated client) clean
 - Any open caveats
 
@@ -130,7 +130,7 @@ Before reporting done, emit the pipeline's Definition-of-Done checklist with eac
 - [ ] API integration tests added/updated (router → service → DB, broadcast-and-invalidate, cursor pagination)
 - [ ] Frontend RNTL unit + component tests added/updated
 - [ ] Typegen regenerated — no drift (`git diff --exit-code` on `products/<product>/api-client/`)
-- [ ] `turbo run lint typecheck test build --filter=...<product>...` (JS) AND — for API changes — `ruff check && pyright && pytest` — all green (lint + typecheck + tests + the Expo web export / app build are all first-class gates; a green test suite with a red build is not done)
+- [ ] `turbo run lint typecheck test build --filter=...*<product>*...` (JS) AND — for API changes — `ruff check && pyright && pytest` — all green (lint + typecheck + tests + the Expo web export / app build are all first-class gates; a green test suite with a red build is not done)
 
 Run the final gate one last time and paste the output. Silent skips are rule violations. If you cannot satisfy a line, say so explicitly with a one-line justification — do not just omit. Zero `.only`, zero `.skip`, zero new ignores.
 
@@ -145,7 +145,7 @@ Run the final gate one last time and paste the output. Silent skips are rule vio
 - **Tests are MANDATORY in the same pass.** Tests come first at every sequence step (Step 3's red → green cycle); code and tests ship together. "I'll add the tests in a follow-up" is forbidden.
 - **Honour approval gates.** Alembic migrations, env-var additions, anything the plan flagged for review — show, wait, then proceed. NEVER auto-apply destructive or production-affecting changes.
 - **Implementation log updated AS YOU GO.** Not at the end. Every meaningful batch records what changed.
-- **Final gate is non-skippable.** `turbo run lint typecheck test build --filter=...<product>...` (+ `ruff check && pyright && pytest` for API) — all green, plus a clean typegen-drift check. Lint, typecheck, tests, and the Expo web export / app build are first-class gates; a green test suite with a red build is not done. The Definition-of-Done checklist gets emitted with every line ticked or explicitly justified.
+- **Final gate is non-skippable.** `turbo run lint typecheck test build --filter=...*<product>*...` (+ `ruff check && pyright && pytest` for API) — all green, plus a clean typegen-drift check. Lint, typecheck, tests, and the Expo web export / app build are first-class gates; a green test suite with a red build is not done. The Definition-of-Done checklist gets emitted with every line ticked or explicitly justified.
 
 What `/ptfm-implement` does NOT mean:
 

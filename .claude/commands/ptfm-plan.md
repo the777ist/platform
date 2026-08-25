@@ -208,7 +208,7 @@ The pipeline's Definition-of-Done checklist, inline so the executing agent has i
 - [ ] pytest API unit + integration tests added/updated
 - [ ] Broadcast / realtime seam test added/updated (where the change broadcasts)
 - [ ] Typegen regenerated, no drift (`git diff --exit-code` on `api-client/`)
-- [ ] `turbo run lint typecheck test build --filter=...<product>...` green (+ `export:web` where the change touches web) — lint + typecheck + tests + the Expo web export / app build are all first-class gates
+- [ ] `turbo run lint typecheck test build --filter=...*<product>*...` green (+ `export:web` where the change touches web) — lint + typecheck + tests + the Expo web export / app build are all first-class gates
 - [ ] For API changes: `ruff check && ruff format --check && pyright && pytest` all green (Ruff + pyright strict + Pydantic strict + pytest)
 - [ ] Zero `.only`, zero `.skip`, zero new ignores
 

@@ -165,7 +165,7 @@ ABSOLUTE, NON-NEGOTIABLE RULES:
 - **No silent doc skips.** If a file changed and the docs don't reflect it, the docs get updated. Period.
 - **Never modify a test to pass — only to add coverage.** If you discover an existing test that's wrong (asserts against bugged behaviour), surface it and stop. Do not silently "fix" it.
 - **Never hand-edit the generated `api-client/`.** Drift is fixed by regenerating from the API, never by editing the client.
-- **Final gate**: for JS — `turbo run lint typecheck test build --filter=...<product>...` (+ `export:web` where web changed); for API changes — `ruff check && pyright && pytest`; plus the typegen drift check — all green. Zero `.only`, zero `.skip`, zero new ignores.
+- **Final gate**: for JS — `turbo run lint typecheck test build --filter=...*<product>*...` (+ `export:web` where web changed); for API changes — `ruff check && pyright && pytest`; plus the typegen drift check — all green. Zero `.only`, zero `.skip`, zero new ignores.
 
 Process:
 
@@ -184,7 +184,7 @@ Process:
 7. After every fix that adds new tests, updates docs, or addresses a quality-gate finding, you MUST emit the pipeline's Definition-of-Done checklist for that change (plan/impl docs updated; RNTL unit + component tests; pytest API unit + integration tests; typegen regenerated with no drift; the turbo + Ruff/pyright/pytest gates green).
 8. Final report: number of doc edits made (per doc section), number of tests added per layer (RNTL unit/component, pytest unit/integration), files now at full coverage, exit status of every gate (turbo lint/typecheck/test/build, ruff, pyright, pytest, typegen drift), any open gaps explicitly justified.
 
-Final gate: for JS — `turbo run lint typecheck test build --filter=...<product>...` (+ `export:web` where web changed); for API changes — `ruff check && pyright && pytest`; plus the typegen drift check — all green.
+Final gate: for JS — `turbo run lint typecheck test build --filter=...*<product>*...` (+ `export:web` where web changed); for API changes — `ruff check && pyright && pytest`; plus the typegen drift check — all green.
 
 What "audit" does NOT mean:
 

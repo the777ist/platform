@@ -45,7 +45,7 @@ Do NOT review files in isolation — a change is only correct in context.
 3. **Walk outward for each change**: what calls this code, what this code calls, the types it depends on, the tests that cover it, the feature's `index.ts` public surface. A changed endpoint means reading its router, its service method(s), its Pydantic `schemas/` DTOs, its SQLModel `models/`, its RLS posture, its generated-client hook + the screen that consumes it, and its tests. A changed screen means reading the feature module, the `@platform/ui` primitives + `packages/core` helpers it depends on, and its RNTL tests.
 4. **For DB / schema changes**, inspect the live schema with the Supabase MCP (`mcp__Supabase__list_tables`, `list_migrations`, `get_advisors`, `execute_sql` read-only) so the review reflects reality, not the migration's assumed state. Confirm a backing **Alembic** migration exists under `products/<product>/api/.../alembic/versions/`. `get_advisors` surfaces security + performance issues Supabase itself flags (missing/disabled RLS, exposed views, unindexed FKs, etc.) — fold those in.
 5. **Read the plan / impl docs** (if any) to review the change against its intent — did it build what was planned? Did it silently deviate? Did it skip a planned test?
-6. **Baseline the gates** — for JS run `turbo run lint typecheck test build --filter=...<product>...` (+ `export:web` where the change touches web); for the API run `ruff check`, `pyright`, `pytest`; and run the **typegen drift check** (`git diff --exit-code` on the regenerated `products/<product>/api-client/`). Capture status. A red gate is itself a finding; a green baseline tells you the change at least compiles + passes its own tests + has no typegen drift.
+6. **Baseline the gates** — for JS run `turbo run lint typecheck test build --filter=...*<product>*...` (+ `export:web` where the change touches web); for the API run `ruff check`, `pyright`, `pytest`; and run the **typegen drift check** (`git diff --exit-code` on the regenerated `products/<product>/api-client/`). Capture status. A red gate is itself a finding; a green baseline tells you the change at least compiles + passes its own tests + has no typegen drift.
 
 ---
 
@@ -153,7 +153,7 @@ One line: **APPROVE** / **APPROVE WITH NITS** / **CHANGES REQUESTED** / **BLOCKE
 
 ### `## Gate status`
 
-`turbo run lint typecheck test build --filter=...<product>...` (+ `export:web` where web is touched) / `ruff check` / `pyright` / `pytest` / **typegen drift check** — each pass/fail with the error count if red.
+`turbo run lint typecheck test build --filter=...*<product>*...` (+ `export:web` where web is touched) / `ruff check` / `pyright` / `pytest` / **typegen drift check** — each pass/fail with the error count if red.
 
 ### `## Blockers` / `## High` / `## Medium` / `## Low & nits`
 
@@ -185,7 +185,7 @@ Then output the same verdict + severity counts + the blocker/high titles in chat
 A review's primary deliverable is the report — but don't leave the user to do everything by hand. After delivering the report, **offer** to apply fixes:
 
 - **Default offer: blockers + high-confidence highs.** Surface exactly which findings you'd fix.
-- **Only on the user's explicit go-ahead** do you touch code. Then fix per the pipeline's TDD discipline — for each fix: add / update a meaningful regression test first (watch it fail), apply the fix (watch it pass) — **RNTL** (`jest.mock`, async render) at the matching app layer, **pytest** (real Postgres, per-test isolation) at the API layer — per the layered-services / DTO≠ORM / problem+json / `@platform/ui` + semantic-tokens / Alembic / RLS-deny-all adherence rules. Regenerate the typed client if the endpoint changed. Re-run all gates green after the fix batch (`turbo run lint typecheck test build --filter=...<product>...` + `ruff check && pyright && pytest` + typegen drift check).
+- **Only on the user's explicit go-ahead** do you touch code. Then fix per the pipeline's TDD discipline — for each fix: add / update a meaningful regression test first (watch it fail), apply the fix (watch it pass) — **RNTL** (`jest.mock`, async render) at the matching app layer, **pytest** (real Postgres, per-test isolation) at the API layer — per the layered-services / DTO≠ORM / problem+json / `@platform/ui` + semantic-tokens / Alembic / RLS-deny-all adherence rules. Regenerate the typed client if the endpoint changed. Re-run all gates green after the fix batch (`turbo run lint typecheck test build --filter=...*<product>*...` + `ruff check && pyright && pytest` + typegen drift check).
 - **Architectural / design findings are NOT auto-fixed** — they're judgement calls that belong in `/ptfm-simplify`, `/ptfm-commonify`, or a fresh `/ptfm-plan`. Surface them; don't silently restructure.
 - If the user declines, the report stands as the deliverable.
 

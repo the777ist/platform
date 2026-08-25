@@ -57,18 +57,18 @@ RULES FOR TESTS — read these twice. The premise: good test coverage is what le
 - **Never** delete tests on the grounds that "the new code makes them redundant". Coverage shrinkage is a regression in itself. If two tests genuinely test the same thing after consolidation, surface both to the user and let them choose.
 - **Always off-limits:** the jest-expo config (the `jest.config.*` / jest-expo preset), the project's test setup / shared scaffold (e.g. the RNTL setup, `jest.mock` factories, polyfactory factories, `seed.py`), the pytest fixtures / conftest, and any fixture data shape that encodes product behaviour. Edits there are out of scope — flag and stop.
 - The full test suite MUST pass after every meaningful refactor step, not just at the end — `turbo run test` (JS, jest-expo) and, for API changes, `pytest`. If it goes red, you revert or fix forward.
-- Final gate: for JS — `turbo run lint typecheck test build --filter=...<product>...`; for API changes — `ruff check && pyright && pytest`; plus the typegen drift check. All green, zero skipped, zero `.only`, zero new ignores.
+- Final gate: for JS — `turbo run lint typecheck test build --filter=...*<product>*...`; for API changes — `ruff check && pyright && pytest`; plus the typegen drift check. All green, zero skipped, zero `.only`, zero new ignores.
 
 Process:
 
 1. Read the plan + implementation docs in full (and the reference docs above).
 2. Walk every file in the feature surface — `products/<product>/app/features/<FEATURE>/**`, every component / hook / store (Zustand) / generated-client hook it touches, every `@platform/ui` primitive (`packages/ui/src/components/ui/*`) and `packages/core` helper it depends on, the Expo Router route/screen files, and across the API every `schemas/` / `routers/` / `services/` / `models/` file the endpoint chain touches (plus any `products/<product>/api-client/` endpoints the feature consumes — NEVER hand-edited). Do not skim.
 3. Build a duplication/consolidation inventory as a to-do list — one entry per simplification, each tagged with: files affected, what's duplicated, the canonical home (WITHIN the feature), and the risk (low/med/high) of regression. Anything whose right home is a SHARED package or a cross-product utility → flag for `/ptfm-commonify`, do not act on it here.
-4. Execute simplifications smallest-blast-radius first. After each change run `turbo run test --filter=...<product>...` (JS) and/or `pytest` (API), and confirm green before moving on. When a simplification touches an API endpoint, regenerate the typed client (typegen) and confirm no unintended drift.
+4. Execute simplifications smallest-blast-radius first. After each change run `turbo run test --filter=...*<product>*...` (JS) and/or `pytest` (API), and confirm green before moving on. When a simplification touches an API endpoint, regenerate the typed client (typegen) and confirm no unintended drift.
 5. Update both docs in the same pass (docs + tests are part of every change — the pipeline's rule):
    - Plan doc: add a `## Post-ship deltas` entry per consolidated decision.
    - Implementation doc: update the file inventory, note deletions/relocations-within-feature, log behaviour-preserving refactors with their rationale.
-6. Final gate: for JS — `turbo run lint typecheck test build --filter=...<product>...` (+ `export:web` where web changed); for API changes — `ruff check && pyright && pytest`; plus the typegen drift check — all green. Report what shrank — file count, LOC, duplicated symbols eliminated, primitives composed/extended.
+6. Final gate: for JS — `turbo run lint typecheck test build --filter=...*<product>*...` (+ `export:web` where web changed); for API changes — `ruff check && pyright && pytest`; plus the typegen drift check — all green. Report what shrank — file count, LOC, duplicated symbols eliminated, primitives composed/extended.
 
 What "simplification" does NOT mean here:
 
@@ -87,4 +87,4 @@ What "simplification" does NOT mean here:
 
 ---
 
-Start now. Go step by step. Do not stop until the entire feature has been combed through, every duplication addressed or explicitly justified (relocations-out flagged for `/ptfm-commonify`), docs updated, and the suite is green — `turbo run lint typecheck test build --filter=...<product>...` (JS) and, for API changes, `ruff check && pyright && pytest`, plus the typegen drift check.
+Start now. Go step by step. Do not stop until the entire feature has been combed through, every duplication addressed or explicitly justified (relocations-out flagged for `/ptfm-commonify`), docs updated, and the suite is green — `turbo run lint typecheck test build --filter=...*<product>*...` (JS) and, for API changes, `ruff check && pyright && pytest`, plus the typegen drift check.
