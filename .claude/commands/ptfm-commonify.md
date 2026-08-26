@@ -62,7 +62,7 @@ ABSOLUTE, NON-NEGOTIABLE RULES — read these twice:
 - The jest-expo config + the project's test setup (the shared `src/test/**`-equivalent setup files, jest config, conftest/factories) — content stays IDENTICAL. (Their file paths may shift only if their consumer's path shifted and the project convention requires it — prefer leaving these in place.)
 - If you genuinely believe a test's expectation has to change for a refactor, STOP, surface it to me with file + line + reasoning, and wait. Do not edit it. If the answer is "the refactor would change observable behaviour", the refactor is out of scope — flag it and stop.
 - The full test suite MUST pass after every meaningful relocation step, not just at the end — **`turbo run test --filter=...*<product>*...`** for JS and **`pytest`** for the API. If it goes red, you revert or fix forward (by fixing the production code or import paths, NOT the assertions) before moving on.
-- `turbo run lint typecheck test build --filter=...*<product>*...` (JS) AND — for any API change — `ruff check && pyright && pytest` is the final gate. All green, zero skipped, zero `.only`, zero `.skip`, zero new ignores. Where a move touches web, include `export:web`. Run the **typegen drift check** (`git diff --exit-code` on `products/<product>/api-client/`) if any relocation touched the endpoint chain.
+- `turbo run lint typecheck test build --filter=...*<product>*...` (JS) AND — for any API change — `ruff check && pyright && pytest` is the final gate. All green, zero skipped, zero `.only`, zero `.skip`, zero new ignores. Where a move touches web, include `export:web`. Run the **typegen drift check** (`node scripts/check-typegen-drift.mjs`) if any relocation touched the endpoint chain.
 
 Process:
 

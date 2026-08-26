@@ -115,7 +115,7 @@ Anything you learned mid-implementation worth surfacing — hidden invariants, s
 
 - Manual run-through (golden path)
 - `turbo run lint typecheck test build --filter=...*<product>*...` output (+ `ruff check && pyright && pytest` for API changes) — all gates green
-- Typegen drift check (`git diff --exit-code` on the regenerated client) clean
+- Typegen drift check (`node scripts/check-typegen-drift.mjs`) clean
 - Any open caveats
 
 Update the log incrementally — every batch of changes, write what you just did. Don't leave it for the end.
@@ -129,7 +129,7 @@ Before reporting done, emit the pipeline's Definition-of-Done checklist with eac
 - [ ] API unit + service tests added/updated (`pytest`, real Postgres, savepoint isolation)
 - [ ] API integration tests added/updated (router → service → DB, broadcast-and-invalidate, cursor pagination)
 - [ ] Frontend RNTL unit + component tests added/updated
-- [ ] Typegen regenerated — no drift (`git diff --exit-code` on `products/<product>/api-client/`)
+- [ ] Typegen regenerated — no drift (`node scripts/check-typegen-drift.mjs`)
 - [ ] `turbo run lint typecheck test build --filter=...*<product>*...` (JS) AND — for API changes — `ruff check && pyright && pytest` — all green (lint + typecheck + tests + the Expo web export / app build are all first-class gates; a green test suite with a red build is not done)
 
 Run the final gate one last time and paste the output. Silent skips are rule violations. If you cannot satisfy a line, say so explicitly with a one-line justification — do not just omit. Zero `.only`, zero `.skip`, zero new ignores.

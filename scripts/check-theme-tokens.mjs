@@ -25,7 +25,7 @@
 //   3. AGREEMENT every global.css matches theme.ts exactly, keys AND values. Web and native read
 //                different files for the same token; nothing regenerates the product copies, so
 //                a /sync-tokens that updates packages/ui silently leaves each product behind.
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -82,6 +82,29 @@ export function cssVars(source) {
     light: grab(/(?:^|[\s{;]):root\s*\{([^}]*)\}/m),
     dark: grab(/\.dark:root\s*\{([^}]*)\}/m),
   };
+}
+
+/**
+ * The generated files must still match what the SOURCE produces.
+ *
+ * CLAUDE.md: "Token VALUES are authored ONLY in packages/ui/figma/tokens.json ... never
+ * hand-edit generated theme values." Nothing enforced it. A value hand-edited consistently
+ * across theme.ts and every global.css satisfied all three rules above — they check the copies
+ * against each other, never against their source — so the committed design system could differ
+ * from the tokens it is supposedly generated from, and the next /sync-tokens would silently
+ * revert somebody's brand change with no explanation.
+ *
+ * Regenerates and compares, then restores the files, so the check itself has no side effects.
+ */
+export function generatedFilesMatchSource(root = ROOT) {
+  const outputs = ["packages/ui/src/lib/theme.ts", "packages/ui/src/global.css"];
+  const before = outputs.map((f) => readFileSync(join(root, f), "utf8"));
+  try {
+    execFileSync("node", ["scripts/figma-tokens.mjs"], { cwd: root, stdio: "ignore" });
+    return outputs.filter((f, i) => readFileSync(join(root, f), "utf8") !== before[i]);
+  } finally {
+    outputs.forEach((f, i) => writeFileSync(join(root, f), before[i]));
+  }
 }
 
 /** Compare two token maps -> the three ways they can disagree. */
@@ -141,6 +164,14 @@ function main() {
         problems.push(`${file} (${mode}) defines tokens theme.ts does not: ${extra.join(", ")}`);
       for (const m of mismatched) problems.push(`${file} (${mode}) disagrees with theme.ts — ${m}`);
     }
+  }
+
+  // 4. SOURCE — the generated files still match what tokens.json produces.
+  for (const stale of generatedFilesMatchSource()) {
+    problems.push(
+      `${stale} does not match packages/ui/figma/tokens.json — it was hand-edited, or the ` +
+        `source changed without a regen`,
+    );
   }
 
   if (problems.length > 0) {

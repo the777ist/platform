@@ -145,7 +145,7 @@ A feature isn't audit-clean unless it lints, typechecks, tests, and builds on BO
 - **`turbo run test`** — the RNTL suite green (jest-expo). Zero `.only`, zero `.skip`.
 - **`turbo run build`** (+ `export:web` where the change touches web) — the Expo **web export / app build** must succeed. This is the "production build" gate — it catches RN-web resolution failures, New-Arch / Hermes issues, dynamic-import failures, and other production-only errors lint and tests miss. Slow but load-bearing.
 - **API gates** — `ruff check` (+ `ruff format --check`) clean, **`pyright`** strict clean (no untyped defs, no implicit `Any`), Pydantic strict mode satisfied, **`pytest`** green against real Postgres.
-- **Typegen drift check** — regenerate the client and run `git diff --exit-code` on `products/<product>/api-client` (+ `products/<product>/api/openapi.json`). Drift = red gate. NEVER hand-edit the generated client — change the endpoint, run typegen, regenerate.
+- **Typegen drift check** — regenerate the client and run `node scripts/check-typegen-drift.mjs`. Drift = red gate. NEVER hand-edit the generated client — change the endpoint, run typegen, regenerate.
 
 For each issue found:
 
