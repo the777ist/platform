@@ -8,53 +8,78 @@
 //
 // `sh -n` parses without executing, so this is a few milliseconds and has no side effects.
 //
-// Discovery is by DIRECTORY WALK, not a hardcoded list, so a new hook script is covered the moment
-// it is added rather than the day someone remembers to add it here.
+// Discovery follows GIT, not a list of directories, so a shell script added anywhere in the repo
+// is covered the moment it is committed rather than the day someone remembers to add it here.
 import { execFileSync } from "node:child_process";
-import { readdirSync, existsSync } from "node:fs";
-import { join, dirname, relative } from "node:path";
+import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const SEARCH_DIRS = [".lefthook", "scripts"];
+export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-function shellScriptsIn(dir) {
-  const abs = join(ROOT, dir);
-  if (!existsSync(abs)) return [];
-  return readdirSync(abs, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".sh"))
-    .map((entry) => join(abs, entry.name))
+/**
+ * Every shell script the repo tracks, wherever it lives.
+ *
+ * Asked of git rather than walked from a list of directories. An earlier version read
+ * `.lefthook/` and `scripts/` non-recursively, which covered both scripts that exist today and
+ * would silently have skipped one added in a subdirectory or under products/ — while the comment
+ * above it claimed otherwise. Following the repo also means node_modules and .venv are never
+ * walked, the same reason the other guards use `git ls-files`.
+ */
+export function shellScripts(root = ROOT) {
+  return execFileSync("git", ["ls-files", "*.sh"], { cwd: root, encoding: "utf8" })
+    .split(/\r?\n/)
+    .filter(Boolean)
     .sort();
 }
 
-const scripts = SEARCH_DIRS.flatMap(shellScriptsIn);
-if (scripts.length === 0) {
-  console.log("lint-shell: no shell scripts found");
-  process.exit(0);
-}
-
-let failed = 0;
-for (const script of scripts) {
+/**
+ * Parse one script without executing it. Returns null when it parses, else the reason.
+ *
+ * `sh -n` is a few milliseconds and has no side effects. ENOENT is reported separately because
+ * it means `sh` itself is missing, not that the script is broken — say which, or the next person
+ * spends an hour looking for a syntax error that is not there.
+ */
+export function checkScript(absPath) {
   try {
-    execFileSync("sh", ["-n", script], { stdio: ["ignore", "pipe", "pipe"] });
+    execFileSync("sh", ["-n", absPath], { stdio: ["ignore", "pipe", "pipe"] });
+    return null;
   } catch (error) {
-    failed += 1;
-    // ENOENT means `sh` itself is missing, not that the script is broken. Say which, or the next
-    // person spends an hour looking for a syntax error that is not there.
-    if (error.code === "ENOENT") {
-      console.error(
-        `❌ cannot run \`sh\` — no POSIX shell on PATH (needed to check ${relative(ROOT, script)})`,
-      );
-      continue;
-    }
-    console.error(`❌ ${relative(ROOT, script)}`);
-    const detail = (error.stderr ?? "").toString().trim();
-    if (detail) console.error(detail);
+    if (error.code === "ENOENT") return { kind: "no-shell", detail: "" };
+    return { kind: "parse-error", detail: (error.stderr ?? "").toString().trim() };
   }
 }
 
-if (failed > 0) {
-  console.error(`lint-shell: ${failed} shell script(s) failed to parse`);
-  process.exit(1);
+function main() {
+  const scripts = shellScripts();
+  if (scripts.length === 0) {
+    console.log("lint-shell: no shell scripts found");
+    return;
+  }
+
+  let failed = 0;
+  for (const script of scripts) {
+    const problem = checkScript(join(ROOT, script));
+    if (!problem) continue;
+    failed += 1;
+    if (problem.kind === "no-shell") {
+      console.error(`❌ cannot run \`sh\` — no POSIX shell on PATH (needed to check ${script})`);
+      continue;
+    }
+    console.error(`❌ ${script}`);
+    if (problem.detail) console.error(problem.detail);
+  }
+
+  if (failed > 0) {
+    console.error(`lint-shell: ${failed} shell script(s) failed to parse`);
+    process.exit(1);
+  }
+  console.log(`lint-shell: ${scripts.length} shell script(s) parse cleanly`);
 }
-console.log(`lint-shell: ${scripts.length} shell script(s) parse cleanly`);
+
+// Guarded so importing this module (to test the rules) does not shell out or exit the process.
+if (
+  process.argv[1] &&
+  process.argv[1].split(String.fromCharCode(92)).join("/").endsWith("scripts/lint-shell.mjs")
+) {
+  main();
+}
