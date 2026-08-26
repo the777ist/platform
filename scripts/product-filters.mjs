@@ -18,26 +18,51 @@ import { readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const surface = process.argv[2];
+export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+export const SURFACES = ["api", "app"];
 
-if (!surface || !["api", "app"].includes(surface)) {
-  console.error("usage: node scripts/product-filters.mjs <api|app>");
-  process.exit(2);
+/**
+ * Directory names under products/ that actually have this surface, sorted.
+ *
+ * Sorted explicitly: readdirSync returns filesystem order, which is NOT the same on the Windows
+ * dev machines and the Linux runners. Without this the generated YAML differs by platform for no
+ * reason, which makes any future diff of it meaningless.
+ */
+export function productsWithSurface(surface, root = ROOT) {
+  return readdirSync(join(root, "products"))
+    .filter((name) => existsSync(join(root, "products", name, surface)))
+    .sort();
 }
 
-// Sorted explicitly: readdirSync returns filesystem order, which is NOT the same on the Windows
-// dev machines and the Linux runners. Without this the generated YAML differs by platform for no
-// reason, which makes any future diff of it meaningless.
-const products = readdirSync(join(ROOT, "products"))
-  .filter((name) => existsSync(join(ROOT, "products", name, surface)))
-  .sort();
+/**
+ * One dorny/paths-filter line per product.
+ *
+ * The KEY drops a leading underscore so `_template` stays addressable as `template`, which is
+ * what the workflows' matrix expressions already expect — but the PATH keeps the real directory
+ * name. Getting that pairing backwards is the quiet failure: `products/template/api/**` matches
+ * nothing, so the filter is always false and the product simply never deploys, with every
+ * workflow still green.
+ *
+ * `packages/**` is on every product deliberately: a shared package change can alter any product's
+ * build output, so every product redeploys (the co-evolve guard, same rule the gates use).
+ */
+export function filterLines(products, surface) {
+  return products.map(
+    (name) => `${name.replace(/^_/, "")}: ['products/${name}/${surface}/**', 'packages/**']`,
+  );
+}
 
-// The matrix key drops the leading underscore so `_template` stays addressable as `template`,
-// which is what the workflows' matrix expressions already expect. Keeping the key stable means
-// this change swaps only where the YAML comes from, never what the deploy jobs do with it.
-const lines = products.map(
-  (name) => `${name.replace(/^_/, "")}: ['products/${name}/${surface}/**', 'packages/**']`,
-);
-
-process.stdout.write(lines.length ? lines.join("\n") + "\n" : "");
+// --- CLI ---------------------------------------------------------------------------------------
+// Guarded so importing this module (to test the rules) neither writes to stdout nor exits.
+if (
+  process.argv[1] &&
+  process.argv[1].split(String.fromCharCode(92)).join("/").endsWith("scripts/product-filters.mjs")
+) {
+  const surface = process.argv[2];
+  if (!surface || !SURFACES.includes(surface)) {
+    console.error("usage: node scripts/product-filters.mjs <api|app>");
+    process.exit(2);
+  }
+  const lines = filterLines(productsWithSurface(surface), surface);
+  process.stdout.write(lines.length ? lines.join("\n") + "\n" : "");
+}

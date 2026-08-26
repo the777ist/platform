@@ -29,6 +29,19 @@ export function allApiDirs() {
     .sort();
 }
 
+/**
+ * The `(head)`-marked revisions in `alembic heads` output.
+ *
+ * Alembic prints one line per head, e.g. `a1b2c3d4e5f6 (head)`, and prints nothing at all for a
+ * migration directory with no revisions yet — which a freshly stamped product has. Matching on
+ * the marker rather than counting lines keeps banners, warnings and blank trailing lines from
+ * being mistaken for revisions, since a false SECOND head would block every push with an error
+ * nobody can act on.
+ */
+export function parseHeads(output) {
+  return output.split(/\r?\n/).filter((line) => line.includes("(head)"));
+}
+
 // Returns the failures rather than exiting, so the hook can fold this into its own exit handling.
 export function checkAlembicHeads(apiDirs) {
   const failures = [];
@@ -47,7 +60,7 @@ export function checkAlembicHeads(apiDirs) {
       console.warn(`⚠️  ${dir}: could not run \`alembic heads\` — multi-head check SKIPPED`);
       continue;
     }
-    const heads = out.split(/\r?\n/).filter((line) => line.includes("(head)"));
+    const heads = parseHeads(out);
     if (heads.length > 1) failures.push({ dir, heads });
   }
   return failures;
