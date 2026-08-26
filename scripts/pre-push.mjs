@@ -11,12 +11,12 @@
 // exactly the commits the remote has not seen. Run it by hand with:
 //   node scripts/pre-push.mjs origin/main
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createConnection } from "node:net";
 import { scopeFilter, affectedApiDirs, TURBO_TASKS } from "./affected.mjs";
 import { checkAlembicHeads, reportFailures, allApiDirs } from "./alembic-heads.mjs";
+import { testDbTarget } from "./test-db-target.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BASE = process.argv[2];
@@ -49,26 +49,6 @@ const affectedApis = affectedApiDirs(SCOPE);
 
 // --- is that product's Postgres actually up? -------------------------------------------------
 // Local API tests run against THAT product's own Supabase stack, on the port the CLI listens on.
-// Read it from the stack's config.toml rather than re-deriving 54322+100·i — the formula already
-// lives in config.toml, the api dev script, the generator and tests/__init__.py; a fifth copy is
-// a fifth thing to drift (CLAUDE.md gotcha).
-function testDbTarget(apiDir) {
-  const url = process.env.TEST_DATABASE_URL; // honoured verbatim, exactly as the suite honours it
-  if (url) {
-    const m = url.match(/@([^/:]+)(?::(\d+))?/);
-    if (m) return { host: m[1], port: Number(m[2] ?? 5432) };
-  }
-  if (process.env.CI) return { host: "localhost", port: 5432 };
-  const cfg = join(ROOT, apiDir, "..", "supabase", "config.toml");
-  if (!existsSync(cfg)) return null;
-  // `shadow_port` sits in the same section and must not match: anchor on the line start.
-  const db = readFileSync(cfg, "utf8")
-    .split(/^\[/m)
-    .find((s) => s.startsWith("db]"));
-  const m = db?.match(/^\s*port\s*=\s*(\d+)/m);
-  return m ? { host: "127.0.0.1", port: Number(m[1]) } : null;
-}
-
 const probe = (target) =>
   new Promise((resolve) => {
     const socket = createConnection({ host: target.host, port: target.port });

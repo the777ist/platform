@@ -30,9 +30,23 @@ function gateScripts(source) {
     ...[...source.matchAll(/scripts\/([a-z0-9-]+)\.mjs/g)].map((m) => m[1]),
     ...[...source.matchAll(/from "\.\/([a-z0-9-]+)\.mjs"/g)].map((m) => m[1]),
   ];
-  // pre-push refers to itself in its own header; it is the hook, not a gate within it.
-  return new Set(names.filter((n) => n !== "pre-push"));
+  return new Set(names.filter((n) => !NOT_A_GATE.has(n)));
 }
+
+/**
+ * Modules that appear in the hook but are not gates, each with the reason it cannot fail a run.
+ * Written down rather than inferred: an unexplained exclusion here would let a real gate be
+ * dropped from CI by adding one word to a list.
+ */
+const NOT_A_GATE = new Map([
+  ["pre-push", "the hook itself, not a gate within it"],
+  [
+    "test-db-target",
+    "a pure helper that resolves where a product's pytest expects Postgres, used only to decide " +
+      "whether the hook may SKIP that suite locally. CI never skips — it always has a service " +
+      "container — so it has nothing to call.",
+  ],
+]);
 
 test("every gate the pre-push hook runs is also run by CI", () => {
   const inHook = gateScripts(HOOK);
@@ -43,6 +57,16 @@ test("every gate the pre-push hook runs is also run by CI", () => {
     [],
     `these run in the hook but NOT in CI, so --no-verify skips them entirely: ${hookOnly.join(", ")}`,
   );
+});
+
+test("every non-gate exclusion carries a written reason", () => {
+  // The exclusion list is the one place this test could be defeated by editing it, so the cost
+  // of adding an entry is having to justify it.
+  assert.ok(NOT_A_GATE.size > 0);
+  for (const [name, reason] of NOT_A_GATE) {
+    assert.equal(typeof reason, "string");
+    assert.ok(reason.length > 30, `${name}: reason too thin to be a reason: "${reason}"`);
+  }
 });
 
 test("the hook is actually running the gates this repo has", () => {
