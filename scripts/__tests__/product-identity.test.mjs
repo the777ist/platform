@@ -26,6 +26,8 @@ const identity = (over = {}) => ({
   slug: "a",
   sentryProject: "example-a",
   projectId: "example-a",
+  desktopAppId: "com.example.a.desktop",
+  desktopReleasesRepo: "a-desktop-releases",
   flyApps: ["example-a-api-prod", "example-a-api-stg"],
   ...over,
 });
@@ -41,6 +43,8 @@ test("distinct products collide on nothing", () => {
       slug: "b",
       sentryProject: "example-b",
       projectId: "example-b",
+      desktopAppId: "com.example.b.desktop",
+      desktopReleasesRepo: "b-desktop-releases",
       flyApps: ["example-b-api-prod", "example-b-api-stg"],
     }),
   });
@@ -73,6 +77,21 @@ test("the EAS slug and the Sentry project are part of the identity", () => {
   });
   assert.ok(found.some((c) => c.kind === "slug" && c.value === "a"));
   assert.ok(found.some((c) => c.kind === "sentryProject" && c.value === "example-a"));
+});
+
+test("the desktop app id and releases repo are part of the identity", () => {
+  // electron-updater resolves "the latest release of the repo", so two products publishing to
+  // ONE releases repo hand each other's binaries to their users as an update. The
+  // electron-builder config's own comment is why each product gets its own repo — and nothing
+  // checked that they did.
+  const found = collisions({
+    a: identity(),
+    b: identity({ portIndex: "1", scheme: "b", slug: "b", flyApps: [] }),
+  });
+  assert.ok(
+    found.some((c) => c.kind === "desktopReleasesRepo" && c.value === "a-desktop-releases"),
+  );
+  assert.ok(found.some((c) => c.kind === "desktopAppId"));
 });
 
 test("a product does not collide with ITSELF for reusing one name across kinds", () => {

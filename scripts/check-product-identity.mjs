@@ -15,6 +15,8 @@
 //   project_id      the same, for the Supabase CLI's local containers.
 //   slug            two products publishing OTA updates to ONE EAS project.
 //   sentryProject   two products' errors in one stream, discovered during an incident.
+//   desktopAppId    two desktop apps that cannot coexist on a machine.
+//   desktopReleasesRepo  electron-updater hands one product's binary to the other's users.
 //
 // `_template` is included deliberately: it is in the deploy matrix as `template`, so its names
 // are as real as any product's.
@@ -39,6 +41,7 @@ export function productIdentity(name, root = ROOT) {
   const read = (...p) => (existsSync(join(dir, ...p)) ? readFileSync(join(dir, ...p), "utf8") : "");
 
   const appConfig = read("app", "app.config.ts");
+  const electron = read("desktop", "electron-builder.yml");
   const supabase = read("supabase", "config.toml");
   const productJson = read("product.json");
 
@@ -65,6 +68,12 @@ export function productIdentity(name, root = ROOT) {
     // during an incident, at the moment it costs most.
     sentryProject: first(appConfig, /project:\s*"([^"]+)"/),
     projectId: first(supabase, /^project_id\s*=\s*"([^"]+)"/m),
+    // The desktop bundle identifier — two apps that cannot coexist on a machine.
+    desktopAppId: first(electron, /^appId:\s*(\S+)/m),
+    // electron-updater resolves "the latest release of the repo", so two products publishing to
+    // ONE releases repo hand each other's binaries to their users as updates. The config's own
+    // comment is why each product gets its own repo; nothing checked that they did.
+    desktopReleasesRepo: first(electron, /^\s{2}repo:\s*(\S+)/m),
     flyApps: flyApps.sort(),
   };
 }
