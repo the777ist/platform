@@ -11,7 +11,12 @@ import assert from "node:assert/strict";
 
 import { isFocused, isSkipped, isTestFile } from "../check-focused-tests.mjs";
 import { leaksTemplateToken } from "../check-stamp-tokens.mjs";
-import { jwtRole } from "../check-committed-secrets.mjs";
+import {
+  jwtRole,
+  jwtPayload,
+  isLeakedServiceRole,
+  findLeakedKeys,
+} from "../check-committed-secrets.mjs";
 import { namesAColour } from "../check-semantic-tokens.mjs";
 
 const b64 = (obj) => Buffer.from(JSON.stringify(obj)).toString("base64url");
@@ -126,5 +131,69 @@ test("token references and semantic classes are allowed", () => {
     'className="h-10 px-4 rounded-md"',
   ]) {
     assert.ok(!namesAColour(line), `should NOT be flagged: ${line}`);
+  }
+});
+
+test("a service-role key pasted OUTSIDE a .env is caught", () => {
+  // The env-file rules are the rule that gets written down; this is the one that catches
+  // reality. A key reaches a public repo through a workflow, a fixture, a README snippet or a
+  // debug script far more often than through a committed .env — and none of those were read
+  // at all until this existed.
+  const key = jwt({ iss: "supabase", ref: "abcdefghijklmnop", role: "service_role" });
+  const hits = findLeakedKeys(`jobs:\n  env:\n    SUPABASE_SERVICE_ROLE_KEY: ${key}\n`);
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].line, 3);
+});
+
+test("the Supabase CLI's public local demo key is allowed", () => {
+  // It is published in Supabase's own docs, byte-identical on every machine, and authorises
+  // nothing beyond a throwaway local stack. e2e-nightly.yml uses it deliberately. Flagging it
+  // would make the guard cry wolf on its own repo, which is how a guard gets switched off.
+  const demo = jwt({ iss: "supabase-demo", role: "service_role", exp: 1983812996 });
+  assert.equal(isLeakedServiceRole(demo), false);
+  assert.deepEqual(findLeakedKeys(`KEY=${demo}`), []);
+});
+
+test("the allowlist is keyed on the ISSUER, not on one literal key", () => {
+  // A rotated demo key must still pass; a real key must still fail. Matching the exact token
+  // would invert both of those the first time Supabase reissues it.
+  const rotated = jwt({ iss: "supabase-demo", role: "service_role", exp: 9999999999 });
+  assert.equal(isLeakedServiceRole(rotated), false);
+  const realish = jwt({ iss: "supabase", role: "service_role", exp: 9999999999 });
+  assert.equal(isLeakedServiceRole(realish), true);
+});
+
+test("an anon key is never flagged, wherever it appears", () => {
+  // Every product commits one on purpose; it is publishable and gated by RLS.
+  const anon = jwt({ iss: "supabase", ref: "abcdefghijklmnop", role: "anon" });
+  assert.equal(isLeakedServiceRole(anon), false);
+  assert.deepEqual(findLeakedKeys(`EXPO_PUBLIC_SUPABASE_ANON_KEY=${anon}`), []);
+});
+
+test("ordinary text that merely looks like base64 is not a finding", () => {
+  for (const text of ["eyJustSomeWord", "not.a.jwt", "eyJhbGci.notbase64json.sig", ""]) {
+    assert.deepEqual(findLeakedKeys(text), [], text);
+  }
+});
+
+test("several keys on different lines are all reported", () => {
+  const a = jwt({ iss: "supabase", role: "service_role", exp: 1 });
+  const b = jwt({ iss: "supabase", role: "service_role", exp: 2 });
+  const hits = findLeakedKeys(`first: ${a}\nharmless line\nsecond: ${b}\n`);
+  assert.deepEqual(
+    hits.map((h) => h.line),
+    [1, 3],
+  );
+});
+
+test("a JWT with no role claim is not a service-role leak", () => {
+  // Plenty of unrelated JWTs are legitimately committed in fixtures and lockfiles.
+  assert.equal(isLeakedServiceRole(jwt({ iss: "someone-else", sub: "user-1" })), false);
+  assert.equal(jwtPayload(jwt({ sub: "x" }))?.sub, "x");
+});
+
+test("a non-JWT decodes to null rather than throwing", () => {
+  for (const value of ["", "a.b", "x.y.z", "plain-secret"]) {
+    assert.equal(jwtPayload(value), null, value);
   }
 });

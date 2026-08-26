@@ -26,6 +26,55 @@ const PUBLIC_BUT_SECRET = /^EXPO_PUBLIC_.*(SECRET|SERVICE_ROLE|PRIVATE)/i;
 // A bare `.env` / `.env.local` is machine-local and must never be tracked at all.
 const NEVER_TRACKED = /(^|\/)\.env(\.local)?$/;
 
+// A JWT ANYWHERE in a tracked file, not only in a .env. The env-file scan below is the rule that
+// gets written down; this is the one that catches reality. A service-role key reaches a public
+// repo through a workflow, a test fixture, a README snippet or a debug script far more easily
+// than through a committed .env, and none of those were being read at all.
+//
+// The segment lengths are deliberately loose: precision comes from DECODING the payload and
+// checking the role claim, not from the shape. Demanding a full-length signature would miss a
+// key that was truncated on the way in, and buy no accuracy at all.
+const JWT_ANYWHERE = /eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g;
+
+// The Supabase CLI ships ONE well-known local keypair, published in its own docs and byte-identical
+// on every machine. Its issuer is `supabase-demo` and it authorises nothing beyond a throwaway
+// local stack, so e2e-nightly.yml uses the service-role half of it deliberately. Every OTHER
+// service-role key is a live incident on a public repo. Allowlisting by ISSUER rather than by the
+// literal key means a rotated demo key still passes and a real key still cannot.
+const PUBLIC_DEMO_ISS = "supabase-demo";
+
+// Binary-ish files git tracks that cannot contain a pasted key and are slow to read as text.
+const SKIP_EXT = /\.(png|jpg|jpeg|gif|ico|webp|pdf|ttf|otf|woff2?|keystore|patch)$/i;
+
+/** The decoded payload if the value is a decodable JWT, else null. */
+export function jwtPayload(value) {
+  const parts = value.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+    return typeof payload === "object" && payload !== null ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
+/** True for a service-role key that is NOT the Supabase CLI's public local demo key. */
+export function isLeakedServiceRole(value) {
+  const payload = jwtPayload(value);
+  return payload?.role === "service_role" && payload.iss !== PUBLIC_DEMO_ISS;
+}
+
+/** Every leaked service-role key in a blob of text, with the line it sits on. */
+export function findLeakedKeys(text) {
+  const hits = [];
+  text.split(/\r?\n/).forEach((line, i) => {
+    for (const match of line.matchAll(JWT_ANYWHERE)) {
+      if (isLeakedServiceRole(match[0])) hits.push({ line: i + 1, token: match[0] });
+    }
+  });
+  return hits;
+}
+
 // Returns the `role` claim if the value is a decodable JWT, else null.
 export function jwtRole(value) {
   const parts = value.split(".");
@@ -82,6 +131,21 @@ function main() {
       });
   }
 
+  // Repo-wide sweep for a service-role key pasted ANYWHERE, not just into a .env.
+  for (const file of tracked.filter((f) => !SKIP_EXT.test(f))) {
+    let text;
+    try {
+      text = readFileSync(join(ROOT, file), "utf8");
+    } catch {
+      continue; // unreadable/binary — nothing to assert
+    }
+    for (const { line, token } of findLeakedKeys(text)) {
+      findings.push(
+        `${file}:${line}: a service_role JWT (…${token.slice(-8)}) — it bypasses RLS entirely`,
+      );
+    }
+  }
+
   if (findings.length > 0) {
     console.error("");
     console.error("❌ Secret material in committed files:");
@@ -91,7 +155,10 @@ function main() {
     process.exit(1);
   }
 
-  console.log("check-committed-secrets: committed env files carry publishable values only");
+  console.log(
+    `check-committed-secrets: ${tracked.length} tracked file(s) scanned, ` +
+      "no service-role keys; committed env files carry publishable values only",
+  );
 }
 
 // Guarded so importing this module (to test the rules) does not run the scan or exit the process.
