@@ -68,17 +68,26 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: uv sync --frozen --project products/${{ matrix.product }}/api
       - run: pnpm exec playwright install --with-deps chromium
-      - name: Derive this product's Supabase URL
-        # Supabase block = 54321 + 100*portIndex (PHILOSOPHY generator spec). Hardcoding :54321 is
-        # exactly what pinned this workflow to _template. The product name goes through env rather
-        # than being interpolated into the shell.
+      - name: Resolve this product's Supabase URL
+        # READ from the product's supabase/config.toml, never recomputed from
+        # `54321 + 100*portIndex`. The generator owns that formula and writes the result into
+        # config.toml; recomputing it here is a second copy that can disagree with the file the
+        # CLI actually reads. On a runner that is one wasted `supabase start`; the shape that
+        # matters is a URL pointing at a DIFFERENT product's stack, which the suite would happily
+        # sign up against. (Hardcoding :54321 is what pinned this workflow to _template.)
         env:
           PRODUCT: ${{ matrix.product }}
         run: |
-          idx=$(node -e "console.log(JSON.parse(require('fs').readFileSync('products/' + process.env.PRODUCT + '/product.json','utf8')).portIndex)")
-          url="http://localhost:$((54321 + 100 * idx))"
-          echo "SUPABASE_URL=$url" >> "$GITHUB_ENV"
-          echo "$PRODUCT: portIndex=$idx -> SUPABASE_URL=$url"
+          port=$(node -e "
+            const fs = require('fs');
+            const cfg = fs.readFileSync('products/' + process.env.PRODUCT + '/supabase/config.toml', 'utf8');
+            const section = cfg.split(/^\[/m).find((s) => s.startsWith('api]'));
+            const m = section && section.match(/^\s*port\s*=\s*(\d+)/m);
+            if (!m) { console.error('no [api] port in config.toml'); process.exit(1); }
+            console.log(m[1]);
+          ")
+          echo "SUPABASE_URL=http://localhost:$port" >> "$GITHUB_ENV"
+          echo "$PRODUCT: supabase/config.toml [api] port=$port"
       - name: Web E2E (signup → login → CRUD → realtime)
         # Filtered by PATH, not by `@<scope>/<product>-app`: a path filter survives a repo/org
         # rename, which the scoped name does not.

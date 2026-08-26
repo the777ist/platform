@@ -85,8 +85,11 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   gets nightly E2E and a newly stamped one is covered the night it lands. It used to be hardcoded
   to `products/_template` — the stamp SOURCE was the only thing ever tested and no shipped product
   was. `_template` stays in the matrix on purpose: a break there is stamped into every future
-  product. `SUPABASE_URL` is derived per product (`54321 + 100*portIndex`); hardcoding `:54321` is
-  what pinned it to the template.
+  product. `SUPABASE_URL` is READ from that product's `supabase/config.toml` (`[api] port`), not
+  recomputed from `54321 + 100*portIndex` — the generator owns that formula and writes the result
+  into config.toml, so recomputing it is a second copy that can point at a DIFFERENT product's
+  stack. The e2e `global-setup.ts` health check reads the same file for the same reason.
+  Hardcoding `:54321` is what pinned this workflow to the template.
 - `deploy-api.yml` / `eas-update.yml` DERIVE their per-product `changes:` filters from
   `products/*` via `scripts/product-filters.mjs`, so a newly stamped product deploys with no
   workflow edit. (They used to hardcode the roster, which meant a new product silently never
