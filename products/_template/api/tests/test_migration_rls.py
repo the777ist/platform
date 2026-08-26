@@ -46,14 +46,33 @@ def test_alembic_migration_applies_rls_deny_all(rls_db_url: str) -> None:
         command.upgrade(Config("alembic.ini"), "head")
         eng = create_engine(rls_db_url)
         with eng.connect() as conn:
+            # EVERY user table, discovered from the catalogue — never a hardcoded list.
+            #
+            # This used to assert `relname IN ('item', 'push_token')`, which pinned the locked
+            # invariant ("tables stay RLS-deny-all") to the two tables the template happens to
+            # ship. A product adding a third table got no coverage for it at all, and every
+            # product stamped from this template inherited that hole — the failure being an
+            # openly readable table on a public-facing database, which nothing else would report.
+            #
+            # alembic_version is excluded deliberately: it is Alembic's own bookkeeping, not
+            # application data, and FORCE RLS on it would lock Alembic out of its own table.
             rows = conn.execute(
                 text(
-                    "SELECT relname, relrowsecurity, relforcerowsecurity "
-                    "FROM pg_class WHERE relname IN ('item', 'push_token')"
+                    "SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity "
+                    "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+                    "WHERE n.nspname = 'public' AND c.relkind = 'r' "
+                    "AND c.relname <> 'alembic_version' "
+                    "ORDER BY c.relname"
                 )
             ).all()
         eng.dispose()
-        assert len(rows) == 2
+
+        names = {str(row[0]) for row in rows}
+        # Without this the test passes VACUOUSLY: a query that matches nothing satisfies a loop
+        # over its rows, so a migration that failed to create the tables, or a catalogue filter
+        # that quietly stopped matching, would read as "every table is protected".
+        assert {"item", "push_token"} <= names, f"expected the template's tables, got {names}"
+
         for relname, rls, force_rls in rows:
             assert rls is True, f"RLS not enabled on {relname}"
             assert force_rls is True, f"FORCE RLS not enabled on {relname}"
