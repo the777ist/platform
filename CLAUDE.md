@@ -109,12 +109,14 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   message went straight through, ungated. `pnpm prepare` now runs `scripts/verify-hooks.mjs`, which
   WARNS loudly (it does not fail the install — a deliberate org-wide hooksPath is legitimate, and
   CI re-runs every gate regardless). Fix for one repo: `git config --local core.hooksPath .git/hooks`.
-- `main` is PROTECTED and CI is the binding gate: a pull request is required, the `build` check
-  must be green, force-pushes and branch deletion are blocked, and conversations must be resolved.
-  Zero approvals are required, so a solo maintainer can still merge their own PR. `enforce_admins`
-  is OFF deliberately — an admin keeps an escape hatch for a genuine emergency; that is a
-  deliberate hole, not an oversight, so do not treat "an admin can push" as proof the gate is off.
-  Before this, nothing enforced ANY of it: every gate on this page was bypassable at the last step.
+- `main` is NOT branch-protected — removed deliberately, so that merging never presents GitHub's
+  "bypass rules" prompt. CI still runs on every PR and every push to main, but nothing BLOCKS a
+  merge on it: a red `build` can land. Treat CI as advisory at the merge step and binding only by
+  convention, and do not cite "main is protected" as the reason a gate holds — the pre-push hook
+  and CI are the only things actually running, and `--no-verify` skips the first.
+  It was previously protected (PR required, `build` green, no force-push or deletion,
+  conversations resolved, 0 approvals, `enforce_admins` off). To restore exactly that:
+  `gh api -X PUT repos/<org>/<repo>/branches/main/protection --input <saved-protection.json>`.
 - Git hooks are TIERED, and the budgets are the design constraint (`lefthook.yml`'s header is
   authoritative): pre-commit ~5s = staged-file AUTO-FIXERS only, piped semantic-fixer →
   formatter so the formatter gets the last write; commit-msg = commitlint (Conventional
