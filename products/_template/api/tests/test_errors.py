@@ -31,25 +31,25 @@ def client() -> TestClient:
     register_exception_handlers(app)
 
     @app.get("/problem")
-    def _problem() -> None:
+    def _problem() -> None:  # pyright: ignore[reportUnusedFunction]  (registered via decorator)
         raise ProblemException(status=404, title="Not Found", detail="no such item")
 
     @app.get("/problem-no-detail")
-    def _problem_no_detail() -> None:
+    def _problem_no_detail() -> None:  # pyright: ignore[reportUnusedFunction]  (registered via decorator)
         raise ProblemException(status=409, title="Conflict")
 
     @app.get("/problem-typed")
-    def _problem_typed() -> None:
+    def _problem_typed() -> None:  # pyright: ignore[reportUnusedFunction]  (registered via decorator)
         raise ProblemException(
             status=402, title="Payment Required", detail="upgrade", type_="https://errors/pay"
         )
 
     @app.get("/http-error")
-    def _http_error() -> None:
+    def _http_error() -> None:  # pyright: ignore[reportUnusedFunction]  (registered via decorator)
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     @app.post("/validated")
-    def _validated(body: _Body) -> dict[str, int]:
+    def _validated(body: _Body) -> dict[str, int]:  # pyright: ignore[reportUnusedFunction]  (registered via decorator)
         return {"count": body.count}
 
     return TestClient(app, raise_server_exceptions=False)

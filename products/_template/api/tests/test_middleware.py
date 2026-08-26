@@ -23,13 +23,13 @@ def _client() -> TestClient:
     app = FastAPI()
 
     @app.get("/ok")
-    def _ok() -> dict[str, str]:
+    def _ok() -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]  (registered via decorator)
         # Read back what the middleware bound, so the test sees the value the handler saw.
         bound = structlog.contextvars.get_contextvars().get("request_id")
         return {"bound": str(bound)}
 
     @app.get("/boom")
-    def _boom() -> None:
+    def _boom() -> None:  # pyright: ignore[reportUnusedFunction]  (registered via decorator)
         raise HTTPException(status_code=500, detail="kaboom")
 
     register_exception_handlers(app)
