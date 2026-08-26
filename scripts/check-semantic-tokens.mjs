@@ -45,34 +45,52 @@ const RAW_COLOR_FN = /\b(?:rgba?|hsla?)\(\s*(?!var\()/;
 const TAILWIND_PALETTE =
   /\b(?:bg|text|border|ring|fill|stroke|from|via|to|shadow|outline|decoration|divide|accent|caret|placeholder)-(?:slate|gray|grey|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b/;
 
-const files = execFileSync("git", ["ls-files"], { cwd: ROOT, encoding: "utf8" })
-  .split(/\r?\n/)
-  .filter(Boolean)
-  .filter((f) => SCANNED.some((re) => re.test(f)))
-  .filter((f) => !EXEMPT.some((re) => re.test(f)));
+/** Exported so the rule itself is testable without touching the filesystem. */
+export function namesAColour(line) {
+  return HEX.test(line) || RAW_COLOR_FN.test(line) || TAILWIND_PALETTE.test(line);
+}
 
-const findings = [];
-for (const file of files) {
-  readFileSync(join(ROOT, file), "utf8")
+function main() {
+  const files = execFileSync("git", ["ls-files"], { cwd: ROOT, encoding: "utf8" })
     .split(/\r?\n/)
-    .forEach((line, i) => {
-      if (line.trim().startsWith("//") || line.trim().startsWith("*")) return;
-      if (HEX.test(line) || RAW_COLOR_FN.test(line) || TAILWIND_PALETTE.test(line)) {
-        findings.push(`${file}:${i + 1}: ${line.trim()}`);
-      }
-    });
+    .filter(Boolean)
+    .filter((f) => SCANNED.some((re) => re.test(f)))
+    .filter((f) => !EXEMPT.some((re) => re.test(f)));
+
+  const findings = [];
+  for (const file of files) {
+    readFileSync(join(ROOT, file), "utf8")
+      .split(/\r?\n/)
+      .forEach((line, i) => {
+        if (line.trim().startsWith("//") || line.trim().startsWith("*")) return;
+        if (namesAColour(line)) {
+          findings.push(`${file}:${i + 1}: ${line.trim()}`);
+        }
+      });
+  }
+
+  if (findings.length > 0) {
+    console.error("");
+    console.error("❌ Hardcoded colour in a component — use a semantic token instead:");
+    for (const f of findings) console.error(`     ${f}`);
+    console.error("");
+    console.error("   A brand is a token-VALUE override, never a forked component. A named colour");
+    console.error("   here keeps one brand's value in every product, in light AND dark mode, and");
+    console.error("   the only way to notice is to look at it. Use bg-primary / text-foreground /");
+    console.error("   border-border etc., or add a token if none fits.");
+    process.exit(1);
+  }
+
+  console.log(`check-semantic-tokens: ${files.length} component file(s) scanned, no named colours`);
 }
 
-if (findings.length > 0) {
-  console.error("");
-  console.error("❌ Hardcoded colour in a component — use a semantic token instead:");
-  for (const f of findings) console.error(`     ${f}`);
-  console.error("");
-  console.error("   A brand is a token-VALUE override, never a forked component. A named colour");
-  console.error("   here keeps one brand's value in every product, in light AND dark mode, and");
-  console.error("   the only way to notice is to look at it. Use bg-primary / text-foreground /");
-  console.error("   border-border etc., or add a token if none fits.");
-  process.exit(1);
+// Guarded so importing this module (to test the rules) does not run the scan or exit the process.
+if (
+  process.argv[1] &&
+  process.argv[1]
+    .split(String.fromCharCode(92))
+    .join("/")
+    .endsWith("scripts/check-semantic-tokens.mjs")
+) {
+  main();
 }
-
-console.log(`check-semantic-tokens: ${files.length} component file(s) scanned, no named colours`);

@@ -32,35 +32,53 @@ if (!existsSync(join(ROOT, "products"))) {
   process.exit(0);
 }
 
-const files = execFileSync("git", ["ls-files", "products"], { cwd: ROOT, encoding: "utf8" })
-  .split(/\r?\n/)
-  .filter(Boolean)
-  // The template is where the tokens are SUPPOSED to live.
-  .filter((f) => !f.startsWith(`${TEMPLATE_DIR}/`))
-  .filter((f) => !SKIP_EXT.test(f));
+/** Exported so the rule itself is testable without touching the filesystem. */
+export function leaksTemplateToken(line) {
+  return LEAKED_TOKEN.test(line);
+}
 
-const leaks = [];
-for (const file of files) {
-  let text;
-  try {
-    text = readFileSync(join(ROOT, file), "utf8");
-  } catch {
-    continue; // unreadable/binary — nothing to assert
+function main() {
+  const files = execFileSync("git", ["ls-files", "products"], { cwd: ROOT, encoding: "utf8" })
+    .split(/\r?\n/)
+    .filter(Boolean)
+    // The template is where the tokens are SUPPOSED to live.
+    .filter((f) => !f.startsWith(`${TEMPLATE_DIR}/`))
+    .filter((f) => !SKIP_EXT.test(f));
+
+  const leaks = [];
+  for (const file of files) {
+    let text;
+    try {
+      text = readFileSync(join(ROOT, file), "utf8");
+    } catch {
+      continue; // unreadable/binary — nothing to assert
+    }
+    text.split(/\r?\n/).forEach((line, i) => {
+      if (leaksTemplateToken(line)) leaks.push(`${file}:${i + 1}: ${line.trim()}`);
+    });
   }
-  text.split(/\r?\n/).forEach((line, i) => {
-    if (LEAKED_TOKEN.test(line)) leaks.push(`${file}:${i + 1}: ${line.trim()}`);
-  });
+
+  if (leaks.length > 0) {
+    console.error("");
+    console.error("❌ Template token leaked into a stamped product:");
+    for (const leak of leaks) console.error(`     ${leak}`);
+    console.error("");
+    console.error("   The generator only rewrites WHOLE-WORD tokens, so an embedded one is copied");
+    console.error("   verbatim. Fix it in products/_template (keep the token word-delimited, e.g.");
+    console.error('   "template_api" + "_suffix"), then re-stamp the product.');
+    process.exit(1);
+  }
+
+  console.log(`check-stamp-tokens: ${files.length} stamped file(s) scanned, no template tokens`);
 }
 
-if (leaks.length > 0) {
-  console.error("");
-  console.error("❌ Template token leaked into a stamped product:");
-  for (const leak of leaks) console.error(`     ${leak}`);
-  console.error("");
-  console.error("   The generator only rewrites WHOLE-WORD tokens, so an embedded one is copied");
-  console.error("   verbatim. Fix it in products/_template (keep the token word-delimited, e.g.");
-  console.error('   "template_api" + "_suffix"), then re-stamp the product.');
-  process.exit(1);
+// Guarded so importing this module (to test the rules) does not run the scan or exit the process.
+if (
+  process.argv[1] &&
+  process.argv[1]
+    .split(String.fromCharCode(92))
+    .join("/")
+    .endsWith("scripts/check-stamp-tokens.mjs")
+) {
+  main();
 }
-
-console.log(`check-stamp-tokens: ${files.length} stamped file(s) scanned, no template tokens`);
