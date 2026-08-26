@@ -23,6 +23,8 @@ const identity = (over = {}) => ({
   bundleId: "com.example.a",
   androidPackage: "com.example.a",
   scheme: "a",
+  slug: "a",
+  sentryProject: "example-a",
   projectId: "example-a",
   flyApps: ["example-a-api-prod", "example-a-api-stg"],
   ...over,
@@ -36,6 +38,8 @@ test("distinct products collide on nothing", () => {
       bundleId: "com.example.b",
       androidPackage: "com.example.b",
       scheme: "b",
+      slug: "b",
+      sentryProject: "example-b",
       projectId: "example-b",
       flyApps: ["example-b-api-prod", "example-b-api-stg"],
     }),
@@ -59,9 +63,22 @@ test("a shared portIndex is reported", () => {
   assert.ok(found.some((c) => c.kind === "portIndex" && c.value === "0"));
 });
 
-test("a product does not collide with ITSELF for using one id on both platforms", () => {
-  // bundleId and androidPackage are deliberately the same reverse-DNS string within a product.
-  // Keying collisions on value alone would flag every product ever stamped.
+test("the EAS slug and the Sentry project are part of the identity", () => {
+  // A shared slug means two products publish OTA updates to ONE EAS project, so a staging push
+  // to one can reach the other's installed binaries. A shared Sentry project mixes their errors
+  // into one stream, which is discovered during an incident — the moment it costs most.
+  const found = collisions({
+    a: identity(),
+    b: identity({ portIndex: "1", scheme: "b", flyApps: [] }),
+  });
+  assert.ok(found.some((c) => c.kind === "slug" && c.value === "a"));
+  assert.ok(found.some((c) => c.kind === "sentryProject" && c.value === "example-a"));
+});
+
+test("a product does not collide with ITSELF for reusing one name across kinds", () => {
+  // Within one product several kinds legitimately share a value: bundleId and androidPackage are
+  // the same reverse-DNS string, and the Sentry project and Supabase project are both
+  // `example-<name>`. Keying collisions on value alone would flag every product ever stamped.
   assert.deepEqual(collisions({ only: identity() }), []);
 });
 

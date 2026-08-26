@@ -13,6 +13,8 @@
 //   portIndex       two local stacks fight for the same ports, and e2e derives ONE SUPABASE_URL
 //                   from it — so a suite can pass against the wrong product's database.
 //   project_id      the same, for the Supabase CLI's local containers.
+//   slug            two products publishing OTA updates to ONE EAS project.
+//   sentryProject   two products' errors in one stream, discovered during an incident.
 //
 // `_template` is included deliberately: it is in the deploy matrix as `template`, so its names
 // are as real as any product's.
@@ -56,6 +58,12 @@ export function productIdentity(name, root = ROOT) {
     bundleId: first(appConfig, /bundleIdentifier:\s*"([^"]+)"/),
     androidPackage: first(appConfig, /package:\s*"([^"]+)"/),
     scheme: first(appConfig, /scheme:\s*"([^"]+)"/),
+    // The EAS project is keyed by slug: two products sharing one publish OTA updates to the
+    // same project, so a staging push to one can reach the other's installed binaries.
+    slug: first(appConfig, /slug:\s*"([^"]+)"/),
+    // A shared Sentry project mixes two products' errors into one stream, which is discovered
+    // during an incident, at the moment it costs most.
+    sentryProject: first(appConfig, /project:\s*"([^"]+)"/),
     projectId: first(supabase, /^project_id\s*=\s*"([^"]+)"/m),
     flyApps: flyApps.sort(),
   };
