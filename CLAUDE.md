@@ -90,6 +90,10 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   workflow edit. (They used to hardcode the roster, which meant a new product silently never
   deployed.) The matrix key drops the leading underscore, so `_template` stays addressable as
   `template` and the deploy jobs' expressions are unchanged.
+- Path filters scope a BRANCH push only. On a TAG push every release workflow parses the product
+  out of the tag (`<product>-api-v*`, `*-app-v*`, `*-desktop-v*`) — a release tag normally points
+  at main's head, so a path diff against the default branch is EMPTY and a filter-scoped deploy
+  would skip production entirely while the run went green.
 - A FRESH CLONE starts untrusted by mise: trust is keyed to the ABSOLUTE PATH, so `mise install`
   exits 1 with "Config files ... are not trusted" and the whole `pnpm bootstrap` chain dies on its
   first command. `scripts/bootstrap.mjs` runs `mise trust` first; if you invoke tools without
