@@ -32,7 +32,7 @@ async function loadSource() {
 // REST payload -> { light: { <name>: { $type, $value } }, dark: { ... } } for the `semantic`
 // collection, resolving each variable's valuesByMode through the light/dark modes.
 // ⚠️ Enterprise-only path — exercised during /bootstrap-design-system, not in CI.
-function normalizeRest(json) {
+export function normalizeRest(json) {
   const { variables, variableCollections } = json.meta ?? {};
   if (!variables || !variableCollections) {
     throw new Error("Unexpected REST payload: missing meta.variables/variableCollections");
@@ -66,7 +66,7 @@ function normalizeRest(json) {
 
 // Tokens Studio export -> plain { light: {...}, dark: {...} } DTCG tree. Accepts either
 // top-level light/dark sets or "semantic/light"-style set names; strips $themes/$metadata.
-function toDtcg(json) {
+export function toDtcg(json) {
   const out = {};
   for (const [key, value] of Object.entries(json)) {
     if (key.startsWith("$")) continue; // $themes / $metadata bookkeeping
@@ -84,7 +84,7 @@ function toDtcg(json) {
 // ---- color helpers ----------------------------------------------------------------------
 
 // "H S% L%" channel string from hex ("#0a0a0b"), hsl() wrapper, or already-channels input.
-function toHslChannels(value) {
+export function toHslChannels(value) {
   if (typeof value !== "string") throw new Error(`Unsupported color value: ${value}`);
   const channels = /^\d+(\.\d+)?\s+\d+(\.\d+)?%\s+\d+(\.\d+)?%$/;
   if (channels.test(value.trim())) return value.trim();
@@ -102,7 +102,7 @@ function toHslChannels(value) {
   throw new Error(`Unsupported color value: ${value}`);
 }
 
-function rgbaToHslChannels({ r, g, b }) {
+export function rgbaToHslChannels({ r, g, b }) {
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
   const l = (max + min) / 2;
@@ -132,7 +132,7 @@ StyleDictionary.registerTransform({
 });
 
 // Group resolved tokens { light: { "--background": "0 0% 100%", ... }, dark: { ... } }.
-function groupByMode(allTokens) {
+export function groupByMode(allTokens) {
   const modes = {};
   for (const t of allTokens) {
     const [mode, ...rest] = t.path;
@@ -187,26 +187,37 @@ StyleDictionary.registerFormat({
   },
 });
 
-const tokens = await loadSource();
-const sd = new StyleDictionary({
-  tokens,
-  // Both modes hold the same semantic names by design (light/background + dark/background) —
-  // SD's flattened-name collision warning is expected noise here; formats key by path.
-  log: { warnings: "disabled" },
-  platforms: {
-    // WEB: full global.css (tailwind directives + :root/.dark:root CSS-var blocks).
-    web: {
-      transforms: ["color/hsl-channels"],
-      buildPath: "packages/ui/src/",
-      files: [{ destination: "global.css", format: "css/tailwind-globals" }],
+async function main() {
+  const tokens = await loadSource();
+  const sd = new StyleDictionary({
+    tokens,
+    // Both modes hold the same semantic names by design (light/background + dark/background) —
+    // SD's flattened-name collision warning is expected noise here; formats key by path.
+    log: { warnings: "disabled" },
+    platforms: {
+      // WEB: full global.css (tailwind directives + :root/.dark:root CSS-var blocks).
+      web: {
+        transforms: ["color/hsl-channels"],
+        buildPath: "packages/ui/src/",
+        files: [{ destination: "global.css", format: "css/tailwind-globals" }],
+      },
+      // NATIVE: theme.ts vars() objects.
+      native: {
+        transforms: ["color/hsl-channels"],
+        buildPath: "packages/ui/src/lib/",
+        files: [{ destination: "theme.ts", format: "javascript/nativewind-theme" }],
+      },
     },
-    // NATIVE: theme.ts vars() objects.
-    native: {
-      transforms: ["color/hsl-channels"],
-      buildPath: "packages/ui/src/lib/",
-      files: [{ destination: "theme.ts", format: "javascript/nativewind-theme" }],
-    },
-  },
-});
-await sd.buildAllPlatforms(); // writes cfg.outputs.globalCss + cfg.outputs.themeTs
-console.log("regenerated global.css (web) + theme.ts (native)");
+  });
+  await sd.buildAllPlatforms(); // writes cfg.outputs.globalCss + cfg.outputs.themeTs
+  console.log("regenerated global.css (web) + theme.ts (native)");
+}
+
+// Guarded so importing this module (to test the colour conversions) does not REGENERATE the
+// design system as a side effect of loading it.
+if (
+  process.argv[1] &&
+  process.argv[1].split(String.fromCharCode(92)).join("/").endsWith("scripts/figma-tokens.mjs")
+) {
+  await main();
+}
