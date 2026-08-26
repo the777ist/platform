@@ -20,7 +20,7 @@ We need to implement the full fix / feature for Linear ticket `<TICKET-ID>` (in 
 
 1. **`<product>`** — if a first token was provided in `$ARGUMENTS`, use it. Otherwise, if the session is inside `products/<name>/...`, infer `<name>`. Validate `products/<product>/` exists. If you cannot resolve a valid product, STOP and ASK — do NOT guess.
 2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS`, use it. Otherwise run `git branch --show-current` and extract the `<TEAM>-<NUMBER>` portion (e.g. `PTFM-145` from `feature/PTFM-145-d2c-bulk-edit`). If neither yields a ticket, STOP and ASK — do NOT guess.
-3. **`<slug>`** — if a slug-shaped token was provided, use it. Otherwise `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` and `products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` to recover the canonical slug (the segment between `<TICKET-ID>-` and the `_plan.md` / `_implementation.md` suffix).
+3. **`<slug>`** — if a slug-shaped token was provided, use it. Otherwise derive it from the **Linear branch**: run `git branch --show-current` and take the segment after the ticket id, e.g. `hritt/abc-160-multi-channel-broadcast` → `multi-channel-broadcast`. Linear names the branch from the ticket title, so every stage of a ticket lands on the SAME slug without any stage having to find another stage's file. Fall back to `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` and `products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` (recovering the segment between `<TICKET-ID>-` and the `_plan.md` / `_implementation.md` suffix) when the branch is not a Linear branch, and to the kebab-cased ticket title (~5–8 words) when neither yields one.
 
 Reference docs (read these first, in full, in this order):
 
@@ -167,3 +167,9 @@ Deployment context spans the template's four surfaces — **Fly (api), EAS (mobi
 ---
 
 Start now. Resolve the product. Fetch the ticket. Load the plan. Walk the codebase. Build per the plan's sequence (model → service → schema → router → openapi → typegen → hook → screen). Add tests in the same pass. Keep the implementation log up to date as you go. Regenerate the typed client (no drift). Final gate green. Definition-of-Done emitted.
+
+## Next stage
+
+When this pass is complete, hand off to `/ptfm-audit` - reconcile the docs and close the coverage gaps this pass opened.
+
+The full pipeline is `/ptfm-product` -> `/ptfm-architect` -> `/ptfm-plan` -> `/ptfm-implement` -> `/ptfm-audit` -> `/ptfm-simplify` -> `/ptfm-commonify` -> `/ptfm-review` -> `/ptfm-test-ui`. Stages before `/ptfm-plan` are skipped for smaller work (each says so itself); `/ptfm-review` is NOT skippable; `/ptfm-test-ui` is optional and applies only where the change touches UI.

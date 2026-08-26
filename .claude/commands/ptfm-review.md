@@ -20,7 +20,7 @@ We need to do a deep **code review AND security review** of the changes on this 
 
 1. **`<product>`** — first token if provided; else infer from cwd (`products/<name>/...`); else STOP and ASK. Confirm `products/<product>/` exists.
 2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS` (after `<product>`), use it. Otherwise run `git branch --show-current` and extract the `<TEAM>-<NUMBER>` portion (e.g. `ABC-145` from `feature/ABC-145-d2c-bulk-edit`). If neither yields a ticket, that's fine for a review — proceed; the ticket is only used to locate plan/impl docs and name the report.
-3. **`<slug>`** — if a slug-shaped token was provided, use it. Otherwise `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` and `products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` to recover the canonical slug; else derive from the branch name.
+3. **`<slug>`** — if a slug-shaped token was provided, use it. Otherwise derive it from the **Linear branch**: run `git branch --show-current` and take the segment after the ticket id, e.g. `hritt/abc-160-multi-channel-broadcast` → `multi-channel-broadcast`. Linear names the branch from the ticket title, so every stage of a ticket lands on the SAME slug without any stage having to find another stage's file. Fall back to `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` and `products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` (recovering the segment between `<TICKET-ID>-` and the `_plan.md` / `_implementation.md` suffix) when the branch is not a Linear branch, and to the kebab-cased ticket title (~5–8 words) when neither yields one.
 4. **Review surface** — default is the diff between the current branch and the base branch (`main` for this repo (trunk-based per PHILOSOPHY.md) — confirm via `git remote show origin` if unsure), scoped to `products/<product>/`, PLUS uncommitted working-tree changes. The user instruction may override (a PR number, a commit range, a path filter, "security only"). If the diff is empty, STOP and ask what to review.
 
 Reference docs (read these first, in full):
@@ -224,3 +224,9 @@ What `/ptfm-review` does NOT mean:
 ---
 
 Start now. Resolve `<product>` and scope everything to `products/<product>/`. Discover the diff. Read every changed file and the code it touches in full. Re-read the PHILOSOPHY.md + CLAUDE.md rules the change must obey. Run the code-review dimensions and the security threat-model. Adversarially verify every finding, rank by severity + confidence, give each a fix. Save the report to `products/<product>/docs/reviews/<TICKET-ID>-<slug>_review.md` and deliver the verdict in chat. Then offer to fix the blockers + highs (gated on explicit approval). Do NOT stop until every changed file has been reviewed against both bars, every finding is verified + ranked + has a fix, the security threat-model pass is complete, and the verdict is delivered.
+
+## Next stage
+
+When this pass is complete, hand off to `/ptfm-test-ui` - drive the feature through a real browser - OPTIONAL, and only where the change touches UI.
+
+The full pipeline is `/ptfm-product` -> `/ptfm-architect` -> `/ptfm-plan` -> `/ptfm-implement` -> `/ptfm-audit` -> `/ptfm-simplify` -> `/ptfm-commonify` -> `/ptfm-review` -> `/ptfm-test-ui`. Stages before `/ptfm-plan` are skipped for smaller work (each says so itself); `/ptfm-review` is NOT skippable; `/ptfm-test-ui` is optional and applies only where the change touches UI.

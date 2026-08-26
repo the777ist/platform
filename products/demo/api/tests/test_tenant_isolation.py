@@ -19,12 +19,18 @@ Each was verified by mutation: 124 tests passed with each of them removed.
 existence oracle. The assertions below pin the status for that reason, not by accident.
 """
 
+import importlib
+import inspect
+import pkgutil
+import re
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, SQLModel
 
+import demo_api.models as models_pkg
 from demo_api.auth import get_current_user
 from demo_api.db import get_session
 from demo_api.main import create_app
@@ -138,4 +144,95 @@ def test_a_push_token_registered_by_one_user_is_not_reassigned_to_another(
     # Two rows, one per user — not one row that changed hands.
     assert mine.json()["id"] != theirs.json()["id"], (
         "the second user took over the first's token row"
+    )
+
+
+# --- the guard that makes this file self-maintaining -------------------------------------------
+#
+# Everything above tests the resources the demo happens to ship. The failure worth preventing
+# is the NEXT one: a product adds an owner-scoped model, wires it through a service, and nobody
+# writes the isolation test — which is exactly how the demo itself shipped with this file
+# missing entirely.
+#
+# Telling an agent or a reviewer to remember is not a control. This asserts it instead: any model
+# carrying an ownership column must be exercised here, or the suite goes red naming the model.
+
+
+def _owner_scoped_models() -> list[type[SQLModel]]:
+    """Table models with an ownership column — the ones RLS does not protect from the API."""
+    found: list[type[SQLModel]] = []
+    for module_info in pkgutil.iter_modules(list(models_pkg.__path__)):
+        module = importlib.import_module(f"{models_pkg.__name__}.{module_info.name}")
+        for _, obj in vars(module).items():
+            if (
+                inspect.isclass(obj)
+                and issubclass(obj, SQLModel)
+                and getattr(obj, "__tablename__", None) is not None
+                and obj.__module__ == module.__name__
+                and {"owner_id", "user_id"} & set(obj.model_fields)
+            ):
+                found.append(obj)
+    return found
+
+
+def _tablename(model: type[SQLModel]) -> str:
+    """SQLModel types __tablename__ as a declared_attr, which pyright reads as partially unknown
+    (the models carry the same ignore). Read it as object, then narrow."""
+    value: object = getattr(model, "__tablename__", "")
+    return value if isinstance(value, str) else ""
+
+
+def _squash(text: str) -> str:
+    """Compare names without caring about item/items or push_token/push-tokens."""
+    return re.sub(r"[^a-z]", "", text.lower())
+
+
+def _covers(table: str, resource: str) -> bool:
+    """Does route segment `resource` address table `table`?
+
+    Plural tolerance ONLY — never substring containment. A containment test looked reasonable and
+    was wrong in a way that took a second mutation to catch: `/v1/me` squashes to "me", which is a
+    substring of "comment", so a brand-new `comment` model counted as covered by the me endpoint.
+    """
+    return table == resource or f"{table}s" == resource or table == f"{resource}s"
+
+
+def _exercised_resources() -> set[str]:
+    """The resource segments this file actually hits, e.g. {"items", "pushtokens"}.
+
+    Matched against the ROUTES the tests exercise, never against the file's whole text. The first
+    version of this guard searched the entire source — comments included — and a new `comment`
+    model passed because the word "comment" appeared once in this file's own prose. A guard a
+    stray English word can satisfy is not a guard.
+    """
+    body = Path(__file__).read_text(encoding="utf-8")
+    return {_squash(seg) for seg in re.findall(r"/v1/([a-z0-9-]+)", body)}
+
+
+def test_the_model_walk_finds_the_owner_scoped_tables() -> None:
+    # Non-vacuity: an empty list is covered by definition, which would make the guard below a
+    # no-op the moment the walk broke.
+    names = {m.__name__ for m in _owner_scoped_models()}
+    assert {"Item", "PushToken"} <= names, names
+
+
+def test_every_owner_scoped_model_is_exercised_by_this_file() -> None:
+    """A new owner-scoped model must come with isolation coverage, or this goes red.
+
+    The API bypasses RLS, so an ownership column is a promise that the SERVICE filters on it.
+    Nothing else in the stack checks that promise: pyright sees a str, the migration sees a
+    column, and the happy-path tests all run as one user.
+    """
+    exercised = _exercised_resources()
+    # A table is covered when this file HITS ITS ROUTE: `item` matches `/v1/items`, `push_token`
+    # matches `/v1/push-tokens`. Containment either way absorbs the plural.
+    unexercised = [
+        m.__name__
+        for m in _owner_scoped_models()
+        if not any(_covers(_squash(_tablename(m)), r) for r in exercised)
+    ]
+    assert not unexercised, (
+        f"{unexercised} carry an ownership column but are not exercised in this file. "
+        f"The API bypasses RLS, so the service's owner filter is the ONLY thing stopping one "
+        f"user reading another's rows — add the cross-tenant cases before shipping the model."
     )

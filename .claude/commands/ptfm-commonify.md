@@ -22,7 +22,7 @@ This command is the operational arm of **`PHILOSOPHY.md`'s promote-on-2nd-use ru
 
 1. **`<product>`** — first token if provided; else infer from cwd (`products/<name>/...`); else STOP and ASK. Confirm `products/<product>/` exists.
 2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS` (after `<product>`), use it. Otherwise run `git branch --show-current` and extract the `<TEAM>-<NUMBER>` portion (e.g. `ABC-145` from `feature/ABC-145-d2c-bulk-edit`). If neither yields a ticket, STOP and ASK — do NOT guess.
-3. **`<slug>`** — if a slug-shaped token was provided, use it. Otherwise `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` and `products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` to recover the canonical slug (the segment between `<TICKET-ID>-` and the `_plan.md` / `_implementation.md` suffix).
+3. **`<slug>`** — if a slug-shaped token was provided, use it. Otherwise derive it from the **Linear branch**: run `git branch --show-current` and take the segment after the ticket id, e.g. `hritt/abc-160-multi-channel-broadcast` → `multi-channel-broadcast`. Linear names the branch from the ticket title, so every stage of a ticket lands on the SAME slug without any stage having to find another stage's file. Fall back to `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` and `products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` (recovering the segment between `<TICKET-ID>-` and the `_plan.md` / `_implementation.md` suffix) when the branch is not a Linear branch, and to the kebab-cased ticket title (~5–8 words) when neither yields one.
 4. **`<FEATURE>`** — derive from the plan / implementation docs (they reference `products/<product>/app/features/<feature>/...` extensively), or by mapping the slug to a folder under `products/<product>/app/features/`. If no clear match, ASK.
 
 Reference docs (read these first, in full):
@@ -108,3 +108,9 @@ What "commonification" does NOT mean here:
 ---
 
 Start now, scoped to `products/<product>`. Go step by step. Do not stop until every commonification candidate has been moved or explicitly justified-as-staying (against the promote-on-2nd-use test), the public surface (`products/<product>/app/features/<FEATURE>/index.ts`, and the API aggregate boundary) reflects the new homes, the docs are updated, and the suite is green — `turbo run lint typecheck test build --filter=...*<product>*...` (+ `export:web` where web is touched), `ruff check`, `pyright`, `pytest`, and the typegen drift check. For behaviour-preserving quality cleanup that is NOT a relocation, hand off to `/ptfm-simplify`.
+
+## Next stage
+
+When this pass is complete, hand off to `/ptfm-review` - the staff-engineer + AppSec pass, which is a BLOCKING gate and not optional.
+
+The full pipeline is `/ptfm-product` -> `/ptfm-architect` -> `/ptfm-plan` -> `/ptfm-implement` -> `/ptfm-audit` -> `/ptfm-simplify` -> `/ptfm-commonify` -> `/ptfm-review` -> `/ptfm-test-ui`. Stages before `/ptfm-plan` are skipped for smaller work (each says so itself); `/ptfm-review` is NOT skippable; `/ptfm-test-ui` is optional and applies only where the change touches UI.

@@ -20,7 +20,7 @@ We need to plan the full implementation for Linear ticket `<TICKET-ID>` in produ
 
 1. **`<product>`** — first token. If absent, infer from cwd (`products/<name>/...`); else STOP and ASK. Confirm `products/<product>/` exists.
 2. **`<TICKET-ID>`** — if a ticket token was provided in `$ARGUMENTS`, use it. Otherwise run `git branch --show-current` and extract the `<TEAM>-<NUMBER>` portion (e.g. `BLOG-145` from `feature/BLOG-145-tag-bulk-edit`). If neither yields a ticket, STOP and ASK — do NOT guess.
-3. **`<slug>`** — if a slug-shaped token was provided, use it. Otherwise `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` and `products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` to recover the canonical slug (the segment between `<TICKET-ID>-` and the `_plan.md` / `_implementation.md` suffix). For new tickets with no plan yet, derive the slug from the Linear ticket title (kebab-case, ~5–8 words).
+3. **`<slug>`** — if a slug-shaped token was provided, use it. Otherwise derive it from the **Linear branch**: run `git branch --show-current` and take the segment after the ticket id, e.g. `hritt/abc-160-multi-channel-broadcast` → `multi-channel-broadcast`. Linear names the branch from the ticket title, so every stage of a ticket lands on the SAME slug without any stage having to find another stage's file. Fall back to `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` and `products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` (recovering the segment between `<TICKET-ID>-` and the `_plan.md` / `_implementation.md` suffix) when the branch is not a Linear branch, and to the kebab-cased ticket title (~5–8 words) when neither yields one.
 
 Reference docs (read these first, in full, in this order):
 
