@@ -84,3 +84,26 @@ class TestPageEnvelope:
         # as the wrong shape.
         with pytest.raises(ValueError):
             Page[str](items="not-a-list")  # type: ignore[arg-type]
+
+
+class TestTheLimitsThemselves:
+    """The clamp tests above are all RELATIONAL — `clamp_limit(1_000_000) == MAX_LIMIT` — so they
+    describe the clamping and say nothing about what it clamps TO. Verified: setting
+    MAX_LIMIT = 1_000_000 leaves every one of them green, including the case named "the DoS
+    shape", while permitting exactly the full table scan that case exists to prevent.
+
+    A bound is only a bound at a particular value, so the values are asserted as literals here.
+    """
+
+    def test_the_page_ceiling_is_small_enough_to_be_a_ceiling(self) -> None:
+        assert MAX_LIMIT == 100
+
+    def test_the_default_page_is_a_screenful(self) -> None:
+        # Also the value the router advertises in openapi.json, so the generated client and every
+        # useInfiniteQuery page size follow it.
+        assert DEFAULT_LIMIT == 20
+
+    def test_the_default_never_exceeds_the_ceiling(self) -> None:
+        # The ordering that makes the pair coherent: a default above the ceiling would be
+        # silently clamped on every unparameterised request.
+        assert DEFAULT_LIMIT <= MAX_LIMIT

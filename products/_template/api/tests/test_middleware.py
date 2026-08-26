@@ -75,3 +75,25 @@ class TestErrorResponsesToo:
         response = _client().get("/boom", headers={REQUEST_ID_HEADER: "trace-me"})
         assert response.status_code == 500
         assert response.headers[REQUEST_ID_HEADER] == "trace-me"
+
+
+class TestTheWireContract:
+    def test_the_header_NAME_is_the_one_packages_core_actually_sends(self) -> None:
+        # Spelled out here rather than imported, unlike every other use of REQUEST_ID_HEADER in
+        # this file. The rest of these tests send the header AND assert on it through the same
+        # constant, so renaming the constant's VALUE keeps all of them green — verified: setting
+        # it to "X-Correlation-Id" leaves this whole file passing.
+        #
+        # But the name is a CROSS-SYSTEM contract, not an internal detail. packages/core's api
+        # wrapper writes the literal "X-Request-Id" (src/api.ts), so a rename here means the API
+        # ignores the id the client sent, mints a fresh one, and the client -> API -> logs thread
+        # this module exists to guarantee is quietly severed. Nothing else in the repo would
+        # notice. The contract value belongs in the test.
+        assert REQUEST_ID_HEADER == "X-Request-Id"
+
+    def test_the_literal_header_is_honoured_end_to_end(self) -> None:
+        # The same assertion made through the wire rather than through the constant: a request
+        # carrying the literal header a real client sends must come back with it.
+        response = _client().get("/ok", headers={"X-Request-Id": "from-a-real-client"})
+        assert response.headers["X-Request-Id"] == "from-a-real-client"
+        assert response.json()["bound"] == "from-a-real-client"

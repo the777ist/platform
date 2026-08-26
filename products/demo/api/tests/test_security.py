@@ -9,12 +9,16 @@ disappears, which silently breaks the client half of tracing.
 No database needed.
 """
 
+from collections.abc import Generator
+
 import jwt
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from demo_api.main import create_app
 from demo_api.security import _rate_key, install_security  # pyright: ignore[reportPrivateUsage]
+from demo_api.settings import Settings, get_settings
 
 
 def _request(headers: dict[str, str] | None = None):
@@ -118,3 +122,95 @@ class TestCors:
         # CORSMiddleware simply omits the allow-origin header for a disallowed origin, which
         # is what makes the browser block the read.
         assert response.headers.get("access-control-allow-origin") != "https://evil.example"
+
+
+class TestTheLimiterActuallyLimits:
+    """Nothing asserted that a 429 is ever returned.
+
+    Every test above exercises `_rate_key` (which bucket a request lands in) and the response
+    headers. None of them build an app with the limiter wired, because `install_security` does
+    not install it — `create_app` does, and it has to, because the middleware ORDER matters (a
+    429 short-circuited by the limiter must still pass back out through the security headers and
+    CORS). So the middleware, the 429 rendering and the ordering all went unexercised.
+
+    That is not a hypothetical gap. RateLimitMiddleware exists because slowapi's own middleware
+    resolves endpoints via `route.matches(scope)`, which returns Match.NONE on current FastAPI —
+    so it "silently exempted every request and default limits never fired". That bug shipped
+    once, was found by hand, and nothing was left behind to notice it happening again. A rate
+    limiter that never fires looks exactly like one that is never provoked.
+    """
+
+    @pytest.fixture
+    def strict_client(self, monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient]:
+        # Three per minute rather than the real hundred, so the test provokes the limit in four
+        # requests instead of a hundred and one. Each create_app() builds its OWN Limiter with
+        # fresh in-memory storage, so tests cannot poison each other's buckets.
+        monkeypatch.setenv("RATE_LIMIT_DEFAULT", "3/minute")
+        get_settings.cache_clear()
+        yield TestClient(create_app())
+        get_settings.cache_clear()
+
+    def test_the_fourth_request_over_a_3_per_minute_limit_is_refused(
+        self, strict_client: TestClient
+    ) -> None:
+        codes = [strict_client.get("/v1/hello").status_code for _ in range(4)]
+        assert codes[:3] == [200, 200, 200], f"the limit fired too early: {codes}"
+        assert codes[3] == 429, f"the limiter never fired: {codes}"
+
+    def test_the_429_is_problem_json_like_every_other_error(
+        self, strict_client: TestClient
+    ) -> None:
+        # RFC 9457 is a locked decision, and the limiter's rejection is the one error response
+        # produced by middleware rather than by an exception handler — so it is the one most
+        # likely to be rendered as something else.
+        for _ in range(3):
+            strict_client.get("/v1/hello")
+        response = strict_client.get("/v1/hello")
+
+        assert response.status_code == 429
+        assert response.headers["content-type"].startswith("application/problem+json")
+        body = response.json()
+        assert body["status"] == 429
+        assert body["title"] == "Too Many Requests"
+
+    def test_a_rejected_request_still_carries_the_security_headers(
+        self, strict_client: TestClient
+    ) -> None:
+        # The documented reason for the middleware ORDER: the limiter short-circuits before the
+        # route, so if it were installed outside the header middleware the 429 would come back
+        # bare. Starlette's add_middleware is LIFO, which makes this easy to get backwards and
+        # impossible to notice.
+        for _ in range(3):
+            strict_client.get("/v1/hello")
+        response = strict_client.get("/v1/hello")
+
+        assert response.status_code == 429
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
+        assert response.headers["X-Frame-Options"] == "DENY"
+
+    def test_two_users_do_not_share_a_bucket(self, strict_client: TestClient) -> None:
+        # _rate_key's bucketing asserted through the LIMITER rather than by calling it directly:
+        # one user exhausting the limit must not lock out everybody else, which is what a
+        # key_func wired up incorrectly would do.
+        spent = jwt.encode({"sub": "heavy-user"}, "s")
+        fresh = jwt.encode({"sub": "light-user"}, "s")
+        for _ in range(4):
+            strict_client.get("/v1/hello", headers={"Authorization": f"Bearer {spent}"})
+
+        assert (
+            strict_client.get("/v1/hello", headers={"Authorization": f"Bearer {spent}"}).status_code
+            == 429
+        )
+        assert (
+            strict_client.get("/v1/hello", headers={"Authorization": f"Bearer {fresh}"}).status_code
+            == 200
+        )
+
+
+class TestTheConfiguredLimit:
+    def test_the_shipped_default_is_a_real_limit(self) -> None:
+        # A bound is only a bound at a particular value. The tests above prove the machinery
+        # fires at whatever the setting says; this pins what it actually says in production, so
+        # loosening it to "100000/minute" is a deliberate edit rather than a silent one.
+        get_settings.cache_clear()
+        assert Settings.model_fields["rate_limit_default"].default == "100/minute"
