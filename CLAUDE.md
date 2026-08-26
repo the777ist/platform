@@ -63,9 +63,11 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   Supabase block `54321+100i`. `pnpm bootstrap` starts every product's stack.
 - A stamped stack starts EMPTY and `api/.env` is never generated: copy the product's
   `.env.example` (ports pre-offset per product), paste the `supabase status` service_role
-  key, then `alembic upgrade head` + `python -m <name>_api.seed` from `api/`. NEVER leave
-  `SUPABASE_JWKS_URL=` / `SUPABASE_JWT_SECRET=` as empty-string lines — pydantic reads ""
-  (not None), it passes the `is not None` checks in `auth.py`, and every authed call 401s.
+  key, then `alembic upgrade head` + `python -m <name>_api.seed` from `api/`. A blank
+  `SUPABASE_JWKS_URL=` / `SUPABASE_JWT_SECRET=` line USED to break every authed call: pydantic
+  read "" (not None), which passed the `is not None` checks in `auth.py`, so `jwks_url` returned
+  "" instead of deriving the endpoint from `supabase_url`. `Settings` now coerces blank and
+  whitespace-only optionals to None, so an empty line means exactly what an absent one does.
 - Local API tests need NO env. `tests/__init__.py` targets CI's `:5432` service container
   when `CI` is set, else THAT product's own stack — reading `db.port` from its
   `supabase/config.toml` rather than re-deriving `54322+100i` — and auto-creates a
