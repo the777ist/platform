@@ -193,7 +193,7 @@ pnpm new-product demo`; preserve the untracked `demo/api/.env` first). The gener
 ```bash
 pnpm bootstrap                                                # start EVERY product's local Supabase stack
 pnpm turbo run lint typecheck test build openapi --affected   # the CI gate, scoped to changes
-git diff --exit-code products/*/api-client products/*/api/openapi.json  # typegen drift check
+node scripts/check-typegen-drift.mjs                          # typegen drift check
 node scripts/pre-push.mjs origin/main                           # run the pre-push gate by hand
 pnpm run format:check                                         # prettier gate (`pnpm run format` to fix)
 ```

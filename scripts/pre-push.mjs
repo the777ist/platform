@@ -128,17 +128,17 @@ try {
     run(`pnpm turbo run test ${SCOPE_ARG} ${holdBack}`);
   }
 
-  // Generated-artifact drift — the SAME command CI runs. `api-client#build` dependsOn `^openapi`,
+  // Generated-artifact drift — the SAME checker CI runs. `api-client#build` dependsOn `^openapi`,
   // so the run above already regenerated both; this is the near-free half of the highest-cost CI
   // failure there is. The generated client is never hand-edited (CLAUDE.md).
-  try {
-    run(`git diff --exit-code -- "products/*/api-client" "products/*/api/openapi.json"`);
-  } catch {
-    console.error("");
-    console.error("❌ Generated-artifact drift: the diff above came from the build you just ran.");
-    console.error("   Commit it (or re-run /typegen <product>) before pushing.");
-    process.exit(1);
-  }
+  //
+  // This used to be `git diff --exit-code -- "products/*/api-client" ...` and was INERT: git
+  // matches a non-literal pathspec against the whole path, so the wildcard matched the directory
+  // and nothing inside it, and the command returned 0 with a modified client sitting right there.
+  // It also could never have seen an untracked file, which is what a regen produces when a
+  // product gains a router. check-typegen-drift.mjs resolves literal paths and reads
+  // `git status --porcelain`, so modified, deleted AND new all count.
+  run("node scripts/check-typegen-drift.mjs");
 
   // Root-owned files (scripts/, *.config.mjs) belong to NO package, so `turbo run lint` never
   // reaches them — including these gate scripts themselves. Same entry point CI calls.
