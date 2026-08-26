@@ -11,10 +11,12 @@ Minimal app, no database.
 
 import re
 
+import pytest
 import structlog
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
+from template_api import middleware
 from template_api.errors import register_exception_handlers
 from template_api.middleware import REQUEST_ID_HEADER, install_request_id
 
@@ -97,3 +99,43 @@ class TestTheWireContract:
         response = _client().get("/ok", headers={"X-Request-Id": "from-a-real-client"})
         assert response.headers["X-Request-Id"] == "from-a-real-client"
         assert response.json()["bound"] == "from-a-real-client"
+
+
+class TestSentryCorrelation:
+    """The API half of the Sentry tag was untested; the client half (packages/core's
+    sentry.test.ts) was not.
+
+    CLAUDE.md states the invariant as "the SAME id tags Sentry on both sides
+    (client→API→logs)". Both sides write the literal key `request_id`, but only one side
+    asserted it. Drop `sentry_sdk.set_tag` here, or rename the key, and every API test still
+    passes while a production incident stops correlating the client's error with the API's —
+    which is the exact moment anybody would look.
+    """
+
+    def test_the_request_id_is_tagged_on_sentry(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        tags: dict[str, str] = {}
+
+        def _record(key: object, value: object) -> None:
+            tags[str(key)] = str(value)
+
+        monkeypatch.setattr(middleware.sentry_sdk, "set_tag", _record)
+
+        _client().get("/ok", headers={"X-Request-Id": "trace-me-42"})
+
+        # The KEY is spelled out, not imported: packages/core writes `Sentry.setTag("request_id",
+        # …)` as a literal, so this is a cross-system contract and the value belongs in the test.
+        assert tags["request_id"] == "trace-me-42"
+
+    def test_a_minted_id_is_tagged_too(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # A request with no inbound id still has to be traceable; tagging only the inbound case
+        # would leave every server-originated trace untagged.
+        tags: dict[str, str] = {}
+
+        def _record(key: object, value: object) -> None:
+            tags[str(key)] = str(value)
+
+        monkeypatch.setattr(middleware.sentry_sdk, "set_tag", _record)
+
+        response = _client().get("/ok")
+
+        assert tags["request_id"] == response.headers[REQUEST_ID_HEADER]
