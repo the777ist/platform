@@ -4,11 +4,10 @@ from collections.abc import Generator
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, text
-from sqlalchemy.pool import NullPool
 from sqlmodel import Session, SQLModel, create_engine
 
 from template_api.auth import get_current_user
-from template_api.db import get_session
+from template_api.db import _make_engine, get_session  # pyright: ignore[reportPrivateUsage]
 from template_api.main import create_app
 from template_api.schemas.user import MeRead
 
@@ -38,7 +37,10 @@ def engine() -> Engine:
             if present is None:
                 conn.execute(text(f'CREATE DATABASE "{TEST_DB_NAME}"'))
         admin.dispose()
-    eng = create_engine(TEST_DB_URL, poolclass=NullPool, connect_args={"prepare_threshold": None})
+    # The APPLICATION's engine factory, not a second copy of its arguments. Repeating
+    # poolclass/connect_args here meant the suite ran against a configuration that merely
+    # happened to match production's — see tests/test_db_engine.py.
+    eng = _make_engine(TEST_DB_URL)
     SQLModel.metadata.create_all(
         eng
     )  # tests build the schema directly (no RLS needed in test role)
