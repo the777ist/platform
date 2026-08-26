@@ -3,6 +3,12 @@ module.exports = {
   // Single Jest runner for ALL JS tests (PHILOSOPHY Quality): jest-expo preset,
   // resolved from the hoisted workspace root.
   preset: "jest-expo",
+  // Generous on purpose. Jest's 5s default is a rendering budget, not a correctness signal:
+  // a populated FlatList under jest-expo timed out at 5s on a cold Linux CI runner while
+  // passing easily on a dev machine. A gate that fails for being slow teaches people to
+  // distrust it, so the limit sits far above the realistic worst case and only catches a
+  // genuine hang.
+  testTimeout: 30_000,
   // Playwright owns e2e/ (run via `pnpm exec playwright test`) — Jest's default
   // testMatch would otherwise try to execute the Playwright specs and fail.
   testPathIgnorePatterns: ["/node_modules/", "/e2e/", "/dist/", "/.maestro/"],
