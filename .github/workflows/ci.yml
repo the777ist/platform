@@ -61,7 +61,9 @@ jobs:
         # choice rather than a bug. And a package with no `test` script is skipped by
         # `turbo run test` without a word, so the run goes green having checked one package
         # fewer than yesterday. And two products sharing a fly app name means one deploy
-        # overwrites the other, which nothing else in the pipeline can see.
+        # overwrites the other, which nothing else in the pipeline can see. A postgres_changes
+        # subscription returns nothing under RLS deny-all, and the tempting fix for that is the
+        # permissive policy that makes every row world-readable.
         run: |
           node scripts/check-focused-tests.mjs
           node scripts/check-stamp-tokens.mjs
@@ -70,6 +72,7 @@ jobs:
           node scripts/check-theme-tokens.mjs
           node scripts/check-package-tasks.mjs
           node scripts/check-product-identity.mjs
+          node scripts/check-realtime-broadcast-only.mjs
       - name: commitlint (the commit-msg hook is bypassable)
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
