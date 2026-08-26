@@ -60,7 +60,8 @@ jobs:
         # semantic token with no value renders as nothing in one theme, which reads as a design
         # choice rather than a bug. And a package with no `test` script is skipped by
         # `turbo run test` without a word, so the run goes green having checked one package
-        # fewer than yesterday.
+        # fewer than yesterday. And two products sharing a fly app name means one deploy
+        # overwrites the other, which nothing else in the pipeline can see.
         run: |
           node scripts/check-focused-tests.mjs
           node scripts/check-stamp-tokens.mjs
@@ -68,6 +69,7 @@ jobs:
           node scripts/check-semantic-tokens.mjs
           node scripts/check-theme-tokens.mjs
           node scripts/check-package-tasks.mjs
+          node scripts/check-product-identity.mjs
       - name: commitlint (the commit-msg hook is bypassable)
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
