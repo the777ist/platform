@@ -46,6 +46,15 @@ const PUBLIC_DEMO_ISS = "supabase-demo";
 // Binary-ish files git tracks that cannot contain a pasted key and are slow to read as text.
 const SKIP_EXT = /\.(png|jpg|jpeg|gif|ico|webp|pdf|ttf|otf|woff2?|keystore|patch)$/i;
 
+// A .dockerignore line that keeps `.env` out of the build context. Docker matches these against
+// the context root, so `.env` and `.env*` both do it; `**/.env` covers nested copies too.
+const ENV_IGNORED = /^\s*(\.env\*?|\*\*\/\.env\*?)\s*$/m;
+
+/** True when this .dockerignore keeps env files out of the image. */
+export function dockerignoreExcludesEnv(text) {
+  return ENV_IGNORED.test(text);
+}
+
 /** The decoded payload if the value is a decodable JWT, else null. */
 export function jwtPayload(value) {
   const parts = value.split(".");
@@ -142,6 +151,29 @@ function main() {
     for (const { line, token } of findLeakedKeys(text)) {
       findings.push(
         `${file}:${line}: a service_role JWT (…${token.slice(-8)}) — it bypasses RLS entirely`,
+      );
+    }
+  }
+
+  // A secret kept OUT of git can still be baked INTO an image. Every Dockerfile here does
+  // `COPY . .`, and CLAUDE.md's own setup recipe has each developer create an api/.env holding a
+  // service_role key — gitignored, so nothing above sees it, and present on disk, so the build
+  // context picks it up. Measured with a real docker build: without a `.env` line the image
+  // carried it, and pydantic-settings (env_file=".env") then reads it at runtime for anything
+  // the platform does not set.
+  for (const dockerfile of tracked.filter((f) => /(^|\/)Dockerfile$/.test(f))) {
+    const dir = dirname(dockerfile);
+    const ignoreFile = dir === "." ? ".dockerignore" : `${dir}/.dockerignore`;
+    let text;
+    try {
+      text = readFileSync(join(ROOT, ignoreFile), "utf8");
+    } catch {
+      findings.push(`${dockerfile}: no ${ignoreFile} — the build context would include .env`);
+      continue;
+    }
+    if (!dockerignoreExcludesEnv(text)) {
+      findings.push(
+        `${ignoreFile}: does not exclude .env — ${dockerfile} would bake it into the image`,
       );
     }
   }

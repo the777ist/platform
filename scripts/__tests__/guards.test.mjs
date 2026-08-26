@@ -8,6 +8,12 @@
 // they need no filesystem, no git, and no fixture repo.
 import test from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 import { isFocused, isSkipped, isTestFile } from "../check-focused-tests.mjs";
 import { leaksTemplateToken } from "../check-stamp-tokens.mjs";
@@ -16,6 +22,7 @@ import {
   jwtPayload,
   isLeakedServiceRole,
   findLeakedKeys,
+  dockerignoreExcludesEnv,
 } from "../check-committed-secrets.mjs";
 import { namesAColour } from "../check-semantic-tokens.mjs";
 
@@ -195,5 +202,50 @@ test("a JWT with no role claim is not a service-role leak", () => {
 test("a non-JWT decodes to null rather than throwing", () => {
   for (const value of ["", "a.b", "x.y.z", "plain-secret"]) {
     assert.equal(jwtPayload(value), null, value);
+  }
+});
+
+test("a .dockerignore that excludes .env satisfies the rule", () => {
+  for (const text of [".env\n.venv\n", ".venv\n.env\n", ".env*\n", "**/.env\n", "  .env  \n"]) {
+    assert.ok(dockerignoreExcludesEnv(text), JSON.stringify(text));
+  }
+});
+
+test("the real gap is caught: a sensible-looking ignore with no .env line", () => {
+  // This was the shipped file. It excludes the venv, the caches and the tests — everything you
+  // would think of — and not the one file that holds a service_role key.
+  const shipped = ".venv\n__pycache__\ntests\n*.pyc\n.pytest_cache\n.ruff_cache\n";
+  assert.ok(!dockerignoreExcludesEnv(shipped));
+});
+
+test("an empty or absent ignore does not count as excluding", () => {
+  assert.ok(!dockerignoreExcludesEnv(""));
+  assert.ok(!dockerignoreExcludesEnv("\n\n"));
+});
+
+test("a mention of .env that is not an ignore line does not count", () => {
+  // A comment about env files, or a NEGATION re-including them, must not read as exclusion.
+  assert.ok(!dockerignoreExcludesEnv("# keep .env out one day\n.venv\n"));
+  assert.ok(!dockerignoreExcludesEnv(".env.example\n"));
+  assert.ok(!dockerignoreExcludesEnv("!.env\n"));
+});
+
+test("every Dockerfile in the repo sits beside an ignore that excludes .env", () => {
+  // Against the real tree: api/.env is gitignored, so it is invisible to every other check here
+  // while being present on disk for `COPY . .` to pick up.
+  const dockerfiles = execFileSync("git", ["ls-files", "*Dockerfile"], {
+    cwd: ROOT,
+    encoding: "utf8",
+  })
+    .split(/\r?\n/)
+    .filter(Boolean);
+  assert.ok(dockerfiles.length >= 2, `only found ${dockerfiles.length} Dockerfiles`);
+  for (const dockerfile of dockerfiles) {
+    const ignore = join(ROOT, dirname(dockerfile), ".dockerignore");
+    assert.ok(existsSync(ignore), `${dockerfile} has no .dockerignore`);
+    assert.ok(
+      dockerignoreExcludesEnv(readFileSync(ignore, "utf8")),
+      `${dockerfile}'s .dockerignore does not exclude .env`,
+    );
   }
 });

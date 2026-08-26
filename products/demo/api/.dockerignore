@@ -1,3 +1,10 @@
+# Secrets FIRST. `COPY . .` in the Dockerfile copies this whole directory, and CLAUDE.md's own
+# setup recipe has every developer create an api/.env holding a service_role key — so without
+# these two lines the production image ships with a developer's local secrets baked into a layer,
+# and pydantic-settings (env_file=".env") reads them at runtime for anything Fly does not set.
+.env
+.env.*
+
 .venv
 __pycache__
 tests
