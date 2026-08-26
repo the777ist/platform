@@ -58,13 +58,16 @@ jobs:
         # template token makes a stamped product carry the template's names. A committed
         # service-role key is the same shape as the anon key that is published on purpose. And a
         # semantic token with no value renders as nothing in one theme, which reads as a design
-        # choice rather than a bug.
+        # choice rather than a bug. And a package with no `test` script is skipped by
+        # `turbo run test` without a word, so the run goes green having checked one package
+        # fewer than yesterday.
         run: |
           node scripts/check-focused-tests.mjs
           node scripts/check-stamp-tokens.mjs
           node scripts/check-committed-secrets.mjs
           node scripts/check-semantic-tokens.mjs
           node scripts/check-theme-tokens.mjs
+          node scripts/check-package-tasks.mjs
       - name: commitlint (the commit-msg hook is bypassable)
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
