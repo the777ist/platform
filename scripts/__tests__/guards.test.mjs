@@ -17,12 +17,20 @@ import { namesAColour } from "../check-semantic-tokens.mjs";
 const b64 = (obj) => Buffer.from(JSON.stringify(obj)).toString("base64url");
 const jwt = (payload) => `${b64({ alg: "HS256" })}.${b64(payload)}.sig`;
 
+// The fixtures are ASSEMBLED rather than written literally, and this comment avoids spelling the
+// modifier out for the same reason: this file is itself scanned by the focused-test guard, which
+// cannot tell a fixture (or a sentence about one) from the real thing. It flagged this very file
+// on the first run — including this comment. Exempting the file would have been the easy fix and
+// the wrong one, since an exemption is how a guard quietly stops covering things.
+const ONLY = ".only(";
+const SKIP = ".skip(";
+
 test("focused tests are caught for every runner spelling", () => {
   for (const line of [
-    'describe.only("x", () => {})',
-    'it.only("x", () => {})',
-    'test.only("x", () => {})',
-    "describe . only (", // spacing is not a way around it
+    `describe${ONLY}"x", () => {})`,
+    `it${ONLY}"x", () => {})`,
+    `test${ONLY}"x", () => {})`,
+    `describe . ${ONLY.slice(1)}`, // spacing is not a way around the rule
   ]) {
     assert.ok(isFocused(line), `should be flagged: ${line}`);
   }
@@ -40,8 +48,9 @@ test("ordinary test code is not mistaken for a focused test", () => {
 });
 
 test("skips are reported separately from focused tests", () => {
-  assert.ok(isSkipped('it.skip("x", () => {})'));
-  assert.ok(!isFocused('it.skip("x", () => {})'));
+  const skipped = `it${SKIP}"x", () => {})`;
+  assert.ok(isSkipped(skipped));
+  assert.ok(!isFocused(skipped));
 });
 
 test("only real test files are scanned", () => {
