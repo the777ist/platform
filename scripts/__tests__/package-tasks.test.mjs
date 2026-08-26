@@ -13,6 +13,7 @@ import {
   exemptionsFor,
   missingTasks,
   staleExemptions,
+  stubbedTasks,
   workspacePackages,
 } from "../check-package-tasks.mjs";
 
@@ -103,5 +104,52 @@ test("both desktop packages are among them, with a test script", () => {
   for (const name of ["@platform/template-desktop", "@platform/demo-desktop"]) {
     assert.ok(byName.has(name), `${name} not found`);
     assert.ok(byName.get(name).scripts?.test, `${name} has no test script`);
+  }
+});
+
+test("a task that runs no real tool is a stub, not a task", () => {
+  // `"test": "echo ok"` satisfies every "has a test script" check ever written while running
+  // nothing. It is the natural shape of a script stubbed to unblock a build and never restored.
+  assert.deepEqual(stubbedTasks("@platform/some-app", { ...ALL, test: "echo ok" }), ["test"]);
+  assert.deepEqual(stubbedTasks("@platform/some-app", { ...ALL, typecheck: "true" }), [
+    "typecheck",
+  ]);
+  assert.deepEqual(stubbedTasks("@platform/some-app", { ...ALL, lint: "exit 0" }), ["lint"]);
+});
+
+test("the real tools this repo uses are all recognised", () => {
+  // Both stacks, and the desktop packages' bare node runner.
+  const real = {
+    lint: "uv run ruff check . && uv run ruff format --check .",
+    typecheck: "uv run pyright",
+    test: "uv run pytest",
+  };
+  assert.deepEqual(stubbedTasks("@platform/some-api", real), []);
+  assert.deepEqual(
+    stubbedTasks("@platform/some-desktop", {
+      lint: "eslint .",
+      typecheck: "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+      test: 'node --test "src/**/*.test.ts"',
+    }),
+    [],
+  );
+});
+
+test("a tool named inside a longer word does not count", () => {
+  // `\b` anchors matter: a script mentioning `pretest` or `jester` is not running jest.
+  assert.deepEqual(stubbedTasks("@platform/x", { ...ALL, test: "run-jester" }), ["test"]);
+  assert.deepEqual(stubbedTasks("@platform/x", { ...ALL, typecheck: "mytsc-wrapper" }), [
+    "typecheck",
+  ]);
+});
+
+test("an exempted task is not reported as a stub", () => {
+  // api-client is excused from lint and test; it has no script to be a stub of.
+  assert.deepEqual(stubbedTasks("@platform/demo-api-client", { typecheck: "tsc --noEmit" }), []);
+});
+
+test("every real package runs a real tool for every task it declares", () => {
+  for (const pkg of workspacePackages()) {
+    assert.deepEqual(stubbedTasks(pkg.name, pkg.scripts), [], `${pkg.name} has a stubbed task`);
   }
 });

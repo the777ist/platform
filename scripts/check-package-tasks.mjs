@@ -52,6 +52,29 @@ export function missingTasks(name, scripts) {
   return REQUIRED_TASKS.filter((task) => !scripts?.[task] && !exempt[task]);
 }
 
+// A declared task is not the same as a task that DOES something. `"test": "echo ok"` satisfies
+// every "has a test script" check ever written while running nothing, and it is the natural shape
+// of a script stubbed to unblock a build and never restored. So each task must also invoke a tool
+// that can actually fail.
+//
+// Recognised tools per task. Adding one is a deliberate edit, which is the point: a package that
+// starts running its tests through something new should have to say so.
+export const TASK_TOOLS = {
+  lint: [/\beslint\b/, /\bruff\b/],
+  typecheck: [/\btsc\b/, /\bpyright\b/],
+  test: [/\bjest\b/, /\bpytest\b/, /\bvitest\b/, /node\s+--test\b/],
+};
+
+/** Tasks whose script runs nothing that could fail. */
+export function stubbedTasks(name, scripts) {
+  const exempt = exemptionsFor(name);
+  return REQUIRED_TASKS.filter((task) => {
+    const script = scripts?.[task];
+    if (!script || exempt[task]) return false;
+    return !TASK_TOOLS[task].some((tool) => tool.test(script));
+  });
+}
+
 /** Tasks a package declares that it was ALSO exempted from — a stale exemption. */
 export function staleExemptions(name, scripts) {
   const exempt = exemptionsFor(name);
@@ -76,6 +99,11 @@ function main() {
     for (const task of missingTasks(pkg.name, pkg.scripts)) {
       problems.push(
         `${pkg.name} (${pkg.file}) has no "${task}" script — turbo run ${task} skips it silently`,
+      );
+    }
+    for (const task of stubbedTasks(pkg.name, pkg.scripts)) {
+      problems.push(
+        `${pkg.name} has a "${task}" script that runs no known tool: ${JSON.stringify(pkg.scripts[task])}`,
       );
     }
     // A package that grew the task it was excused from means the exemption is now a lie, and a
