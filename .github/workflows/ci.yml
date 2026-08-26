@@ -47,6 +47,10 @@ jobs:
         # never reaches them — including the gate scripts themselves. Same script the pre-push hook
         # calls, so the two cannot diverge on flags or config resolution.
         run: pnpm run lint:root
+      - name: Tests for the gate scripts themselves
+        # affected.mjs decides what this workflow checks; if it returned an empty scope, turbo
+        # would run nothing and this job would still be green. The enforcer needs enforcing.
+        run: pnpm run test:scripts
       - name: Focused tests + stamped tokens + secrets + semantic tokens
         # Both are FALSE-GREEN guards: a stray `.only` makes a suite pass having run almost
         # nothing, and an embedded template token makes a stamped product carry the template's

@@ -144,6 +144,10 @@ try {
   // reaches them — including these gate scripts themselves. Same entry point CI calls.
   run("pnpm run lint:root");
 
+  // The gate scripts themselves. affected.mjs decides what this gate and CI check, so a silent
+  // failure there disables everything downstream — the enforcer needs enforcing too.
+  run("pnpm run test:scripts");
+
   // Two false-GREEN guards. A focused test makes the suite pass having run almost nothing, and an
   // embedded template token makes a stamped product document the template's own names. Both are
   // silent by nature, which is exactly why they are asserted rather than reviewed for.
