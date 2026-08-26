@@ -135,6 +135,12 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   `lint` hashes BYTE-IDENTICAL and replayed a stale PASS — even though `ruff check .` lints
   `alembic/` and `tests/test_migration_rls.py` applies the migrations to assert RLS deny-all.
   `uv.lock` was likewise missing from lint/typecheck, so a ruff/pyright bump reused old results.
+  The JS half of that hole survived the fix and was found later: `pnpm-lock.yaml` is at the ROOT,
+  in no package directory, so `$TURBO_DEFAULT$` never saw it and turbo did NOT derive external
+  deps from it either — bumping `zustand` (a direct `@platform/core` dependency) left
+  `@platform/core#typecheck`'s hash byte-identical, so every dependency PR was graded by a cache
+  entry built against the version it replaced. It is now a `globalDependencies` entry (globally,
+  not per-package: a transitive bump can reach anything, so invalidate everything).
   api `openapi` is the ONE justified allowlist: its input really is only `src/`, and `openapi.json`
   is its own output.
 - `.gitattributes` pins LF in the repo AND in every working tree. Do not delete it: without it the

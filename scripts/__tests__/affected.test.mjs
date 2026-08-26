@@ -33,6 +33,21 @@ test("globalInputFiles reports the root files turbo.json declares", () => {
   }
 });
 
+test("the JS lockfile is a global input, or a dependency bump replays a stale PASS", () => {
+  // Turbo is supposed to derive each package's external-dependency hash from the lockfile, and
+  // measurably does not here: bumping zustand — a DIRECT dependency of @platform/core — from
+  // 5.0.14 to 5.0.99 left @platform/core#typecheck's hash byte-identical at 0a4051c7ee2a1e81
+  // until pnpm-lock.yaml was named in globalDependencies. Every Dependabot PR would have been
+  // graded by a cache entry produced against the version it was replacing.
+  //
+  // uv.lock needs no entry here for the reason that hid this one: it lives INSIDE each api
+  // package, so $TURBO_DEFAULT$ already covers it. pnpm-lock.yaml lives in no package at all.
+  assert.ok(
+    globalInputFiles().includes("pnpm-lock.yaml"),
+    "pnpm-lock.yaml is not a declared globalDependency",
+  );
+});
+
 test("an unresolvable base widens to EVERY package instead of narrowing to none", () => {
   // CI derives its base from github.event.before, which is all-zeros on a first push and
   // unreachable after a force-push. Narrowing there would gate nothing at all.
