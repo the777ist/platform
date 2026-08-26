@@ -11,8 +11,9 @@
 // is caught the day it is written instead of years later.
 //
 // Deliberately narrow to keep it honest: it matches the token followed by a word separator
-// (`template_api`, `template-app`, `template_api_test`), NOT the ordinary English word. A product
-// is free to have an email `template`, a `templates/` directory, or the word in prose.
+// (`template_api`, `template-app`, `template_api_test`) or by an uppercase letter (`TemplateCard`),
+// NOT the ordinary English word. A product is free to have an email `template`, a `templates/`
+// directory, the plural `Templates`, or the word in prose.
 import { execFileSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -24,6 +25,13 @@ const TEMPLATE_DIR = "products/_template";
 // `template` or `Template` immediately followed by - or _ and more word characters.
 const LEAKED_TOKEN = /\btemplate[-_]\w+/i;
 
+// PascalCase compounds need their own pattern, and they are the sneakier half. The generator
+// rewrites `\bTemplate\b`, which cannot match before another word character — so `TemplateCard`
+// or `TemplateProps` survives stamping intact, and the kebab/snake pattern above does not see it
+// either (there is no - or _ to anchor on). Case-SENSITIVE on purpose: `Templates` is the English
+// plural and must stay legal.
+const LEAKED_PASCAL = /\bTemplate[A-Z]\w*/;
+
 // Binary-ish files git tracks that are pointless (and noisy) to scan as text.
 const SKIP_EXT = /\.(png|jpg|jpeg|gif|ico|webp|pdf|ttf|otf|woff2?|keystore|patch)$/i;
 
@@ -34,7 +42,7 @@ if (!existsSync(join(ROOT, "products"))) {
 
 /** Exported so the rule itself is testable without touching the filesystem. */
 export function leaksTemplateToken(line) {
-  return LEAKED_TOKEN.test(line);
+  return LEAKED_TOKEN.test(line) || LEAKED_PASCAL.test(line);
 }
 
 function main() {

@@ -80,6 +80,20 @@ test("ordinary uses of the English word template are not flagged", () => {
   }
 });
 
+test("a PascalCase compound is caught — the half the generator cannot rewrite", () => {
+  // `\bTemplate\b` cannot match before another word character, so `TemplateCard` survives the
+  // stamp intact AND has no - or _ for the pattern above to anchor on. Nothing else catches it.
+  assert.ok(leaksTemplateToken("export function TemplateCard() {}"));
+  assert.ok(leaksTemplateToken("type TemplateProps = { id: string }"));
+});
+
+test("the English plural and the bare word stay legal", () => {
+  // `Templates` is ordinary English; a bare `Template` IS rewritten by the generator, so neither
+  // can leak and flagging them would only teach people to route around the guard.
+  assert.ok(!leaksTemplateToken("Templates live in supabase/"));
+  assert.ok(!leaksTemplateToken("the Template is stamped"));
+});
+
 test("a service-role JWT is identified by its ROLE claim, not its shape", () => {
   // The anon key is the same shape and is published on purpose, so shape alone cannot decide.
   assert.equal(jwtRole(jwt({ role: "service_role" })), "service_role");

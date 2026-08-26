@@ -169,9 +169,13 @@ pnpm new-product demo`; preserve the untracked `demo/api/.env` first). The gener
   reuses the freed portIndex, so the re-stamp keeps demo's ports even when
   higher-indexed products exist.
 - The generator rewrites WHOLE-WORD tokens only — never embed `template`/`template_api`
-  inside a longer identifier in `_template` files (e.g. a scratch-DB name like
-  `<module>_rls_test`); keep the token word-delimited (`"template_api" + "_suffix"`).
-  Audit stamps with substring `git grep -i template products/<name>`, not just `-iw`.
+  inside a longer identifier in `_template` files. That cuts both ways: snake/kebab
+  (a scratch-DB name like `<module>_rls_test`) AND PascalCase (`TemplateCard`,
+  `TemplateProps` — `Template` cannot match before another word character, so the
+  template's name welds itself into a public symbol). Keep tokens word-delimited
+  (`"template_api" + "_suffix"`; name the component `Card`, not `TemplateCard`).
+  Audit stamps with substring `git grep -i template products/<name>`, not just `-iw` —
+  `scripts/check-stamp-tokens.mjs` enforces both shapes on every push and CI run.
 - Scripting pnpm/expo: set `CI=1` for non-TTY pnpm, but NEVER pass an empty `CI=` to
   expo-cli — its `getenv.boolish` throws on an empty string.
 - `expo export` FORCES the production dotenv and Metro's transform cache does NOT key

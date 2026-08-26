@@ -90,13 +90,13 @@ function nextPortIndex() {
 }
 
 // ---- Naming variants (PHILOSOPHY.md: kebab / Pascal / snake) ----------------------------
-function toPascal(kebab) {
+export function toPascal(kebab) {
   return kebab
     .split("-")
     .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
     .join("");
 }
-function toSnake(kebab) {
+export function toSnake(kebab) {
   return kebab.replace(/-/g, "_");
 }
 
@@ -107,7 +107,7 @@ function toSnake(kebab) {
 // "templating") — those stay untouched. NOTE: `products/_template` needs its own rule —
 // the underscore is a word character, so \btemplate\b can NOT match inside `_template`
 // (and `git grep -iw` wouldn't flag it either — it would silently survive).
-function buildReplacers(name) {
+export function buildReplacers(name) {
   const kebab = name; // e.g. "demo"
   const Pascal = toPascal(name); // e.g. "Demo"
   const snake = toSnake(name); // e.g. "demo" (or "my_app" for "my-app")
@@ -119,7 +119,7 @@ function buildReplacers(name) {
   ];
 }
 
-function rewrite(text, replacers) {
+export function rewrite(text, replacers) {
   let out = text;
   for (const [re, to] of replacers) out = out.replace(re, to);
   return out;
@@ -131,7 +131,7 @@ function rewrite(text, replacers) {
 // Mask `template =` keys in .toml files before the token pass, restore after.
 const TOML_KEY_GUARD = /^(\s*)template(\s*=)/gm;
 const TOML_KEY_MASK = "__TOML_TEMPLATE_KEY__";
-function rewriteContents(fileName, text, replacers) {
+export function rewriteContents(fileName, text, replacers) {
   const isToml = fileName.endsWith(".toml");
   let out = isToml ? text.replace(TOML_KEY_GUARD, `$1${TOML_KEY_MASK}$2`) : text;
   out = rewrite(out, replacers);
@@ -166,7 +166,7 @@ const TEXT_EXT = new Set([
   ".env",
   "", // "" = extensionless files like Dockerfile
 ]);
-function isText(path) {
+export function isText(path) {
   const base = path.split(sep).pop();
   if (base.startsWith(".env")) return true; // .env.example/.development/.staging/.production
   const dot = base.lastIndexOf(".");
@@ -336,4 +336,10 @@ function main() {
 
   printChecklist(name, portIndex); // Step 6
 }
-main();
+// Guarded so importing this module (to test the token rewrite) does not stamp a product.
+if (
+  process.argv[1] &&
+  process.argv[1].split(String.fromCharCode(92)).join("/").endsWith("scripts/new-product.mjs")
+) {
+  main();
+}
