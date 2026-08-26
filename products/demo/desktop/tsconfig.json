@@ -17,5 +17,10 @@
     "sourceMap": true,
     "noEmitOnError": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  // Tests are EXCLUDED from the build, for two independent reasons: test files must never be
+  // emitted into build/ and shipped inside the packaged desktop app, and they import with
+  // explicit .ts extensions (required by node --test's type stripping), which an emitting
+  // project rejects. tsconfig.test.json typechecks them instead — see the `typecheck` script.
+  "exclude": ["src/**/__tests__/**"]
 }

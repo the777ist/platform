@@ -1,0 +1,12 @@
+{
+  // Typecheck-only project for the main-process tests. Separate from tsconfig.json because that
+  // one EMITS (build/) and TypeScript refuses `allowImportingTsExtensions` on an emitting
+  // project — while `node --test` requires those explicit .ts extensions to resolve them.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": []
+}

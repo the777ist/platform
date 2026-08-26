@@ -2,6 +2,8 @@ import { app, BrowserWindow, protocol, net, shell } from "electron";
 import { autoUpdater } from "electron-updater";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { mimeFor, resolveRendererPath } from "./renderer-path";
+import { SECURE_WEB_PREFERENCES, windowOpenDecision } from "./window-security";
 
 // --- 1. Register the privileged scheme BEFORE app is ready ------------------
 // Must run at top-level (synchronously, before app.whenReady) or Chromium will
@@ -24,45 +26,12 @@ protocol.registerSchemesAsPrivileged([
 // When packaged, electron-builder places renderer/ under resources/app/renderer.
 const RENDERER_DIR = path.join(__dirname, "..", "renderer");
 
-// --- 2. MIME map for the SPA fallback --------------------------------------
-const MIME_BY_EXT: Record<string, string> = {
-  ".html": "text/html",
-  ".js": "text/javascript",
-  ".mjs": "text/javascript",
-  ".css": "text/css",
-  ".json": "application/json",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".gif": "image/gif",
-  ".webp": "image/webp",
-  ".ico": "image/x-icon",
-  ".woff": "font/woff",
-  ".woff2": "font/woff2",
-  ".ttf": "font/ttf",
-  ".map": "application/json",
-};
-
-function mimeFor(filePath: string): string {
-  return MIME_BY_EXT[path.extname(filePath).toLowerCase()] ?? "application/octet-stream";
-}
-
 // --- 3. Protocol handler: URL path -> file under renderer/, SPA fallback ----
 function registerAppProtocol(): void {
   protocol.handle("app", async (request) => {
-    const url = new URL(request.url);
-    // Strip the leading "/" and decode (handles %20 etc). Empty -> index.html.
-    let relPath = decodeURIComponent(url.pathname).replace(/^\/+/, "");
-    if (relPath === "") relPath = "index.html";
-
-    // Resolve and guard against path traversal escaping renderer/.
-    // Compare against RENDERER_DIR + path.sep (NOT a bare startsWith on RENDERER_DIR) so a
-    // sibling dir sharing the prefix (e.g. renderer-evil/) cannot satisfy the check.
-    const resolved = path.normalize(path.join(RENDERER_DIR, relPath));
-    if (resolved !== RENDERER_DIR && !resolved.startsWith(RENDERER_DIR + path.sep)) {
-      return new Response("Forbidden", { status: 403 });
-    }
+    // Containment is decided in renderer-path.ts, which has no electron import and IS tested.
+    const resolved = resolveRendererPath(RENDERER_DIR, request.url);
+    if (resolved === null) return new Response("Forbidden", { status: 403 });
 
     // If the request looks like a real asset (has an extension) serve it directly.
     const hasExt = path.extname(resolved) !== "";
@@ -98,9 +67,7 @@ function createWindow(): void {
     show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true, // renderer cannot touch Node directly
-      nodeIntegration: false, // no Node in the SPA
-      sandbox: true,
+      ...SECURE_WEB_PREFERENCES,
     },
   });
 
@@ -108,11 +75,9 @@ function createWindow(): void {
 
   // Open external links in the OS browser, not inside the shell.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith("http:") || url.startsWith("https:")) {
-      void shell.openExternal(url);
-      return { action: "deny" };
-    }
-    return { action: "allow" };
+    const { action, external } = windowOpenDecision(url);
+    if (external) void shell.openExternal(url);
+    return { action };
   });
 
   // The custom protocol host is arbitrary; "-" is a conventional placeholder host.
