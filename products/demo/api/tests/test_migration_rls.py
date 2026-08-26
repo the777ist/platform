@@ -78,3 +78,33 @@ def test_alembic_migration_applies_rls_deny_all(rls_db_url: str) -> None:
             assert force_rls is True, f"FORCE RLS not enabled on {relname}"
     finally:
         get_settings.cache_clear()
+
+
+def test_alembic_migrates_over_the_MIGRATION_url_not_the_pooler(rls_db_url: str) -> None:
+    """Key ruling #4: Alembic runs over the DIRECT 5432 connection (DATABASE_MIGRATION_URL),
+    never the Supabase pooler (6543, transaction mode) that serves runtime traffic.
+
+    Nothing could tell the two apart. tests/__init__.py sets DATABASE_URL and
+    DATABASE_MIGRATION_URL to the SAME value, so env.py reading either one passed every test —
+    verified by pointing it at `database_url` and watching the whole suite stay green. In
+    production that is DDL over a transaction pooler, which fails, and it fails inside the Fly
+    release_command: mid-deploy, on the one path that has no local equivalent.
+
+    So the two are given DIFFERENT values here, and only the migration one is real. If env.py
+    ever reads the runtime URL again, this cannot connect.
+    """
+    os.environ["DATABASE_MIGRATION_URL"] = rls_db_url
+    os.environ["DATABASE_URL"] = (
+        # connect_timeout keeps the FAILURE fast: without it a wrong url leaves this test
+        # hanging on a connect retry for minutes, which is how a red test gets ignored.
+        "postgresql+psycopg://nobody:nobody@127.0.0.1:1/unreachable?connect_timeout=1"
+    )
+    from demo_api.settings import get_settings
+
+    get_settings.cache_clear()
+    try:
+        # Succeeds only by using DATABASE_MIGRATION_URL; the runtime URL points nowhere.
+        command.upgrade(Config("alembic.ini"), "head")
+    finally:
+        os.environ["DATABASE_URL"] = rls_db_url
+        get_settings.cache_clear()
