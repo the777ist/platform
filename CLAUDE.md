@@ -24,6 +24,12 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
   `com.example.*` bundle ids, infra `<org>-<product>-<env>` (org placeholder `example`).
 - Theming = semantic CSS variables. NEVER name a color in a component — tokens only
   (`bg-primary`, not hex). A brand is a token-VALUE override, never forked components.
+  Token VALUES are authored ONLY in `packages/ui/figma/tokens.json`; `theme.ts` (native) and
+  `global.css` (web) are generated from it by `/sync-tokens`. The generator writes
+  `packages/ui/` only — each `products/<p>/app/global.css` is still a hand-copied duplicate,
+  so copy it across after regenerating. `scripts/check-theme-tokens.mjs` enforces all of it:
+  every `var()` the preset binds has a value in BOTH modes, light and dark define the same
+  keys, and every `global.css` matches `theme.ts` exactly.
 - Figma modes ARE brand modes; each product's `theme.ts` is the export of its Figma brand
   mode (`/sync-tokens` regenerates — never hand-edit generated theme values).
 - Realtime is BROADCAST-ONLY: tables stay RLS-deny-all; the API broadcasts `invalidate`

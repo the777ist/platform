@@ -155,6 +155,7 @@ try {
   run("node scripts/check-stamp-tokens.mjs");
   run("node scripts/check-committed-secrets.mjs");
   run("node scripts/check-semantic-tokens.mjs");
+  run("node scripts/check-theme-tokens.mjs");
 
   // One alembic head per api, through the SAME checker CI runs: a gate that lives only in a hook is
   // not actually enforced, because --no-verify skips it. Driven off the pushed diff rather than
