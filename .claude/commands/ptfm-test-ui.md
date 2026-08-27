@@ -8,8 +8,8 @@ Args: $ARGUMENTS
 Expected shape: `<product> <TICKET-ID> [slug-or-title] [primary user instruction]`
 
 - **`<product>`** — first token: the product directory under `products/` (e.g. `blog`). **Required.** If absent, infer it from the cwd when the session is inside `products/<name>/...`; otherwise STOP and ASK. Validate that `products/<product>/` exists; if it doesn't, STOP and ASK — do NOT guess. EVERYTHING this command does — the codebase walk, every glob, every save path, the target URL — is scoped to `products/<product>/`.
-- **`<TICKET-ID>`** — second token (e.g. `ABC-145`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
-- **`[slug-or-title]`** — optional next token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block globs `products/<product>/docs/plans/` and `products/<product>/docs/implementation/` to recover it.
+- **`<TICKET-ID>`** — second token (e.g. `CRO-412`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
+- **`[slug-or-title]`** — optional next token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block below recovers it — an existing doc for this ticket is the authority; the branch is only a seed, used when no doc exists yet.
 - **`[primary user instruction]`** — anything after the slug (or after the ticket ID if no slug-shaped token follows). Freeform guidance for THIS specific invocation — adjust scope, focus, or emphasis as instructed. **It does NOT override the absolute rules below** — if it conflicts with a rule, prefer the rule and surface the conflict to the user.
 
 ---
@@ -19,8 +19,16 @@ We need to UI-test the entire `<FEATURE>` feature in `products/<product>` end-to
 **Resolve `<product>`, `<TICKET-ID>`, `<slug>`, and `<FEATURE>` BEFORE doing anything else.**
 
 1. **`<product>`** — first token if provided; else infer from cwd (`products/<name>/...`); else STOP and ASK. Confirm `products/<product>/` exists.
-2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS` (after `<product>`), use it. Otherwise run `git branch --show-current` and extract the `<TEAM>-<NUMBER>` portion (e.g. `ABC-145` from `feature/ABC-145-d2c-bulk-edit`). If neither yields a ticket, STOP and ASK — do NOT guess.
-3. **`<slug>`** — if a slug-shaped token was provided, use it. Otherwise `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` and `products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` to recover the canonical slug (the segment between `<TICKET-ID>-` and the `_plan.md` / `_implementation.md` suffix).
+2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS` (after `<product>`), use it. Otherwise run `git branch --show-current` and match `[A-Za-z][A-Za-z0-9]{1,9}-[0-9]+` anywhere in it, CASE-INSENSITIVELY — Linear's branch format is a workspace setting, so it may emit `CRO-412`, `cro-412` or `Cro-412`. **Normalise to UPPERCASE** (`cro-412` → `CRO-412`) and use that form in every path and every filename from here on; glob case-insensitively when reading, so a doc already written in another case still resolves. If neither yields a ticket, STOP and ASK — do NOT guess.
+3. **`<slug>`** — resolve in this order and STOP at the first hit:
+
+   1. A slug-shaped token in `$ARGUMENTS`.
+   2. **An existing artifact for this ticket** — `Glob products/<product>/docs/*/<TICKET-ID>*.md` (match the ticket id case-insensitively) and recover the slug from the filename: the segment between `<TICKET-ID>-` and the `_product.md` / `_architecture.md` / `_plan.md` / `_implementation.md` / `_review.md` suffix. **This is the authority.** Once ANY stage has written a doc for this ticket, that filename fixes the slug for every stage after it.
+   3. The **branch** — the segment after the ticket id: `cro-412-bulk-edit-tags` → `bulk-edit-tags`; `hritt/cro-412-bulk-edit-tags` → `bulk-edit-tags`; `shop/cro-412-bulk-edit-tags` → `bulk-edit-tags`.
+   4. The Linear ticket title, kebab-cased (~5–8 words, drop filler words).
+
+   Steps 3 and 4 are SEEDS — used once, by whichever stage runs first for this ticket — and they are last on purpose, because neither is stable. Linear's branch format is a workspace setting that can be changed at any time, and it truncates long titles, so the same ticket can yield a different string tomorrow than it does today. The filename written by the first stage is what every later stage reads. NEVER re-derive a slug that step 2 already answered, and NEVER rename an existing artifact to match a freshly derived one.
+
 4. **`<FEATURE>`** — derive from the plan / implementation docs (they reference `products/<product>/app/features/<feature>/...` extensively), or by mapping the slug to a folder under `products/<product>/app/features/`. If no clear match, ASK.
 
 ---
@@ -45,8 +53,10 @@ Reference docs (read these first, in full):
 - @products/<product>/CLAUDE.md — the product's structure, ports (incl. the Expo web dev-server port), infra names.
 - the nested **API** `CLAUDE.md` under `products/<product>/api/` — the add-an-endpoint recipe (model→service→schema→router→openapi→typegen→hook→screen), used when a fix touches the backend.
 - @packages/ui/CLAUDE.md + @packages/ui/FIGMA.md — design-system runbook + token contract (semantic tokens only, `@platform/ui` primitives, never modify a shared primitive).
-- @products/<product>/docs/plans/<TICKET-ID>-<slug>\_plan.md
-- @products/<product>/docs/implementation/<TICKET-ID>-<slug>\_implementation.md
+- `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` — read the match in full. **If it returns nothing, STOP and ASK.**
+- `Glob products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` — read the match in full. **If it returns nothing, STOP and ASK.**
+
+(A constructed exact path is deliberately NOT used for these two: reading a path that does not exist fails SILENTLY, and the stage then runs with no plan in context and still reports success. The glob is the same lookup that resolved `<slug>`, so it hits whenever a doc exists at all; the STOP is what makes a genuinely missing doc loud instead of invisible.)
 
 (If a `CLAUDE.md` is absent, fall back to `PHILOSOPHY.md` — product-level ones are stamped from `products/_template`.)
 
@@ -152,7 +162,7 @@ For each case in the TodoWrite plan, mark it `in_progress`, then:
    - **Frontend** STRICTLY conforms to: `@platform/ui` owned primitives (compose them; NEVER modify a shared primitive for one fix — add a `cva` variant / opt-in prop, or compose on top); **semantic tokens ONLY** (`bg-background`, `text-foreground`, `border-border`, … — **NEVER raw hex**; a brand is a token mode); the **generated typed client is never hand-edited** (change the endpoint → run typegen → regenerate); user-facing errors come from the typed problem+json, not raw strings. **Cross-target coverage applies** — every UI surface needs explicit iOS / Android / web / desktop + light/dark + brand decisions; "works on web only" or "light mode only" is INCOMPLETE (flag what you couldn't verify in this web pass).
    - **Backend** STRICTLY conforms to: layered OOP (`schemas/`→`routers/`→`services/`→`models/`, **DTO ≠ ORM** — never serialize a SQLModel row); **RFC 9457 problem+json** typed errors (no raw throws across the boundary); schema changes ONLY via **Alembic** (and that's a STOP-and-surface deep change per (c)); `DELETE`/`UPDATE` via `session.execute(delete(...))`, never `session.exec(...)`; **slowapi** gates; **RLS deny-all** stays; **broadcast-only** realtime (no Postgres-Changes subscriptions).
      f. **Watch the regression test go RED → GREEN.** If it doesn't, the fix is wrong; iterate.
-     g. **Run all four gates** — for JS: `turbo run lint typecheck test build --filter=...<product>...` (+ `export:web` where the change touches web); for the API: `ruff check && pyright && pytest`; plus the **typegen drift check** (`git diff --exit-code` on the regenerated client) if the change touched the API contract — confirm no regression elsewhere. If any go red, fix before moving on.
+     g. **Run all four gates** — for JS: `turbo run lint typecheck test build --filter=...*<product>*...` (+ `export:web` where the change touches web); for the API: `ruff check && pyright && pytest`; plus the **typegen drift check** (`node scripts/check-typegen-drift.mjs`) if the change touched the API contract — confirm no regression elsewhere. If any go red, fix before moving on.
      h. **Re-drive the failing test case** through the browser. Confirm the user-facing behaviour is correct end-to-end.
      i. **Update the implementation log** (`products/<product>/docs/implementation/<TICKET-ID>-<slug>_implementation.md`) with the fix — same structure as `/ptfm-implement` uses (under `## What got built` and/or `## Deviations from the plan`). Mirror notable deviations into the plan's `## Post-ship deltas`.
      j. **Track the fix for the final report**: failing case, root cause, files touched, regression test path, regression test assertion, four-gates status.
@@ -194,7 +204,7 @@ The cleanup pass is non-skippable. A test run with leaked records is not a compl
 Then output the same structured summary in chat:
 
 - **Cleanup line (top-line, mandatory)**: `cleanup: N records created, N deleted, 0 leaks` — or list every leak explicitly with ID + reason.
-- **Four-gates status (mandatory)**: exit status of `turbo run lint typecheck test build --filter=...<product>...` (JS) and — for API changes — `ruff check`, `pyright`, `pytest`, plus the typegen drift check, after the last fix. All green = run complete.
+- **Four-gates status (mandatory)**: exit status of `turbo run lint typecheck test build --filter=...*<product>*...` (JS) and — for API changes — `ruff check`, `pyright`, `pytest`, plus the typegen drift check, after the last fix. All green = run complete.
 - **Totals**: cases planned, executed, `PASS` count, `FAIL-then-fixed` count, `FLAKE` count, `FAIL-deferred-to-user` count.
 - **Fixes shipped (per bug)**: the failing test case, root cause in one sentence, summary of the fix, files touched, regression test (path + what it asserts — RNTL or pytest), confirmation that the test went RED → GREEN and the gates are green.
 - **Issues deferred to user** (architectural / Alembic-migration / schema / new-env-var / new-endpoint / new-integration / shared-primitive-or-`packages/core` scope): the bug, the proposed approach, why it's out of scope for a test pass — for the user to confirm before the next session.
@@ -213,7 +223,7 @@ ABSOLUTE, NON-NEGOTIABLE RULES:
 - **Thorough execution.** Every case in the plan must be actually driven through the browser. No marking `passed` without executing. Re-run failures once to detect flakes.
 - **FIX bugs that tests reveal.** This is a test-AND-fix run. Surface-level bugs (component logic, validation, error display, state-machine wiring, copy, toast/error wiring, router/screen logic, TanStack Query hook usage, layout, responsive behaviour, a thin service/schema fix) get fixed in this session per PHILOSOPHY.md's adherence rules. **Reporting failures without fixing is FORBIDDEN** unless the fix genuinely requires architectural / Alembic-migration / schema / new-endpoint / shared-primitive work — in which case STOP and surface to the user with a "should I proceed deeper?" rather than silently bypassing.
 - **Regression test for every fix.** Per the pipeline's TDD discipline — write the regression test (RNTL with `jest.mock` for app bugs, pytest for API bugs), watch it RED, fix the bug, watch it GREEN. Modifying unrelated test assertions is forbidden; ADDING new regression tests in service of a fix is MANDATORY.
-- **All four gates green after fixes.** `turbo run lint typecheck test build --filter=...<product>...` (JS) AND — for API changes — `ruff check && pyright && pytest`, plus the typegen drift check — all green when fixes ship. Re-run the gates after every meaningful fix batch. Zero `.only`, zero `.skip`, zero new ignores.
+- **All four gates green after fixes.** `turbo run lint typecheck test build --filter=...*<product>*...` (JS) AND — for API changes — `ruff check && pyright && pytest`, plus the typegen drift check — all green when fixes ship. Re-run the gates after every meaningful fix batch. Zero `.only`, zero `.skip`, zero new ignores.
 - **Update the implementation log** (`products/<product>/docs/implementation/<TICKET-ID>-<slug>_implementation.md`) with any fix shipped — same structure as `/ptfm-implement`. Mirror notable deviations into the plan's `## Post-ship deltas`.
 - **Keep the playbook in lockstep with the run.** Tick `- [x]` (or `- [!]` for deferred) on the playbook file as each case completes — never just in TodoWrite. A playbook with stale `- [ ]`s next to executed cases is incomplete; finalize it in Step 7 before the chat report.
 - **No deep refactors / Alembic schema changes / new endpoints / new integrations / changes to shared `@platform/ui` primitives or `packages/core` / commonification during this pass.** Those are STOP-and-surface-to-user moments, not silently attempt.

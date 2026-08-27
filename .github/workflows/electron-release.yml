@@ -7,12 +7,19 @@ name: Electron Release
 on:
   push:
     tags: ["*-desktop-v*"] # <product>-desktop-v* → 3-OS matrix
+# Least privilege for GITHUB_TOKEN. The repo default is currently `read`, but that is a repo
+# SETTING someone can change; declaring it here makes the guarantee travel with the workflow.
+# Nothing in these jobs writes to this repo (deploys authenticate with their own secrets).
+permissions:
+  contents: read
+
 jobs:
   release:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     env:
       MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }} # PLACEHOLDER (empty until certs exist)
       DESKTOP_RELEASES_TOKEN: ${{ secrets.DESKTOP_RELEASES_TOKEN }} # PLACEHOLDER (empty → build-only, no publish)
@@ -20,18 +27,26 @@ jobs:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v4
       - run: pnpm install --frozen-lockfile
-      - name: Resolve product token (from the desktop tag)
+      - name: Resolve product token + directory (from the desktop tag)
         id: tag
         shell: bash
-        run: echo "product=${GITHUB_REF_NAME%%-desktop-v*}" >> "$GITHUB_OUTPUT"
+        run: |
+          product="${GITHUB_REF_NAME%%-desktop-v*}"
+          # `template` is the product TOKEN; `_template` is the directory on disk. Resolved once
+          # here instead of repeating the same ternary at every use site.
+          if [ "$product" = "template" ]; then dir="_template"; else dir="$product"; fi
+          echo "product=$product" >> "$GITHUB_OUTPUT"
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
       - name: Build the web bundle the desktop wraps
-        run: pnpm turbo run export:web --filter=*-app
+        # Scoped to the product being released. `--filter=*-app` matched EVERY product's app, so
+        # releasing one desktop ran a full `expo export` for every other product too.
+        run: pnpm turbo run export:web --filter=./products/${{ steps.tag.outputs.dir }}/app
       # macOS: sign+publish only when certs are present; empty placeholders → build-but-don't-publish.
       # Publishing also needs DESKTOP_RELEASES_TOKEN (the <org>/<product>-desktop-releases
       # repo PAT) — without it, build the artifacts but skip the publish (green, not red).
       - name: electron-builder — signed publish (mac when certs exist; win/linux always)
         if: runner.os != 'macOS' || env.MAC_CSC_LINK != ''
-        working-directory: products/${{ steps.tag.outputs.product == 'template' && '_template' || steps.tag.outputs.product }}/desktop
+        working-directory: products/${{ steps.tag.outputs.dir }}/desktop
         env:
           GH_TOKEN: ${{ secrets.DESKTOP_RELEASES_TOKEN }} # PLACEHOLDER (token for <org>/<product>-desktop-releases)
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }} # electron-builder reads CSC_LINK
@@ -39,5 +54,5 @@ jobs:
         run: pnpm electron-builder --publish ${{ env.DESKTOP_RELEASES_TOKEN != '' && 'always' || 'never' }}
       - name: electron-builder — macOS build-only (no certs yet)
         if: runner.os == 'macOS' && env.MAC_CSC_LINK == ''
-        working-directory: products/${{ steps.tag.outputs.product == 'template' && '_template' || steps.tag.outputs.product }}/desktop
+        working-directory: products/${{ steps.tag.outputs.dir }}/desktop
         run: pnpm electron-builder --mac --publish never # builds unsigned; does NOT publish the mac artifact

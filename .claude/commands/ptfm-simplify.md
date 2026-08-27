@@ -8,8 +8,8 @@ Args: $ARGUMENTS
 Expected shape: `<product> <TICKET-ID> [slug-or-title] [primary user instruction]`
 
 - **`<product>`** — first token: the product directory under `products/` (e.g. `blog`). **Required.** If absent, infer it from the cwd when the session is inside `products/<name>/...`; otherwise STOP and ASK. Validate that `products/<product>/` exists; if it doesn't, STOP and ASK — do NOT guess. EVERYTHING this command does — the codebase walk, every glob, every save path — is scoped to `products/<product>/`.
-- **`<TICKET-ID>`** — second token (e.g. `ABC-145`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
-- **`[slug-or-title]`** — optional next token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block globs `products/<product>/docs/plans/` and `products/<product>/docs/implementation/` to recover it.
+- **`<TICKET-ID>`** — second token (e.g. `CRO-412`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
+- **`[slug-or-title]`** — optional next token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block below recovers it — an existing doc for this ticket is the authority; the branch is only a seed, used when no doc exists yet.
 - **`[primary user instruction]`** — anything after the slug (or after the ticket ID if no slug-shaped token follows). Freeform guidance for THIS specific invocation — adjust scope, focus, or emphasis as instructed. **It does NOT override the absolute rules below** — if it conflicts with a rule, prefer the rule and surface the conflict to the user.
 
 ---
@@ -19,8 +19,16 @@ We need to simplify the entire `<FEATURE>` feature in `products/<product>`. And 
 **Resolve `<product>`, `<TICKET-ID>`, `<slug>`, and `<FEATURE>` BEFORE doing anything else.**
 
 1. **`<product>`** — first token if provided; else infer from cwd (`products/<name>/...`); else STOP and ASK. Confirm `products/<product>/` exists.
-2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS` (after `<product>`), use it. Otherwise run `git branch --show-current` and extract the `<TEAM>-<NUMBER>` portion (e.g. `ABC-145` from `feature/ABC-145-d2c-bulk-edit`). If neither yields a ticket, STOP and ASK — do NOT guess.
-3. **`<slug>`** — if a slug-shaped token was provided, use it. Otherwise `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` and `products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` to recover the canonical slug (the segment between `<TICKET-ID>-` and the `_plan.md` / `_implementation.md` suffix).
+2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS` (after `<product>`), use it. Otherwise run `git branch --show-current` and match `[A-Za-z][A-Za-z0-9]{1,9}-[0-9]+` anywhere in it, CASE-INSENSITIVELY — Linear's branch format is a workspace setting, so it may emit `CRO-412`, `cro-412` or `Cro-412`. **Normalise to UPPERCASE** (`cro-412` → `CRO-412`) and use that form in every path and every filename from here on; glob case-insensitively when reading, so a doc already written in another case still resolves. If neither yields a ticket, STOP and ASK — do NOT guess.
+3. **`<slug>`** — resolve in this order and STOP at the first hit:
+
+   1. A slug-shaped token in `$ARGUMENTS`.
+   2. **An existing artifact for this ticket** — `Glob products/<product>/docs/*/<TICKET-ID>*.md` (match the ticket id case-insensitively) and recover the slug from the filename: the segment between `<TICKET-ID>-` and the `_product.md` / `_architecture.md` / `_plan.md` / `_implementation.md` / `_review.md` suffix. **This is the authority.** Once ANY stage has written a doc for this ticket, that filename fixes the slug for every stage after it.
+   3. The **branch** — the segment after the ticket id: `cro-412-bulk-edit-tags` → `bulk-edit-tags`; `hritt/cro-412-bulk-edit-tags` → `bulk-edit-tags`; `shop/cro-412-bulk-edit-tags` → `bulk-edit-tags`.
+   4. The Linear ticket title, kebab-cased (~5–8 words, drop filler words).
+
+   Steps 3 and 4 are SEEDS — used once, by whichever stage runs first for this ticket — and they are last on purpose, because neither is stable. Linear's branch format is a workspace setting that can be changed at any time, and it truncates long titles, so the same ticket can yield a different string tomorrow than it does today. The filename written by the first stage is what every later stage reads. NEVER re-derive a slug that step 2 already answered, and NEVER rename an existing artifact to match a freshly derived one.
+
 4. **`<FEATURE>`** — derive from the plan / implementation docs (they reference `products/<product>/app/features/<feature>/...` extensively), or by mapping the slug to a folder under `products/<product>/app/features/`. If no clear match, ASK.
 
 Reference docs (read these first, in full):
@@ -30,8 +38,10 @@ Reference docs (read these first, in full):
 - @products/<product>/CLAUDE.md — the product's structure, ports, infra names.
 - the nested **API** `CLAUDE.md` under `products/<product>/api/` — the add-an-endpoint recipe (model→service→schema→router→openapi→typegen→hook→screen).
 - @packages/ui/CLAUDE.md + @packages/ui/FIGMA.md — design-system runbook + token contract.
-- @products/<product>/docs/plans/<TICKET-ID>-<slug>\_plan.md
-- @products/<product>/docs/implementation/<TICKET-ID>-<slug>\_implementation.md
+- `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` — read the match in full. **If it returns nothing, STOP and ASK.**
+- `Glob products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` — read the match in full. **If it returns nothing, STOP and ASK.**
+
+(A constructed exact path is deliberately NOT used for these two: reading a path that does not exist fails SILENTLY, and the stage then runs with no plan in context and still reports success. The glob is the same lookup that resolved `<slug>`, so it hits whenever a doc exists at all; the STOP is what makes a genuinely missing doc loud instead of invisible.)
 
 (If a `CLAUDE.md` is absent, fall back to `PHILOSOPHY.md` — product-level ones are stamped from `products/_template`.)
 
@@ -57,18 +67,18 @@ RULES FOR TESTS — read these twice. The premise: good test coverage is what le
 - **Never** delete tests on the grounds that "the new code makes them redundant". Coverage shrinkage is a regression in itself. If two tests genuinely test the same thing after consolidation, surface both to the user and let them choose.
 - **Always off-limits:** the jest-expo config (the `jest.config.*` / jest-expo preset), the project's test setup / shared scaffold (e.g. the RNTL setup, `jest.mock` factories, polyfactory factories, `seed.py`), the pytest fixtures / conftest, and any fixture data shape that encodes product behaviour. Edits there are out of scope — flag and stop.
 - The full test suite MUST pass after every meaningful refactor step, not just at the end — `turbo run test` (JS, jest-expo) and, for API changes, `pytest`. If it goes red, you revert or fix forward.
-- Final gate: for JS — `turbo run lint typecheck test build --filter=...<product>...`; for API changes — `ruff check && pyright && pytest`; plus the typegen drift check. All green, zero skipped, zero `.only`, zero new ignores.
+- Final gate: for JS — `turbo run lint typecheck test build --filter=...*<product>*...`; for API changes — `ruff check && pyright && pytest`; plus the typegen drift check. All green, zero skipped, zero `.only`, zero new ignores.
 
 Process:
 
 1. Read the plan + implementation docs in full (and the reference docs above).
 2. Walk every file in the feature surface — `products/<product>/app/features/<FEATURE>/**`, every component / hook / store (Zustand) / generated-client hook it touches, every `@platform/ui` primitive (`packages/ui/src/components/ui/*`) and `packages/core` helper it depends on, the Expo Router route/screen files, and across the API every `schemas/` / `routers/` / `services/` / `models/` file the endpoint chain touches (plus any `products/<product>/api-client/` endpoints the feature consumes — NEVER hand-edited). Do not skim.
 3. Build a duplication/consolidation inventory as a to-do list — one entry per simplification, each tagged with: files affected, what's duplicated, the canonical home (WITHIN the feature), and the risk (low/med/high) of regression. Anything whose right home is a SHARED package or a cross-product utility → flag for `/ptfm-commonify`, do not act on it here.
-4. Execute simplifications smallest-blast-radius first. After each change run `turbo run test --filter=...<product>...` (JS) and/or `pytest` (API), and confirm green before moving on. When a simplification touches an API endpoint, regenerate the typed client (typegen) and confirm no unintended drift.
+4. Execute simplifications smallest-blast-radius first. After each change run `turbo run test --filter=...*<product>*...` (JS) and/or `pytest` (API), and confirm green before moving on. When a simplification touches an API endpoint, regenerate the typed client (typegen) and confirm no unintended drift.
 5. Update both docs in the same pass (docs + tests are part of every change — the pipeline's rule):
    - Plan doc: add a `## Post-ship deltas` entry per consolidated decision.
    - Implementation doc: update the file inventory, note deletions/relocations-within-feature, log behaviour-preserving refactors with their rationale.
-6. Final gate: for JS — `turbo run lint typecheck test build --filter=...<product>...` (+ `export:web` where web changed); for API changes — `ruff check && pyright && pytest`; plus the typegen drift check — all green. Report what shrank — file count, LOC, duplicated symbols eliminated, primitives composed/extended.
+6. Final gate: for JS — `turbo run lint typecheck test build --filter=...*<product>*...` (+ `export:web` where web changed); for API changes — `ruff check && pyright && pytest`; plus the typegen drift check — all green. Report what shrank — file count, LOC, duplicated symbols eliminated, primitives composed/extended.
 
 What "simplification" does NOT mean here:
 
@@ -87,4 +97,10 @@ What "simplification" does NOT mean here:
 
 ---
 
-Start now. Go step by step. Do not stop until the entire feature has been combed through, every duplication addressed or explicitly justified (relocations-out flagged for `/ptfm-commonify`), docs updated, and the suite is green — `turbo run lint typecheck test build --filter=...<product>...` (JS) and, for API changes, `ruff check && pyright && pytest`, plus the typegen drift check.
+Start now. Go step by step. Do not stop until the entire feature has been combed through, every duplication addressed or explicitly justified (relocations-out flagged for `/ptfm-commonify`), docs updated, and the suite is green — `turbo run lint typecheck test build --filter=...*<product>*...` (JS) and, for API changes, `ruff check && pyright && pytest`, plus the typegen drift check.
+
+## Next stage
+
+When this pass is complete, hand off to `/ptfm-commonify` - lift anything genuinely generic into its shared home.
+
+The full pipeline is `/ptfm-product` -> `/ptfm-architect` -> `/ptfm-plan` -> `/ptfm-implement` -> `/ptfm-audit` -> `/ptfm-simplify` -> `/ptfm-commonify` -> `/ptfm-review` -> `/ptfm-test-ui`. Stages before `/ptfm-plan` are skipped for smaller work (each says so itself); `/ptfm-review` is NOT skippable; `/ptfm-test-ui` is optional and applies only where the change touches UI.

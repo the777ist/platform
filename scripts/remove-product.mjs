@@ -16,16 +16,52 @@ import { createInterface } from "node:readline/promises";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PRODUCTS_DIR = join(ROOT, "products");
 
+// The generator only ever creates names matching this, so removal accepts nothing else. Without
+// it `remove-product ..` resolved to the REPOSITORY ROOT and rmSync(recursive) would have deleted
+// the entire checkout — `../packages` likewise. The confirmation prompt is no protection: it asks
+// you to type the name you already typed, and --yes skips it outright.
+export const NAME_RE = /^[a-z][a-z0-9-]*$/;
+
+/** The reason `name` may not be removed, or null when it is a legal target. */
+export function nameProblem(name) {
+  if (!name) return "usage: pnpm remove-product <name> [--yes]";
+  if (name === "template" || name.startsWith("_")) {
+    return `refusing to remove "${name}" — products/_template is the mold every product stamps from`;
+  }
+  if (!NAME_RE.test(name)) {
+    return `invalid name "${name}": must match /^[a-z][a-z0-9-]*$/ (lowercase, digits, hyphens; start with a letter)`;
+  }
+  return null;
+}
+
+/**
+ * The directory a removal would delete.
+ *
+ * Belt and braces with nameProblem: the target must be a DIRECT child of products/, so that
+ * loosening the pattern above can never turn back into a traversal. A destructive command should
+ * not have exactly one thing standing between a typo and the repository.
+ */
+export function destFor(name, productsDir = PRODUCTS_DIR) {
+  const dest = join(productsDir, name);
+  if (dirname(dest) !== productsDir) {
+    throw new Error(`refusing to remove "${name}" — it resolves outside products/ (${dest})`);
+  }
+  return dest;
+}
+
 // ---- Step 1: validate + confirm ----------------------------------------------------------
 function parseArgs() {
   const args = process.argv.slice(2);
   const yes = args.includes("--yes") || args.includes("-y");
   const name = args.find((a) => !a.startsWith("-"));
-  if (!name) die("usage: pnpm remove-product <name> [--yes]");
-  if (name === "template" || name.startsWith("_")) {
-    die(`refusing to remove "${name}" — products/_template is the mold every product stamps from`);
+  const problem = nameProblem(name);
+  if (problem) die(problem);
+  let dest;
+  try {
+    dest = destFor(name);
+  } catch (error) {
+    die(error.message);
   }
-  const dest = join(PRODUCTS_DIR, name);
   if (!existsSync(dest)) die(`product "${name}" does not exist at products/${name}`);
   return { name, dest, yes };
 }
@@ -85,7 +121,7 @@ function printChecklist(name) {
  [ ] Desktop: archive/delete the ${org}/${name}-desktop-releases repo
  [ ] Sentry: delete the 4 ${name} projects (app stg/prod, api stg/prod)
  [ ] GitHub Actions: remove per-product secrets (FLY_API_TOKEN_${name.toUpperCase().replace(/-/g, "_")}, ...)
-     and the "${name}" filter entries in deploy-api.yml / eas-update.yml (if added)
+     (the deploy path filters need no edit — they derive from products/*)
  [ ] FIGMA: ask design to retire the "${name}" brand mode
  [ ] git: the deletion is in your working tree — review and commit it
 ────────────────────────────────────────────────────────────────────
@@ -115,4 +151,10 @@ async function main() {
 
   printChecklist(name); // Step 6
 }
-await main();
+// Guarded so importing this module (to test the name rules) cannot delete anything.
+if (
+  process.argv[1] &&
+  process.argv[1].split(String.fromCharCode(92)).join("/").endsWith("scripts/remove-product.mjs")
+) {
+  await main();
+}

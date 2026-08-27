@@ -9,12 +9,13 @@
     "compile": "tsc -p tsconfig.json",
     "build": "pnpm run copy:renderer && pnpm run compile",
     "start": "electron .",
+    "test": "node --test \"src/**/*.test.ts\"",
     "dev": "pnpm run build && electron .",
     "lint": "eslint .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "release": "electron-builder --publish always",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('renderer',{recursive:true,force:true});require('node:fs').rmSync('release',{recursive:true,force:true})\""
   },
   "devDependencies": {

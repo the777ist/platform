@@ -5,6 +5,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: ".storybook",
+  // A stray `test.only` would otherwise make CI pass having run ONE test. Playwright's own
+  // guard: error in CI, still convenient locally.
+  forbidOnly: !!process.env.CI,
   testMatch: "visual-regression.spec.ts",
   // Baselines live next to the spec and are committed, one set PER PLATFORM — font
   // rendering differs across OSes, so a shared baseline can't satisfy both a local

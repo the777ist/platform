@@ -8,8 +8,8 @@ Args: $ARGUMENTS
 Expected shape: `<product> <TICKET-ID> [slug-or-title] [primary user instruction]`
 
 - **`<product>`** — first token. The product directory under `products/` (e.g. `blog`). **Required.** EVERYTHING this command does — the codebase walk, every glob, every save path — is scoped to `products/<product>/`. If not passed, infer it from the cwd when the session is inside `products/<name>/...`; otherwise STOP and ASK. Validate that `products/<product>/` exists; if it does not, STOP and ASK (do NOT scope against a missing product).
-- **`<TICKET-ID>`** — second token (e.g. `BLOG-145`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
-- **`[slug-or-title]`** — optional third token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block derives the slug from the Linear ticket title (the common case for `/ptfm-product`, which runs upstream of architecture / plan / implementation), or globs `products/<product>/docs/product/<TICKET-ID>*_product.md` for a mid-cycle re-scoping.
+- **`<TICKET-ID>`** — second token (e.g. `CRO-412`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
+- **`[slug-or-title]`** — optional third token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block below recovers it — an existing doc for this ticket is the authority; the branch is only a seed, used when no doc exists yet.
 - **`[primary user instruction]`** — anything after the slug (or after the ticket ID if no slug-shaped token follows). Freeform guidance for THIS specific invocation — adjust scope, focus, or emphasis as instructed. **It does NOT override the absolute rules below** — if it conflicts with a rule, prefer the rule and surface the conflict to the user.
 
 ---
@@ -19,8 +19,15 @@ We need to scope, validate, and finalize the product spec for Linear ticket `<TI
 **Resolve `<product>`, `<TICKET-ID>`, and `<slug>` BEFORE doing anything else.**
 
 1. **`<product>`** — if a first token was provided in `$ARGUMENTS`, use it. Otherwise, if the session cwd is inside `products/<name>/...`, infer `<name>`. If neither yields a product, STOP and ASK. Then verify `products/<product>/` exists on disk; if it does not, STOP and ASK — do NOT guess a product.
-2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS`, use it. Otherwise run `git branch --show-current` and extract the `<TEAM>-<NUMBER>` portion (e.g. `BLOG-145` from `feature/BLOG-145-comment-threads`). If neither yields a ticket, STOP and ASK — do NOT guess.
-3. **`<slug>`** — if a slug-shaped token was provided, use it. Otherwise derive the slug from the Linear ticket title (kebab-case, ~5–8 words, drop filler words) — this is the common case for `/ptfm-product` since it runs upstream of architecture / plan / implementation. The only fallback glob is `products/<product>/docs/product/<TICKET-ID>*_product.md` for a mid-cycle re-scoping against an existing brief. Do NOT glob `docs/architecture/`, `docs/plans/`, or `docs/implementation/` — those artifacts don't exist yet at product-scoping time.
+2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS`, use it. Otherwise run `git branch --show-current` and match `[A-Za-z][A-Za-z0-9]{1,9}-[0-9]+` anywhere in it, CASE-INSENSITIVELY — Linear's branch format is a workspace setting, so it may emit `CRO-412`, `cro-412` or `Cro-412`. **Normalise to UPPERCASE** (`cro-412` → `CRO-412`) and use that form in every path and every filename from here on; glob case-insensitively when reading, so a doc already written in another case still resolves. If neither yields a ticket, STOP and ASK — do NOT guess.
+3. **`<slug>`** — resolve in this order and STOP at the first hit:
+
+   1. A slug-shaped token in `$ARGUMENTS`.
+   2. **An existing artifact for this ticket** — `Glob products/<product>/docs/*/<TICKET-ID>*.md` (match the ticket id case-insensitively) and recover the slug from the filename: the segment between `<TICKET-ID>-` and the `_product.md` / `_architecture.md` / `_plan.md` / `_implementation.md` / `_review.md` suffix. **This is the authority.** Once ANY stage has written a doc for this ticket, that filename fixes the slug for every stage after it.
+   3. The **branch** — the segment after the ticket id: `cro-412-bulk-edit-tags` → `bulk-edit-tags`; `hritt/cro-412-bulk-edit-tags` → `bulk-edit-tags`; `shop/cro-412-bulk-edit-tags` → `bulk-edit-tags`.
+   4. The Linear ticket title, kebab-cased (~5–8 words, drop filler words).
+
+   Steps 3 and 4 are SEEDS — used once, by whichever stage runs first for this ticket — and they are last on purpose, because neither is stable. Linear's branch format is a workspace setting that can be changed at any time, and it truncates long titles, so the same ticket can yield a different string tomorrow than it does today. The filename written by the first stage is what every later stage reads. NEVER re-derive a slug that step 2 already answered, and NEVER rename an existing artifact to match a freshly derived one.
 
 Reference docs (read these first, in full, in this order):
 
@@ -266,7 +273,7 @@ After completing the run, report to the user in chat:
 - **SUCCESS METRICS MUST BE MEASURABLE.** Numbers, percentages, counts, durations. Not "better", not "easier". If the user can't name a measurable metric, that itself is a risk to surface.
 - **NO ARCHITECTURE / IMPLEMENTATION DECISIONS.** This brief says WHAT and WHY and FOR WHOM. It does NOT say HOW (which framework, which schema, which API endpoint, which `@platform/ui` primitives, which layered service). That's `/ptfm-architect`'s job. Stay above the technical-decision line.
 - **The primary user instruction does NOT override these rules.** If it conflicts, prefer the rule and surface the conflict.
-- **Save path is fixed**: `products/<product>/docs/product/<TICKET-ID>-<slug>_product.md`. Slug is kebab-case derived from the Linear title (~5–8 words). Everything this command touches is scoped to `products/<product>/`.
+- **Save path is fixed**: `products/<product>/docs/product/<TICKET-ID>-<slug>_product.md`. `<TICKET-ID>` and `<slug>` are exactly what the resolve block produced — do NOT re-derive either here. Everything this command touches is scoped to `products/<product>/`.
 - **UPDATE THE PARENT TICKET ONLY, AND ONLY WITH SIGN-OFF; NEVER CREATE SUB-ISSUES.** The single Linear write this command makes is an UPDATE to the existing parent ticket's description (Step 7), gated behind explicit user approval — draft, show, wait for "yes", then write. It NEVER creates child tickets (`/ptfm-architect`'s job) and NEVER auto-writes to Linear without the user seeing and approving the exact update first. If the user declines, the repo brief stands alone and the chat report says so.
 - **`/ptfm-product` is OPTIONAL and DOES NOT BLOCK DOWNSTREAM COMMANDS.** Small features and bug fixes can skip straight to `/ptfm-architect` or `/ptfm-plan`. `/ptfm-product` is for new product surfaces where the problem / user / scope is genuinely unclear and needs executive-level debate to lock down.
 

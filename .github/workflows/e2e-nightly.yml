@@ -11,9 +11,40 @@ on:
         description: "Regenerate the linux VR baselines on this runner and upload them as an artifact (instead of asserting)"
         type: boolean
         default: false
+# Least privilege for GITHUB_TOKEN. The repo default is currently `read`, but that is a repo
+# SETTING someone can change; declaring it here makes the guarantee travel with the workflow.
+# Nothing in these jobs writes to this repo (deploys authenticate with their own secrets).
+permissions:
+  contents: read
+
 jobs:
-  web-e2e:
+  # Which products get E2E — derived from products/*, so a newly stamped product is covered the
+  # night it lands with no workflow edit. This job exists because the E2E used to be hardcoded to
+  # `products/_template`: the stamp SOURCE was the only thing ever tested and no shipped product
+  # was. `_template` stays in the list deliberately — it is what every future product is stamped
+  # from, so a break there is born into all of them.
+  products:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      list: ${{ steps.list.outputs.products }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: list
+        run: |
+          json=$(ls -d products/*/app 2>/dev/null | cut -d/ -f2 | jq -R -s -c 'split("\n")|map(select(length>0))')
+          [ -n "$json" ] || json='[]'
+          echo "products=$json" >> "$GITHUB_OUTPUT"
+          echo "products with a web app: $json"
+  web-e2e:
+    needs: products
+    if: ${{ needs.products.outputs.list != '[]' }}
+    strategy:
+      fail-fast: false # one product's failure must never hide another product's result
+      matrix:
+        product: ${{ fromJSON(needs.products.outputs.list) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     services:
       postgres: # the API's DB (auth/realtime come from the Supabase CLI stack below)
         image: postgres:16
@@ -22,11 +53,11 @@ jobs:
         options: >-
           --health-cmd "pg_isready" --health-interval 10s --health-timeout 5s --health-retries 5
     env:
-      # The playwright global-setup starts the product's local Supabase stack (auth +
-      # realtime on the 54321 block) and the api webServer reads these (no .env in CI).
+      # The playwright global-setup starts this product's local Supabase stack and the api
+      # webServer reads these (no .env in CI). SUPABASE_URL is NOT here: the Supabase block is
+      # offset per product, so it is derived below.
       DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
       DATABASE_MIGRATION_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
-      SUPABASE_URL: http://localhost:54321
       # The Supabase CLI's shared LOCAL demo service_role JWT (public by design).
       SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
     steps:
@@ -35,18 +66,42 @@ jobs:
       - uses: supabase/setup-cli@v1 # global-setup runs `supabase start`
         with: { version: latest }
       - run: pnpm install --frozen-lockfile
-      - run: uv sync --frozen --project products/_template/api
+      - run: uv sync --frozen --project products/${{ matrix.product }}/api
       - run: pnpm exec playwright install --with-deps chromium
+      - name: Resolve this product's Supabase URL
+        # READ from the product's supabase/config.toml, never recomputed from
+        # `54321 + 100*portIndex`. The generator owns that formula and writes the result into
+        # config.toml; recomputing it here is a second copy that can disagree with the file the
+        # CLI actually reads. On a runner that is one wasted `supabase start`; the shape that
+        # matters is a URL pointing at a DIFFERENT product's stack, which the suite would happily
+        # sign up against. (Hardcoding :54321 is what pinned this workflow to _template.)
+        env:
+          PRODUCT: ${{ matrix.product }}
+        run: |
+          port=$(node -e "
+            const fs = require('fs');
+            const cfg = fs.readFileSync('products/' + process.env.PRODUCT + '/supabase/config.toml', 'utf8');
+            const section = cfg.split(/^\[/m).find((s) => s.startsWith('api]'));
+            const m = section && section.match(/^\s*port\s*=\s*(\d+)/m);
+            if (!m) { console.error('no [api] port in config.toml'); process.exit(1); }
+            console.log(m[1]);
+          ")
+          echo "SUPABASE_URL=http://localhost:$port" >> "$GITHUB_ENV"
+          echo "$PRODUCT: supabase/config.toml [api] port=$port"
       - name: Web E2E (signup → login → CRUD → realtime)
-        run: pnpm --filter @platform/template-app exec playwright test
+        # Filtered by PATH, not by `@<scope>/<product>-app`: a path filter survives a repo/org
+        # rename, which the scoped name does not.
+        run: pnpm --filter ./products/${{ matrix.product }}/app exec playwright test
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: web-e2e-report
-          path: products/_template/app/test-results/
+          # Unique per matrix job — upload-artifact v4 rejects duplicate names outright.
+          name: web-e2e-report-${{ matrix.product }}
+          path: products/${{ matrix.product }}/app/test-results/
           if-no-files-found: ignore # a pre-test failure produces no results dir
   visual-regression:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v4

@@ -8,8 +8,8 @@ Args: $ARGUMENTS
 Expected shape: `<product> <TICKET-ID> [slug-or-title] [primary user instruction]`
 
 - **`<product>`** — first token (e.g. `blog`). **Required.** The product directory under `products/`. If absent, infer it from cwd when the session is inside `products/<name>/...`; otherwise STOP and ASK. Validate `products/<product>/` exists; if it does not, STOP and ASK. EVERYTHING this command does — the codebase walk, every glob, every save path — is scoped to `products/<product>/`.
-- **`<TICKET-ID>`** — second token (e.g. `PTFM-145`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
-- **`[slug-or-title]`** — optional next token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block globs `products/<product>/docs/plans/` and `products/<product>/docs/implementation/` to recover it.
+- **`<TICKET-ID>`** — second token (e.g. `CRO-412`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
+- **`[slug-or-title]`** — optional next token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block below recovers it — an existing doc for this ticket is the authority; the branch is only a seed, used when no doc exists yet.
 - **`[primary user instruction]`** — anything after the slug (or after the ticket ID if no slug-shaped token follows). Freeform guidance for THIS specific invocation — adjust scope, focus, or emphasis as instructed. **It does NOT override the absolute rules below** — if it conflicts with a rule, prefer the rule and surface the conflict to the user.
 
 ---
@@ -19,8 +19,15 @@ We need to implement the full fix / feature for Linear ticket `<TICKET-ID>` (in 
 **Resolve `<product>`, `<TICKET-ID>` and `<slug>` BEFORE doing anything else.**
 
 1. **`<product>`** — if a first token was provided in `$ARGUMENTS`, use it. Otherwise, if the session is inside `products/<name>/...`, infer `<name>`. Validate `products/<product>/` exists. If you cannot resolve a valid product, STOP and ASK — do NOT guess.
-2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS`, use it. Otherwise run `git branch --show-current` and extract the `<TEAM>-<NUMBER>` portion (e.g. `PTFM-145` from `feature/PTFM-145-d2c-bulk-edit`). If neither yields a ticket, STOP and ASK — do NOT guess.
-3. **`<slug>`** — if a slug-shaped token was provided, use it. Otherwise `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` and `products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` to recover the canonical slug (the segment between `<TICKET-ID>-` and the `_plan.md` / `_implementation.md` suffix).
+2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS`, use it. Otherwise run `git branch --show-current` and match `[A-Za-z][A-Za-z0-9]{1,9}-[0-9]+` anywhere in it, CASE-INSENSITIVELY — Linear's branch format is a workspace setting, so it may emit `CRO-412`, `cro-412` or `Cro-412`. **Normalise to UPPERCASE** (`cro-412` → `CRO-412`) and use that form in every path and every filename from here on; glob case-insensitively when reading, so a doc already written in another case still resolves. If neither yields a ticket, STOP and ASK — do NOT guess.
+3. **`<slug>`** — resolve in this order and STOP at the first hit:
+
+   1. A slug-shaped token in `$ARGUMENTS`.
+   2. **An existing artifact for this ticket** — `Glob products/<product>/docs/*/<TICKET-ID>*.md` (match the ticket id case-insensitively) and recover the slug from the filename: the segment between `<TICKET-ID>-` and the `_product.md` / `_architecture.md` / `_plan.md` / `_implementation.md` / `_review.md` suffix. **This is the authority.** Once ANY stage has written a doc for this ticket, that filename fixes the slug for every stage after it.
+   3. The **branch** — the segment after the ticket id: `cro-412-bulk-edit-tags` → `bulk-edit-tags`; `hritt/cro-412-bulk-edit-tags` → `bulk-edit-tags`; `shop/cro-412-bulk-edit-tags` → `bulk-edit-tags`.
+   4. The Linear ticket title, kebab-cased (~5–8 words, drop filler words).
+
+   Steps 3 and 4 are SEEDS — used once, by whichever stage runs first for this ticket — and they are last on purpose, because neither is stable. Linear's branch format is a workspace setting that can be changed at any time, and it truncates long titles, so the same ticket can yield a different string tomorrow than it does today. The filename written by the first stage is what every later stage reads. NEVER re-derive a slug that step 2 already answered, and NEVER rename an existing artifact to match a freshly derived one.
 
 Reference docs (read these first, in full, in this order):
 
@@ -37,7 +44,7 @@ Reference docs (read these first, in full, in this order):
 ## Step 1 — Fetch the ticket and the plan
 
 1. Use the Linear MCP (`mcp__Linear__*`, e.g. `get_issue`) to fetch the ticket: title, full description, comments, blockers, linked docs. Capture context.
-2. Find the plan doc: `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md`. Read it in full — every section. The plan is the source of truth for what to build.
+2. Find the plan doc: `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md`. Read it in full — every section. The plan is the source of truth for what to build. **If it returns nothing, STOP and ASK** — implementing with no plan is building from a guess, and it fails silently: the stage runs, produces code, and reports success against a spec nobody wrote.
 3. If no plan exists at that path, STOP and surface to the user — direct them to run `/ptfm-plan <product> <TICKET-ID>` first. Do NOT improvise an implementation without a plan.
 4. If multiple plan candidates match, ask the user which one to follow.
 5. Note the implementation log path: `products/<product>/docs/implementation/<TICKET-ID>-<slug>_implementation.md`. Use the same `<slug>` the plan file uses. If a log already exists from a prior session, READ it and continue from where it left off; do not overwrite.
@@ -74,7 +81,7 @@ The plan's `## Implementation sequence` section is dependency-ordered — follow
 4. **Implement the changes per the plan** to turn the new tests RED → GREEN. For an endpoint, follow the canonical add-an-endpoint recipe in order: **model → service → schema → router → openapi → typegen → hook → screen**. Watch each test transition; if a test refuses to go green, the implementation is wrong — fix it before moving on.
 5. **Add edge-case tests as the implementation surfaces them.** Building often reveals cases the plan didn't anticipate — write the new test in this step (not later), watch it fail, then make it pass.
 6. **Honour every approval gate** the plan calls out — **Alembic migrations**, env-var additions, anything explicitly flagged. If the plan says "show migration to user before applying", you SHOW the generated Alembic migration and WAIT for explicit approval before running it; you do not auto-apply. (Alembic runs over the direct 5432 connection via `DATABASE_MIGRATION_URL`.)
-7. **Regenerate the typed client and run a quick sanity check** before closing out the step — if the step changed the API surface, run typegen (`@hey-api/openapi-ts`) to regenerate `products/<product>/api-client/`; **NEVER hand-edit the generated client.** Then run `turbo run typecheck --filter=...<product>...` (and `pyright` for API changes).
+7. **Regenerate the typed client and run a quick sanity check** before closing out the step — if the step changed the API surface, run typegen (`@hey-api/openapi-ts`) to regenerate `products/<product>/api-client/`; **NEVER hand-edit the generated client.** Then run `turbo run typecheck --filter=...*<product>*...` (and `pyright` for API changes).
 8. **Mark the todo `completed`** only once every test for this sequence step is green.
 9. **Move to the next sequence step.** Do not jump ahead, do not batch multiple sequence steps' tests up front — each step gets its own red → green cycle, in order.
 
@@ -84,7 +91,7 @@ Adherence rules (non-negotiable, per `PHILOSOPHY.md`):
 - **Backend STRICTLY conforms to existing patterns.** FastAPI layered services: thin routers `Depends` a service; the service owns business logic AND data access (no repository layer); models are persistence-only. **DTOs are ALWAYS separate from ORM models** — never serialize a SQLModel row to the client. User-facing errors cross the boundary as **RFC 9457 problem+json** (services raise typed errors mapped to problem+json) — **never raise a raw error string** across the boundary. **One Alembic migration per schema change** (show-before-apply gate). **slowapi** rate limits on every paid / public endpoint (key per verified JWT `sub`, fall back to IP). Validate every input with **Pydantic v2 strict mode**. DELETE/UPDATE via `session.execute(delete(...))`, never `session.exec(...)`. The **generated typed client is never hand-edited** — change the endpoint, run typegen, regenerate.
 - **Cross-target + theme coverage.** For every UI surface you touch, make explicit decisions for **iOS, Android, web (react-native-web), and desktop (Electron)**, plus **light / dark**, plus **brand modes**, plus responsive on web / tablet — consistent with how similar surfaces handle it elsewhere. A change that "works on web only" or "light mode only" is INCOMPLETE.
 - **Honor the plan's performance & scale decisions.** Build the indexes the plan specifies (in the Alembic migration), keep `list_*` on a **bounded cursor keyset** (never OFFSET / unbounded scan), avoid **N+1** (one query/join, not per-row), don't over-fetch columns, and keep heavy work (large fan-out, transcode, third-party batch) **off the request path** — on a background job. If you discover a surface the plan didn't size, size it (or surface it) rather than shipping an unindexed scan.
-- **Run tests frequently.** `turbo run test --filter=...<product>...` (and the targeted `pytest`) after every meaningful batch. Going from green to green is much cheaper to debug than going from red to red after 30 changes.
+- **Run tests frequently.** `turbo run test --filter=...*<product>*...` (and the targeted `pytest`) after every meaningful batch. Going from green to green is much cheaper to debug than going from red to red after 30 changes.
 
 "I'll add the tests in a follow-up" is a rule violation. Tests come BEFORE code at every sequence step. **Edge cases are as important as test cases.**
 
@@ -114,8 +121,8 @@ Anything you learned mid-implementation worth surfacing — hidden invariants, s
 ### `## Verification`
 
 - Manual run-through (golden path)
-- `turbo run lint typecheck test build --filter=...<product>...` output (+ `ruff check && pyright && pytest` for API changes) — all gates green
-- Typegen drift check (`git diff --exit-code` on the regenerated client) clean
+- `turbo run lint typecheck test build --filter=...*<product>*...` output (+ `ruff check && pyright && pytest` for API changes) — all gates green
+- Typegen drift check (`node scripts/check-typegen-drift.mjs`) clean
 - Any open caveats
 
 Update the log incrementally — every batch of changes, write what you just did. Don't leave it for the end.
@@ -129,8 +136,8 @@ Before reporting done, emit the pipeline's Definition-of-Done checklist with eac
 - [ ] API unit + service tests added/updated (`pytest`, real Postgres, savepoint isolation)
 - [ ] API integration tests added/updated (router → service → DB, broadcast-and-invalidate, cursor pagination)
 - [ ] Frontend RNTL unit + component tests added/updated
-- [ ] Typegen regenerated — no drift (`git diff --exit-code` on `products/<product>/api-client/`)
-- [ ] `turbo run lint typecheck test build --filter=...<product>...` (JS) AND — for API changes — `ruff check && pyright && pytest` — all green (lint + typecheck + tests + the Expo web export / app build are all first-class gates; a green test suite with a red build is not done)
+- [ ] Typegen regenerated — no drift (`node scripts/check-typegen-drift.mjs`)
+- [ ] `turbo run lint typecheck test build --filter=...*<product>*...` (JS) AND — for API changes — `ruff check && pyright && pytest` — all green (lint + typecheck + tests + the Expo web export / app build are all first-class gates; a green test suite with a red build is not done)
 
 Run the final gate one last time and paste the output. Silent skips are rule violations. If you cannot satisfy a line, say so explicitly with a one-line justification — do not just omit. Zero `.only`, zero `.skip`, zero new ignores.
 
@@ -145,7 +152,7 @@ Run the final gate one last time and paste the output. Silent skips are rule vio
 - **Tests are MANDATORY in the same pass.** Tests come first at every sequence step (Step 3's red → green cycle); code and tests ship together. "I'll add the tests in a follow-up" is forbidden.
 - **Honour approval gates.** Alembic migrations, env-var additions, anything the plan flagged for review — show, wait, then proceed. NEVER auto-apply destructive or production-affecting changes.
 - **Implementation log updated AS YOU GO.** Not at the end. Every meaningful batch records what changed.
-- **Final gate is non-skippable.** `turbo run lint typecheck test build --filter=...<product>...` (+ `ruff check && pyright && pytest` for API) — all green, plus a clean typegen-drift check. Lint, typecheck, tests, and the Expo web export / app build are first-class gates; a green test suite with a red build is not done. The Definition-of-Done checklist gets emitted with every line ticked or explicitly justified.
+- **Final gate is non-skippable.** `turbo run lint typecheck test build --filter=...*<product>*...` (+ `ruff check && pyright && pytest` for API) — all green, plus a clean typegen-drift check. Lint, typecheck, tests, and the Expo web export / app build are first-class gates; a green test suite with a red build is not done. The Definition-of-Done checklist gets emitted with every line ticked or explicitly justified.
 
 What `/ptfm-implement` does NOT mean:
 
@@ -167,3 +174,9 @@ Deployment context spans the template's four surfaces — **Fly (api), EAS (mobi
 ---
 
 Start now. Resolve the product. Fetch the ticket. Load the plan. Walk the codebase. Build per the plan's sequence (model → service → schema → router → openapi → typegen → hook → screen). Add tests in the same pass. Keep the implementation log up to date as you go. Regenerate the typed client (no drift). Final gate green. Definition-of-Done emitted.
+
+## Next stage
+
+When this pass is complete, hand off to `/ptfm-audit` - reconcile the docs and close the coverage gaps this pass opened.
+
+The full pipeline is `/ptfm-product` -> `/ptfm-architect` -> `/ptfm-plan` -> `/ptfm-implement` -> `/ptfm-audit` -> `/ptfm-simplify` -> `/ptfm-commonify` -> `/ptfm-review` -> `/ptfm-test-ui`. Stages before `/ptfm-plan` are skipped for smaller work (each says so itself); `/ptfm-review` is NOT skippable; `/ptfm-test-ui` is optional and applies only where the change touches UI.

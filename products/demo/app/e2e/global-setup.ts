@@ -9,12 +9,25 @@ const appDir = path.resolve(__dirname, "..");
 const productDir = path.resolve(appDir, "..");
 const apiDir = path.join(productDir, "api");
 
-// Ports derive from product.json's portIndex (Supabase block 54321+100i — PHILOSOPHY
-// generator spec) so the stamped copy targets ITS OWN product's stack.
-const { portIndex } = JSON.parse(readFileSync(path.join(productDir, "product.json"), "utf8")) as {
-  portIndex: number;
-};
-const SUPABASE_PORT = 54321 + 100 * portIndex;
+// The Supabase API port is READ from this product's supabase/config.toml, not re-derived from
+// `54321 + 100·portIndex`. The generator owns that formula and writes the result into
+// config.toml; anything that recomputes it is a second copy that can disagree with the file the
+// CLI actually reads (CLAUDE.md: "a fifth copy is a fifth thing to drift").
+//
+// Disagreeing here is worse than it looks: the health check would target a port this product's
+// stack is not on, and on a machine running several products it can hit ANOTHER product's Kong,
+// conclude "up", skip `supabase start`, and let the suite run against the wrong project's auth.
+function supabaseApiPort(): number {
+  const config = readFileSync(path.join(productDir, "supabase", "config.toml"), "utf8");
+  // Split on section headers and take the one that IS `[api]` — `startsWith("api]")` excludes
+  // `[api.tls]` and friends. The port line is anchored so a `*_port` key cannot match.
+  const section = config.split(/^\[/m).find((s) => s.startsWith("api]"));
+  const match = section?.match(/^\s*port\s*=\s*(\d+)/m);
+  if (!match) throw new Error("no [api] port in supabase/config.toml — cannot locate the stack");
+  return Number(match[1]);
+}
+
+const SUPABASE_PORT = supabaseApiPort();
 
 async function supabaseIsUp(): Promise<boolean> {
   try {

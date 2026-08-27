@@ -8,20 +8,62 @@ on:
   push:
     branches: [main] # JS-only OTA → staging channel
     tags: ["*-ota-v*"] # <product>-ota-v* → production channel
+# Least privilege for GITHUB_TOKEN. The repo default is currently `read`, but that is a repo
+# SETTING someone can change; declaring it here makes the guarantee travel with the workflow.
+# Nothing in these jobs writes to this repo (deploys authenticate with their own secrets).
+permissions:
+  contents: read
+
 jobs:
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
-      products: ${{ steps.filter.outputs.changes }}
+      products: ${{ steps.select.outputs.products }}
       has-expo-token: ${{ steps.secret-gate.outputs.has-expo-token }}
     steps:
       - uses: actions/checkout@v6
+      - name: Derive per-product path filters
+        id: gen
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        # Derived from products/* so a newly stamped product is covered the moment it exists. The
+        # hardcoded roster that used to live here meant a new product silently never deployed until
+        # somebody remembered to edit BOTH workflows. Plain node: builtins only, no install needed.
+        run: |
+          {
+            echo "filters<<PRODUCT_FILTERS_EOF"
+            node scripts/product-filters.mjs app
+            echo "PRODUCT_FILTERS_EOF"
+          } >> "$GITHUB_OUTPUT"
       - uses: dorny/paths-filter@v4
         id: filter
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
-          filters: |
-            template: ['products/_template/app/**', 'packages/**']
-            demo: ['products/demo/app/**', 'packages/**']
+          filters: ${{ steps.gen.outputs.filters }}
+      - name: Select the products to update
+        id: select
+        env:
+          CHANGED: ${{ steps.filter.outputs.changes }}
+        run: |
+          # A push to main OTAs whatever CHANGED, to the staging channel. A tag OTAs the ONE
+          # product the tag names, to production — the product is in the tag (`<product>-ota-v*`),
+          # so deriving it from a path diff is both unnecessary and wrong: paths-filter compares a
+          # tag against the default branch, and a release tag normally points AT main's head, so
+          # the diff is empty, `changes` is `[]`, and this job is skipped. The production channel
+          # would simply never be updated, with a green tick on the run.
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            product="${GITHUB_REF_NAME%%-ota-v*}"
+            if [ "$product" = "template" ]; then dir="_template"; else dir="$product"; fi
+            # Fail here rather than letting eas run in a directory that does not exist: a typo in
+            # a release tag is otherwise a confusing failure deep inside the update step.
+            if [ ! -d "products/$dir/app" ]; then
+              echo "::error::tag '$GITHUB_REF_NAME' names product '$product', but products/$dir/app does not exist"
+              exit 1
+            fi
+            echo "products=[\"$product\"]" >> "$GITHUB_OUTPUT"
+          else
+            echo "products=$CHANGED" >> "$GITHUB_OUTPUT"
+          fi
       # `secrets` isn't readable in a job-level `if`, so surface the gate as an output:
       # until EXPO_TOKEN is configured (real infra day), the OTA job SKIPS green instead
       # of failing against the placeholder EAS project.
@@ -34,6 +76,7 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.products != '[]' && needs.changes.outputs.has-expo-token == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       matrix:
         product: ${{ fromJSON(needs.changes.outputs.products) }}

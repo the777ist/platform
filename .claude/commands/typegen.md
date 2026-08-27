@@ -8,5 +8,5 @@ pnpm turbo run openapi build --filter=*$ARGUMENTS-api-client
 `openapi` exports the FastAPI schema (sorted keys, stable diffs); the api-client build runs
 hey-api → typed SDK + TanStack Query options. The output is COMMITTED — commit the diff, and
 never hand-edit anything under `api-client/src/`. CI's drift check
-(`git diff --exit-code products/*/api-client products/*/api/openapi.json`) fails on a stale
-regen.
+(`node scripts/check-typegen-drift.mjs`) fails on a stale regen — it reads `git status`, so a
+NEW generated file counts too, which a `git diff` could not see.

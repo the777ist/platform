@@ -8,8 +8,8 @@ Args: $ARGUMENTS
 Expected shape: `<product> <TICKET-ID> [slug-or-title] [primary user instruction]`
 
 - **`<product>`** — first token: the product directory under `products/` (e.g. `blog`). **Required.** If absent, infer it from the cwd when the session is inside `products/<name>/...`; otherwise STOP and ASK. Validate that `products/<product>/` exists; if it doesn't, STOP and ASK — do NOT guess. EVERYTHING this command does — the diff enumeration, the codebase walk, every glob, every save path — is scoped to `products/<product>/`.
-- **`<TICKET-ID>`** — second token (e.g. `ABC-145`). If not passed, the resolve block below auto-infers from the current branch; if it can't, that's fine for a review — proceed; the ticket is only used to locate plan/impl docs and name the report.
-- **`[slug-or-title]`** — optional next token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block globs `products/<product>/docs/plans/` and `products/<product>/docs/implementation/` to recover it.
+- **`<TICKET-ID>`** — second token (e.g. `CRO-412`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
+- **`[slug-or-title]`** — optional next token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block below recovers it — an existing doc for this ticket is the authority; the branch is only a seed, used when no doc exists yet.
 - **`[primary user instruction]`** — anything after the slug (or after the ticket ID if no slug-shaped token follows). Freeform guidance for THIS specific invocation — scope the review ("security only", "just the realtime surface", "review PR #123", "review the last 3 commits"), set the base branch, raise the bar, etc. **It does NOT override the absolute rules below** — if it conflicts with a rule, prefer the rule and surface the conflict to the user.
 
 ---
@@ -19,8 +19,16 @@ We need to do a deep **code review AND security review** of the changes on this 
 **Resolve `<product>`, `<TICKET-ID>`, `<slug>`, and the review surface BEFORE doing anything else.**
 
 1. **`<product>`** — first token if provided; else infer from cwd (`products/<name>/...`); else STOP and ASK. Confirm `products/<product>/` exists.
-2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS` (after `<product>`), use it. Otherwise run `git branch --show-current` and extract the `<TEAM>-<NUMBER>` portion (e.g. `ABC-145` from `feature/ABC-145-d2c-bulk-edit`). If neither yields a ticket, that's fine for a review — proceed; the ticket is only used to locate plan/impl docs and name the report.
-3. **`<slug>`** — if a slug-shaped token was provided, use it. Otherwise `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` and `products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` to recover the canonical slug; else derive from the branch name.
+2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS` (after `<product>`), use it. Otherwise run `git branch --show-current` and match `[A-Za-z][A-Za-z0-9]{1,9}-[0-9]+` anywhere in it, CASE-INSENSITIVELY — Linear's branch format is a workspace setting, so it may emit `CRO-412`, `cro-412` or `Cro-412`. **Normalise to UPPERCASE** (`cro-412` → `CRO-412`) and use that form in every path and every filename from here on; glob case-insensitively when reading, so a doc already written in another case still resolves. If neither yields a ticket, STOP and ASK — do NOT guess.
+3. **`<slug>`** — resolve in this order and STOP at the first hit:
+
+   1. A slug-shaped token in `$ARGUMENTS`.
+   2. **An existing artifact for this ticket** — `Glob products/<product>/docs/*/<TICKET-ID>*.md` (match the ticket id case-insensitively) and recover the slug from the filename: the segment between `<TICKET-ID>-` and the `_product.md` / `_architecture.md` / `_plan.md` / `_implementation.md` / `_review.md` suffix. **This is the authority.** Once ANY stage has written a doc for this ticket, that filename fixes the slug for every stage after it.
+   3. The **branch** — the segment after the ticket id: `cro-412-bulk-edit-tags` → `bulk-edit-tags`; `hritt/cro-412-bulk-edit-tags` → `bulk-edit-tags`; `shop/cro-412-bulk-edit-tags` → `bulk-edit-tags`.
+   4. The Linear ticket title, kebab-cased (~5–8 words, drop filler words).
+
+   Steps 3 and 4 are SEEDS — used once, by whichever stage runs first for this ticket — and they are last on purpose, because neither is stable. Linear's branch format is a workspace setting that can be changed at any time, and it truncates long titles, so the same ticket can yield a different string tomorrow than it does today. The filename written by the first stage is what every later stage reads. NEVER re-derive a slug that step 2 already answered, and NEVER rename an existing artifact to match a freshly derived one.
+
 4. **Review surface** — default is the diff between the current branch and the base branch (`main` for this repo (trunk-based per PHILOSOPHY.md) — confirm via `git remote show origin` if unsure), scoped to `products/<product>/`, PLUS uncommitted working-tree changes. The user instruction may override (a PR number, a commit range, a path filter, "security only"). If the diff is empty, STOP and ask what to review.
 
 Reference docs (read these first, in full):
@@ -45,7 +53,7 @@ Do NOT review files in isolation — a change is only correct in context.
 3. **Walk outward for each change**: what calls this code, what this code calls, the types it depends on, the tests that cover it, the feature's `index.ts` public surface. A changed endpoint means reading its router, its service method(s), its Pydantic `schemas/` DTOs, its SQLModel `models/`, its RLS posture, its generated-client hook + the screen that consumes it, and its tests. A changed screen means reading the feature module, the `@platform/ui` primitives + `packages/core` helpers it depends on, and its RNTL tests.
 4. **For DB / schema changes**, inspect the live schema with the Supabase MCP (`mcp__Supabase__list_tables`, `list_migrations`, `get_advisors`, `execute_sql` read-only) so the review reflects reality, not the migration's assumed state. Confirm a backing **Alembic** migration exists under `products/<product>/api/.../alembic/versions/`. `get_advisors` surfaces security + performance issues Supabase itself flags (missing/disabled RLS, exposed views, unindexed FKs, etc.) — fold those in.
 5. **Read the plan / impl docs** (if any) to review the change against its intent — did it build what was planned? Did it silently deviate? Did it skip a planned test?
-6. **Baseline the gates** — for JS run `turbo run lint typecheck test build --filter=...<product>...` (+ `export:web` where the change touches web); for the API run `ruff check`, `pyright`, `pytest`; and run the **typegen drift check** (`git diff --exit-code` on the regenerated `products/<product>/api-client/`). Capture status. A red gate is itself a finding; a green baseline tells you the change at least compiles + passes its own tests + has no typegen drift.
+6. **Baseline the gates** — for JS run `turbo run lint typecheck test build --filter=...*<product>*...` (+ `export:web` where the change touches web); for the API run `ruff check`, `pyright`, `pytest`; and run the **typegen drift check** (`node scripts/check-typegen-drift.mjs`). Capture status. A red gate is itself a finding; a green baseline tells you the change at least compiles + passes its own tests + has no typegen drift.
 
 ---
 
@@ -153,7 +161,7 @@ One line: **APPROVE** / **APPROVE WITH NITS** / **CHANGES REQUESTED** / **BLOCKE
 
 ### `## Gate status`
 
-`turbo run lint typecheck test build --filter=...<product>...` (+ `export:web` where web is touched) / `ruff check` / `pyright` / `pytest` / **typegen drift check** — each pass/fail with the error count if red.
+`turbo run lint typecheck test build --filter=...*<product>*...` (+ `export:web` where web is touched) / `ruff check` / `pyright` / `pytest` / **typegen drift check** — each pass/fail with the error count if red.
 
 ### `## Blockers` / `## High` / `## Medium` / `## Low & nits`
 
@@ -185,7 +193,7 @@ Then output the same verdict + severity counts + the blocker/high titles in chat
 A review's primary deliverable is the report — but don't leave the user to do everything by hand. After delivering the report, **offer** to apply fixes:
 
 - **Default offer: blockers + high-confidence highs.** Surface exactly which findings you'd fix.
-- **Only on the user's explicit go-ahead** do you touch code. Then fix per the pipeline's TDD discipline — for each fix: add / update a meaningful regression test first (watch it fail), apply the fix (watch it pass) — **RNTL** (`jest.mock`, async render) at the matching app layer, **pytest** (real Postgres, per-test isolation) at the API layer — per the layered-services / DTO≠ORM / problem+json / `@platform/ui` + semantic-tokens / Alembic / RLS-deny-all adherence rules. Regenerate the typed client if the endpoint changed. Re-run all gates green after the fix batch (`turbo run lint typecheck test build --filter=...<product>...` + `ruff check && pyright && pytest` + typegen drift check).
+- **Only on the user's explicit go-ahead** do you touch code. Then fix per the pipeline's TDD discipline — for each fix: add / update a meaningful regression test first (watch it fail), apply the fix (watch it pass) — **RNTL** (`jest.mock`, async render) at the matching app layer, **pytest** (real Postgres, per-test isolation) at the API layer — per the layered-services / DTO≠ORM / problem+json / `@platform/ui` + semantic-tokens / Alembic / RLS-deny-all adherence rules. Regenerate the typed client if the endpoint changed. Re-run all gates green after the fix batch (`turbo run lint typecheck test build --filter=...*<product>*...` + `ruff check && pyright && pytest` + typegen drift check).
 - **Architectural / design findings are NOT auto-fixed** — they're judgement calls that belong in `/ptfm-simplify`, `/ptfm-commonify`, or a fresh `/ptfm-plan`. Surface them; don't silently restructure.
 - If the user declines, the report stands as the deliverable.
 
@@ -224,3 +232,9 @@ What `/ptfm-review` does NOT mean:
 ---
 
 Start now. Resolve `<product>` and scope everything to `products/<product>/`. Discover the diff. Read every changed file and the code it touches in full. Re-read the PHILOSOPHY.md + CLAUDE.md rules the change must obey. Run the code-review dimensions and the security threat-model. Adversarially verify every finding, rank by severity + confidence, give each a fix. Save the report to `products/<product>/docs/reviews/<TICKET-ID>-<slug>_review.md` and deliver the verdict in chat. Then offer to fix the blockers + highs (gated on explicit approval). Do NOT stop until every changed file has been reviewed against both bars, every finding is verified + ranked + has a fix, the security threat-model pass is complete, and the verdict is delivered.
+
+## Next stage
+
+When this pass is complete, hand off to `/ptfm-test-ui` - drive the feature through a real browser - OPTIONAL, and only where the change touches UI.
+
+The full pipeline is `/ptfm-product` -> `/ptfm-architect` -> `/ptfm-plan` -> `/ptfm-implement` -> `/ptfm-audit` -> `/ptfm-simplify` -> `/ptfm-commonify` -> `/ptfm-review` -> `/ptfm-test-ui`. Stages before `/ptfm-plan` are skipped for smaller work (each says so itself); `/ptfm-review` is NOT skippable; `/ptfm-test-ui` is optional and applies only where the change touches UI.

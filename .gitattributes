@@ -1,0 +1,37 @@
+# .gitattributes — line endings are LF in the repository AND in every working tree.
+#
+# Without this the behaviour depends on each developer's GLOBAL git config, and `core.autocrlf=true`
+# is the DEFAULT for Git for Windows. That developer's checkout becomes CRLF, and then:
+#   - Prettier (endOfLine defaults to "lf") reports essentially EVERY file as unformatted, so
+#     `pnpm run format:check` — which CI runs over the whole repo — fails on a clean clone;
+#   - the pre-commit prettier lane rewrites files back to LF on every commit, fighting git's
+#     conversion in a loop;
+#   - `.lefthook/*.sh` breaks outright on macOS/Linux (`$'\r': command not found`). Git Bash
+#     tolerates CRLF, so this one hides on Windows and surfaces on someone else's machine.
+#
+# Every text file is already stored LF, so this normalises nothing and changes no history — it just
+# stops the next clone from depending on how that person happened to install git.
+* text=auto eol=lf
+
+# Executed rather than formatted: belt and braces for the files where CRLF is fatal.
+*.sh text eol=lf
+
+# Patches are applied byte-for-byte by pnpm and their content hash is recorded in pnpm-lock.yaml.
+# Never let line-ending normalisation touch one: it would silently change the hash and break the
+# patched install. (`-text` = do not treat as text at all.)
+*.patch -text
+
+# Never line-ending-convert binary assets. `text=auto` already detects these, but brand assets grow
+# over time and an explicit list is cheaper than debugging a corrupted icon.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.keystore binary

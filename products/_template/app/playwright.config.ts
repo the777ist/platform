@@ -14,6 +14,9 @@ const API_PORT = 8000 + 10 * portIndex;
 
 export default defineConfig({
   testDir: "./e2e",
+  // A stray `test.only` would otherwise make CI pass having run ONE test. Playwright's own
+  // guard: error in CI, still convenient locally.
+  forbidOnly: !!process.env.CI,
   globalSetup: "./e2e/global-setup.ts",
   timeout: 60_000,
   use: { baseURL: "http://localhost:8081", trace: "on-first-retry" },

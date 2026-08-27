@@ -1,14 +1,21 @@
 {
   "extends": ["//"],
   "tasks": {
+    // openapi KEEPS an explicit allowlist, unlike the tasks below: the export only ever imports
+    // src/, and openapi.json is this task's own OUTPUT — inheriting $TURBO_DEFAULT$ would make the
+    // artifact an input to the task that writes it.
     "openapi": {
       "inputs": ["src/**/*.py", "pyproject.toml", "uv.lock"],
       "outputs": ["openapi.json"]
     },
-    "lint": { "inputs": ["src/**/*.py", "tests/**/*.py", "pyproject.toml"] },
-    "test": {
-      "inputs": ["src/**/*.py", "tests/**/*.py", "pyproject.toml", "uv.lock"]
-    },
+    // lint / typecheck / test deliberately INHERIT the root inputs ($TURBO_DEFAULT$ minus docs).
+    // They used to carry an allowlist of src/ + tests/ + pyproject.toml, which is fail-OPEN: any
+    // file the list did not name was invisible to the cache key. alembic/ was exactly that —
+    // `ruff check .` lints it and tests/test_migration_rls.py APPLIES the migrations, yet editing
+    // a migration left both hashes byte-identical, so a changed migration replayed a stale PASS
+    // and the RLS deny-all invariant went un-reverified. uv.lock was missing from lint/typecheck
+    // for the same reason, so a ruff or pyright version bump reused old results too.
+    // Inheriting the default means new files in the package are inputs by default.
     "dev": { "cache": false, "persistent": true }
   }
 }

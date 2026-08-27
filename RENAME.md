@@ -257,7 +257,7 @@ not a file list, so it stays valid as the tree grows:
 - `.github/workflows/e2e-nightly.yml` — the `pnpm --filter @<repo>/...` lines
 - root `eslint.config.mjs` (re-exports `@<repo>/config/eslint`) + `lefthook.yml` comment
 - `packages/config/tailwind-preset.cjs`, `packages/core/src/api.ts`,
-  `products/*/desktop/turbo.json` — scope in comments
+  `products/*/desktop/turbo.json`, `scripts/affected.mjs` — scope in comments
 - `packages/ui/.storybook/visual-regression.spec.ts` — command strings in comments/errors
 - all docs: root + product README/CLAUDE.md, `packages/ui` CLAUDE.md **and BUILDOUT.md**
   (its H1 is literally `# @<repo>/ui — build-out`, and its recipe embeds

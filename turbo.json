@@ -1,6 +1,32 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
+  // Root files that affect EVERY package but live in no package directory. Without this list
+  // they are invisible to turbo twice over: they do not invalidate any task hash (a real
+  // `strict`/`noUnusedLocals` edit to tsconfig.base.json left every hash byte-identical), and
+  // they select no package, so an affected-scoped gate runs ZERO tasks on a change that alters
+  // how every package compiles. scripts/affected.mjs reads this same list back out of the dry
+  // run to widen the selection, so caching and scoping can never disagree about it.
+  // The chain that makes tsconfig.base.json global: every package tsconfig extends
+  // @platform/config/tsconfig/* -> packages/config/tsconfig/base.json -> ../../../tsconfig.base.json
+  "globalDependencies": [
+    "tsconfig.base.json",
+    "eslint.config.mjs",
+    "pnpm-workspace.yaml",
+    "mise.toml",
+    // The JS lockfile. Turbo is supposed to derive each package's external-dependency hash from
+    // it, and here it does not: bumping zustand (a DIRECT dependency of @platform/core) from
+    // 5.0.14 to 5.0.99 left @platform/core#typecheck's hash byte-identical at 0a4051c7ee2a1e81.
+    // So a dependency upgrade — a Dependabot PR, a manual bump — replayed a cached PASS produced
+    // against the OLD version, and the gate reported success having tested nothing new.
+    //
+    // This is the same hole `uv.lock` had on the Python side, and it survived that fix for the
+    // reason root files always do: uv.lock lives INSIDE each api package, so $TURBO_DEFAULT$
+    // covers it, while pnpm-lock.yaml lives in no package directory and is invisible unless
+    // named here. Listed globally rather than per-package on purpose: a transitive bump can
+    // reach any package, so the fail-safe direction is to invalidate everything.
+    "pnpm-lock.yaml"
+  ],
   "tasks": {
     "openapi": {
       "inputs": ["src/**/*.py", "pyproject.toml", "uv.lock"],

@@ -1,7 +1,7 @@
 # PHILOSOPHY Workflows: mise-action → pnpm frozen install → uv sync (affected apis) →
 # turbo lint/typecheck/test/build/openapi --affected → typegen drift check.
-# The drift check is the contract guard: a stale openapi.json or generated client
-# makes `git diff --exit-code` non-zero and fails CI.
+# The drift check is the contract guard: a stale openapi.json or generated client makes
+# scripts/check-typegen-drift.mjs exit non-zero and fails CI.
 name: CI
 on:
   pull_request:
@@ -10,9 +10,16 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+# Least privilege for GITHUB_TOKEN. The repo default is currently `read`, but that is a repo
+# SETTING someone can change; declaring it here makes the guarantee travel with the workflow.
+# Nothing in these jobs writes to this repo (deploys authenticate with their own secrets).
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     services:
       postgres: # real Postgres for API integration tests (testing strategy)
         image: postgres:16
@@ -35,18 +42,127 @@ jobs:
         # checks at all. Formatting is otherwise enforced only by the lefthook pre-commit
         # hook, which `--no-verify` and a broken hook env both bypass.
         run: pnpm run format:check
-      - name: uv sync (affected APIs)
+      - name: ESLint (root-owned files no package covers)
+        # scripts/ and the root *.config.mjs belong to no workspace package, so `turbo run lint`
+        # never reaches them — including the gate scripts themselves. Same script the pre-push hook
+        # calls, so the two cannot diverge on flags or config resolution.
+        run: pnpm run lint:root
+      - name: Tests for the gate scripts themselves
+        # affected.mjs decides what this workflow checks; if it returned an empty scope, turbo
+        # would run nothing and this job would still be green. The enforcer needs enforcing.
+        run: pnpm run test:scripts
+      - name: Repo guards — focused tests, stamped tokens, secrets, theming
+        # Every one of these is a SILENT failure guard: nothing here throws at runtime, it just
+        # produces a wrong result that looks fine. A stray `.only` makes a suite pass having run
+        # almost nothing (Playwright has forbidOnly in CI; Jest has no such flag). An embedded
+        # template token makes a stamped product carry the template's names. A committed
+        # service-role key is the same shape as the anon key that is published on purpose. And a
+        # semantic token with no value renders as nothing in one theme, which reads as a design
+        # choice rather than a bug. And a package with no `test` script is skipped by
+        # `turbo run test` without a word, so the run goes green having checked one package
+        # fewer than yesterday. And two products sharing a fly app name means one deploy
+        # overwrites the other, which nothing else in the pipeline can see. A postgres_changes
+        # subscription returns nothing under RLS deny-all, and the tempting fix for that is the
+        # permissive policy that makes every row world-readable.
         run: |
-          for api in products/*/api; do
-            uv sync --frozen --project "$api"
+          node scripts/check-focused-tests.mjs
+          node scripts/check-stamp-tokens.mjs
+          node scripts/check-committed-secrets.mjs
+          node scripts/check-semantic-tokens.mjs
+          node scripts/check-theme-tokens.mjs
+          node scripts/check-package-tasks.mjs
+          node scripts/check-product-identity.mjs
+          node scripts/check-realtime-broadcast-only.mjs
+      - name: commitlint (the commit-msg hook is bypassable)
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          # A gate that runs ONLY in a hook is not enforced: --no-verify skips it. Merge commits are
+          # ignored by commitlint's defaults. An unresolvable base (first push / force-push) skips
+          # rather than fails, since there is no range to judge.
+          if git rev-parse --verify --quiet "$BASE^{commit}" >/dev/null; then
+            pnpm exec commitlint --from "$BASE" --to "$HEAD" --verbose
+          else
+            echo "base '$BASE' is not resolvable — skipping commit-message lint"
+          fi
+      - name: Deploy path filters generate cleanly
+        run: |
+          # deploy-api.yml / eas-update.yml derive their per-product path filters from this script,
+          # but those workflows only run on push-to-main and on tags -- so it would otherwise go
+          # unexercised on Linux until the moment a deploy depends on it. Prove it here, where a
+          # failure is a red PR check instead of a broken deploy.
+          for surface in api app; do
+            out=$(node scripts/product-filters.mjs "$surface")
+            expected=$(find products -mindepth 2 -maxdepth 2 -type d -name "$surface" | wc -l)
+            actual=$(echo "$out" | grep -c . || true)
+            echo "$surface: $actual filter line(s) for $expected product(s)"
+            echo "$out"
+            if [ "$actual" != "$expected" ]; then
+              echo "::error::product-filters emitted $actual lines for $expected products"
+              exit 1
+            fi
           done
+      - name: Resolve affected scope
+        id: scope
+        env:
+          # Explicit base/head so scoping survives squash-merge histories: PR base sha on
+          # pull_request, the pushed-from sha on push to main.
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          # scripts/affected.mjs is the SAME module the pre-push hook uses, so the hook and CI can
+          # never disagree about what a change affects. Empty output means "select everything" —
+          # emitted when a global input (tsconfig.base.json, eslint.config.mjs, ...) changed, or
+          # when the base is not a resolvable commit. NOTE: `--affected` is deliberately not used
+          # here; it is mutually exclusive with `--filter` and cannot express either escalation.
+          # Assigned first, THEN echoed: `echo "x=$(cmd)"` hides a crash because echo succeeds,
+          # so a broken resolver would look like "no filter" and quietly pass for a different
+          # reason than it should. A plain assignment trips `set -e`.
+          filter=$(node scripts/affected.mjs scope "$BASE" "$HEAD")
+          echo "filter=$filter" >> "$GITHUB_OUTPUT"
+          # The task list comes from the same module the hook imports, so a task can never be added
+          # to one tier and silently missed by the other.
+          echo "tasks=$(node scripts/affected.mjs tasks)" >> "$GITHUB_OUTPUT"
+          node scripts/affected.mjs apis "$BASE" "$HEAD" > "$RUNNER_TEMP/affected-apis.txt"
+          echo "affected APIs:"; cat "$RUNNER_TEMP/affected-apis.txt"; echo
+      - name: uv sync (affected APIs only)
+        run: |
+          # Only the products actually in play. Looping every products/*/api costs one venv sync per
+          # product on every PR — a bill that grows with the product count and buys nothing.
+          while read -r api; do
+            [ -n "$api" ] || continue
+            echo "-> uv sync $api"
+            uv sync --frozen --project "$api"
+          done < "$RUNNER_TEMP/affected-apis.txt"
+      - name: Alembic single-head check (affected APIs)
+        run: |
+          # Same checker the pre-push hook runs. `alembic heads` reads the migration directory only
+          # -- no database -- and two heads mean two branches each added a migration.
+          if [ -s "$RUNNER_TEMP/affected-apis.txt" ]; then
+            node scripts/alembic-heads.mjs $(cat "$RUNNER_TEMP/affected-apis.txt")
+          else
+            echo "no affected APIs — skipping the alembic head check"
+          fi
       - name: Lint / typecheck / test / build / openapi (affected only)
         env:
-          # Explicit base/head so `--affected` scopes correctly regardless of squash-merge
-          # histories: PR base sha on pull_request, the pushed-from sha on push to main.
-          TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-          TURBO_SCM_HEAD: ${{ github.sha }}
-        run: pnpm turbo run lint typecheck test build openapi --affected
-      - name: Typegen drift check
+          SCOPE: ${{ steps.scope.outputs.filter }}
+          TASKS: ${{ steps.scope.outputs.tasks }}
         run: |
-          git diff --exit-code products/*/api-client products/*/api/openapi.json
+          # Passed via env, not interpolated into the command, and quoted only when non-empty: the
+          # filter contains [ ] that bash would glob, and an empty "" is not the same as no argument.
+          # An empty task list would make `turbo run` a no-op that still exits 0 -- the exact
+          # "gate that silently does nothing" this pipeline is built to avoid. Fail loudly instead.
+          [ -n "$TASKS" ] || { echo "::error::affected.mjs returned an empty task list"; exit 1; }
+          echo "tasks: $TASKS"
+          if [ -n "$SCOPE" ]; then
+            pnpm turbo run $TASKS "$SCOPE"
+          else
+            pnpm turbo run $TASKS
+          fi
+      - name: Typegen drift check
+        # `git diff --exit-code` does not look at UNTRACKED files, and a regen after adding a
+        # router produces new ones — so a client missing a whole service module passed as clean.
+        # Same checker the pre-push hook runs, where the equivalent command was inert outright
+        # (a quoted wildcard pathspec matches the directory, never its contents).
+        run: node scripts/check-typegen-drift.mjs

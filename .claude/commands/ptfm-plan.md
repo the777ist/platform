@@ -8,8 +8,8 @@ Args: $ARGUMENTS
 Expected shape: `<product> <TICKET-ID> [slug-or-title] [primary user instruction]`
 
 - **`<product>`** — **first token, required.** The product directory under `products/` (e.g. `blog`). If absent: infer from cwd when the session is inside `products/<name>/...`; else STOP and ASK. Validate `products/<product>/` exists; if not, STOP and ASK. EVERYTHING this command does — codebase walk, globs, save paths, architecture lookups — is scoped to `products/<product>/`.
-- **`<TICKET-ID>`** — second token (e.g. `BLOG-145`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
-- **`[slug-or-title]`** — optional next token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block globs the product's `docs/plans/` and `docs/implementation/` to recover it.
+- **`<TICKET-ID>`** — second token (e.g. `CRO-412`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
+- **`[slug-or-title]`** — optional next token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block below recovers it — an existing doc for this ticket is the authority; the branch is only a seed, used when no doc exists yet.
 - **`[primary user instruction]`** — anything after the slug (or after the ticket ID if no slug-shaped token follows). Freeform guidance for THIS specific invocation — adjust scope, focus, or emphasis as instructed. **It does NOT override the absolute rules below** — if it conflicts with a rule, prefer the rule and surface the conflict to the user.
 
 ---
@@ -19,8 +19,15 @@ We need to plan the full implementation for Linear ticket `<TICKET-ID>` in produ
 **Resolve `<product>`, `<TICKET-ID>` and `<slug>` BEFORE doing anything else.**
 
 1. **`<product>`** — first token. If absent, infer from cwd (`products/<name>/...`); else STOP and ASK. Confirm `products/<product>/` exists.
-2. **`<TICKET-ID>`** — if a ticket token was provided in `$ARGUMENTS`, use it. Otherwise run `git branch --show-current` and extract the `<TEAM>-<NUMBER>` portion (e.g. `BLOG-145` from `feature/BLOG-145-tag-bulk-edit`). If neither yields a ticket, STOP and ASK — do NOT guess.
-3. **`<slug>`** — if a slug-shaped token was provided, use it. Otherwise `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` and `products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` to recover the canonical slug (the segment between `<TICKET-ID>-` and the `_plan.md` / `_implementation.md` suffix). For new tickets with no plan yet, derive the slug from the Linear ticket title (kebab-case, ~5–8 words).
+2. **`<TICKET-ID>`** — if a ticket token was provided in `$ARGUMENTS`, use it. Otherwise run `git branch --show-current` and match `[A-Za-z][A-Za-z0-9]{1,9}-[0-9]+` anywhere in it, CASE-INSENSITIVELY — Linear's branch format is a workspace setting, so it may emit `CRO-412`, `cro-412` or `Cro-412`. **Normalise to UPPERCASE** (`cro-412` → `CRO-412`) and use that form in every path and every filename from here on; glob case-insensitively when reading, so a doc already written in another case still resolves. If neither yields a ticket, STOP and ASK — do NOT guess.
+3. **`<slug>`** — resolve in this order and STOP at the first hit:
+
+   1. A slug-shaped token in `$ARGUMENTS`.
+   2. **An existing artifact for this ticket** — `Glob products/<product>/docs/*/<TICKET-ID>*.md` (match the ticket id case-insensitively) and recover the slug from the filename: the segment between `<TICKET-ID>-` and the `_product.md` / `_architecture.md` / `_plan.md` / `_implementation.md` / `_review.md` suffix. **This is the authority.** Once ANY stage has written a doc for this ticket, that filename fixes the slug for every stage after it.
+   3. The **branch** — the segment after the ticket id: `cro-412-bulk-edit-tags` → `bulk-edit-tags`; `hritt/cro-412-bulk-edit-tags` → `bulk-edit-tags`; `shop/cro-412-bulk-edit-tags` → `bulk-edit-tags`.
+   4. The Linear ticket title, kebab-cased (~5–8 words, drop filler words).
+
+   Steps 3 and 4 are SEEDS — used once, by whichever stage runs first for this ticket — and they are last on purpose, because neither is stable. Linear's branch format is a workspace setting that can be changed at any time, and it truncates long titles, so the same ticket can yield a different string tomorrow than it does today. The filename written by the first stage is what every later stage reads. NEVER re-derive a slug that step 2 already answered, and NEVER rename an existing artifact to match a freshly derived one.
 
 Reference docs (read these first, in full, in this order):
 
@@ -52,7 +59,7 @@ Many plans stand on their own — small features, bug fixes, isolated changes. S
 
 3. **If an architecture doc IS found, read it IN FULL** — every section: `## Context`, `## AS-IS architecture map`, `## Architectural surface area`, `## Pattern adherence checklist`, `## Phased delivery`, `## Test architecture per phase`, `## Risks & open questions`, `## Handoff brief to /ptfm-plan`. The architecture is binding when present: do NOT re-architect, re-decompose phases, or challenge the pattern-adherence checklist. If you genuinely think the architecture is wrong on a load-bearing point, STOP and surface to the user — amendments happen via `/ptfm-architect`, not silently in this plan.
 4. **If working under an architecture, scope this plan to ONE phase.** The handoff brief lists each phase + Linear sub-issue + slug + focus. Match the current ticket ID against a phase; if the user instruction names a phase explicitly, use that; if unclear, ASK. Plan output: `products/<product>/docs/plans/<TICKET-ID>-<phase-slug>_plan.md` where `<TICKET-ID>` is the **current phase ticket** (this branch's ticket, NOT the epic's) and `<phase-slug>` is from the handoff brief. Example: architecture at `products/blog/docs/architecture/BLOG-160-multi-channel-broadcast_architecture.md`, Phase 1 on Linear `BLOG-161` → plan at `products/blog/docs/plans/BLOG-161-multi-channel-broadcast-phase-1_plan.md`.
-5. **If NOT working under an architecture, plan directly.** Plan output: `products/<product>/docs/plans/<TICKET-ID>-<slug>_plan.md` where `<slug>` is kebab-case from the Linear ticket title (~5–8 words). This is the common case for small / medium changes — do NOT hard-stop to demand an architecture pass where one isn't warranted.
+5. **If NOT working under an architecture, plan directly.** Plan output: `products/<product>/docs/plans/<TICKET-ID>-<slug>_plan.md` where `<slug>` is exactly what the resolve block produced. This is the common case for small / medium changes — do NOT hard-stop to demand an architecture pass where one isn't warranted.
 6. **If a plan already exists at the chosen output path**, surface to the user and ASK whether to amend or create a revision; do NOT overwrite without explicit consent.
 7. **If the ticket is sparse**, ASK the user for missing context before proceeding rather than inventing requirements.
 
@@ -207,8 +214,8 @@ The pipeline's Definition-of-Done checklist, inline so the executing agent has i
 - [ ] RNTL JS unit + component tests added/updated
 - [ ] pytest API unit + integration tests added/updated
 - [ ] Broadcast / realtime seam test added/updated (where the change broadcasts)
-- [ ] Typegen regenerated, no drift (`git diff --exit-code` on `api-client/`)
-- [ ] `turbo run lint typecheck test build --filter=...<product>...` green (+ `export:web` where the change touches web) — lint + typecheck + tests + the Expo web export / app build are all first-class gates
+- [ ] Typegen regenerated, no drift (`node scripts/check-typegen-drift.mjs`)
+- [ ] `turbo run lint typecheck test build --filter=...*<product>*...` green (+ `export:web` where the change touches web) — lint + typecheck + tests + the Expo web export / app build are all first-class gates
 - [ ] For API changes: `ruff check && ruff format --check && pyright && pytest` all green (Ruff + pyright strict + Pydantic strict + pytest)
 - [ ] Zero `.only`, zero `.skip`, zero new ignores
 
@@ -225,7 +232,7 @@ The pipeline's Definition-of-Done checklist, inline so the executing agent has i
 - **Performance & scale sized per surface.** A plan that adds a query / list / mutation without stating its index, N+1 stance, pagination bounds, payload, caching, and (for broadcasters) fan-out is INCOMPLETE — proportional to the surface. No filter/sort ships on an unindexed scan; no `list_*` ships without a bounded cursor keyset; nothing heavy blocks the request path (route it to a job). Inherit the architecture's Scale section when present.
 - **Exhaustive moving-pieces inventory.** Do NOT stop researching until you have a complete picture: every file, table, RPC, component, route, type, DTO/schema, problem+json error code, env var, rate-limit key, Alembic migration, broadcast event, generated-client hook, public export. "I think there might be more" is not done.
 - **Extremely detailed plan output.** The plan is read by another agent who will execute it. Every step must specify: files to touch, code sketches / signatures, test cases to add, sequence dependencies. "Add a button" is not a step. "Add `<Button variant=\"cta\">Save</Button>` (from `@platform/ui`) to `PostToolbar` between the Share and Delete buttons; on press call the generated `useSavePost()` mutation hook with `{ postId }`; on success show toast 'Post saved' and let the broadcast invalidate the list query; on failure render the problem+json-typed error through the global error boundary with fallback 'Couldn't save — please try again.'" is.
-- **Save path**: `products/<product>/docs/plans/<TICKET-ID>-<slug>_plan.md`. `<TICKET-ID>` is always the current branch's ticket. `<slug>` is the phase slug from the architecture's handoff brief (when working under an architecture) or kebab-case from the Linear title (when direct planning).
+- **Save path**: `products/<product>/docs/plans/<TICKET-ID>-<slug>_plan.md`. `<TICKET-ID>` is always the current branch's ticket. `<slug>` is the phase slug from the architecture's handoff brief when working under an architecture, and otherwise exactly what the resolve block produced — do NOT re-derive it here.
 
 What `/ptfm-plan` does NOT mean:
 

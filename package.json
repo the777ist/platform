@@ -8,7 +8,7 @@
   },
   "prettier": "@platform/config/prettier",
   "scripts": {
-    "prepare": "lefthook install",
+    "prepare": "lefthook install && node scripts/verify-hooks.mjs",
     "bootstrap": "node scripts/bootstrap.mjs",
     "new-product": "node scripts/new-product.mjs",
     "remove-product": "node scripts/remove-product.mjs",
@@ -16,10 +16,14 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "build": "turbo run build",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,md,yml,yaml,css}\"",
+    "lint:root": "eslint --no-error-on-unmatched-pattern scripts \"*.{mjs,cjs,js,ts}\" && node scripts/lint-shell.mjs",
+    "test:scripts": "node --test \"scripts/__tests__/*.test.mjs\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,md,yml,yaml,css}\""
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
     "@platform/config": "workspace:*",
     "lefthook": "^1.7.0",
     "prettier": "^3.3.0",

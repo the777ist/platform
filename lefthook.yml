@@ -1,49 +1,99 @@
 # lefthook.yml — repo-level git hooks (PHILOSOPHY Decision Sheet "Git hooks (Lefthook, repo-level +
-# affected-scoped)"). Installed by `pnpm prepare` → `lefthook install` (PHILOSOPHY Phase 1).
+# affected-scoped)"). Installed by `pnpm prepare` → `lefthook install`.
+#
+# THREE TIERS, THREE BUDGETS. The budget is the design constraint: a gate belongs at the earliest
+# tier whose budget it fits, and anything that cannot hit its tier's budget moves OUT one tier
+# rather than making the tier slower.
+#
+#   pre-commit  ~5s   staged files only   auto-fixers exclusively — never type-aware, never
+#                                         whole-repo, never a build, never the network
+#   commit-msg  ~0s   the message         Conventional Commits
+#   pre-push    <=5m   affected packages  correctness on what you are pushing: lint, pyright/tsc,
+#                                         unit tests, the web BUNDLE, generated-artifact drift,
+#                                         alembic heads
+#   ci           ∞    whole repo, cold    everything else — real Postgres, Playwright, VR, EAS
+#
+# Both figures are MEASURED, not aspirational. pre-commit ~5s: one staged .ts is eslint 2.9s +
+# prettier 2.1s. pre-push is seconds when cached and ~83s per affected product when the web bundle
+# has to rebuild — deliberately chosen over a tighter budget, because `expo export` catches Metro
+# bundling failures that no type check can see. Almost all of it is Node process startup — the linting itself is milliseconds —
+# so it does not grow with the size of the commit. Keep it that way: the moment something
+# type-aware or whole-repo lands here, the tier stops being free and starts being bypassed.
+#
+# These hooks are a FLOOR, not a mirror of CI. Every one of them is bypassable with --no-verify by
+# design, and a hook that merely duplicates CI gets bypassed within a week. CI re-runs its own
+# supersets unconditionally and never trusts that a hook ran.
 
-# pre-commit: FAST, staged files ONLY.
-#   - Prettier + ESLint on staged JS/TS
-#   - Ruff check + format on staged .py (scoped to the touched product's api)
+# ── pre-commit ──────────────────────────────────────────────────────────────────────────────────
+# Fixers only, in a fixed ORDER: the semantic fixers rewrite code (reordering imports, changing
+# syntax), so the formatters must have the LAST write — otherwise you commit code the formatter
+# would have changed. Hence `piped`, not one flat parallel block.
+#
+# Within each stage the two lanes are parallel because they are genuine lanes: disjoint globs
+# (JS/TS vs .py) driving different toolchains. Parallelism across *overlapping* globs — the shape
+# this file used to have, with prettier and eslint both writing the same .ts files — is a data race
+# dressed as speed: last writer wins and the staged blob can match neither result.
+#
+# Staging is `stage_fixed` ONLY. Never also `git add` by hand: the concurrent adds contend on
+# .git/index.lock and fail intermittently under load.
 pre-commit:
-  parallel: true
-  commands:
-    prettier:
-      glob: "*.{ts,tsx,js,jsx,mjs,cjs,json,md,yml,yaml,css}"
-      # {staged_files} = only what's staged; --no-error-on-unmatched-pattern so an all-.py
-      # commit doesn't fail prettier.
-      run: pnpm prettier --write --no-error-on-unmatched-pattern {staged_files}
-      stage_fixed: true # re-stage files prettier reformatted
-    eslint:
-      glob: "*.{ts,tsx,js,jsx,mjs,cjs}"
-      # Lint only staged JS/TS; the @platform/config flat config ignores the generated client.
-      run: pnpm eslint --fix --no-error-on-unmatched-pattern {staged_files}
-      stage_fixed: true
-    ruff-check:
-      glob: "*.py"
-      # Scoped to staged .py only. Each product api carries uv + ruff in its own venv (Phase 3).
-      # Project root = walk UP from the first staged file to the nearest pyproject.toml
-      # (a bare `dirname | head -1`/.. only worked for files exactly one level deep).
-      run: |
-        f=$(echo "{staged_files}" | cut -d' ' -f1); d=$(dirname "$f")
-        while [ "$d" != "." ] && [ ! -f "$d/pyproject.toml" ]; do d=$(dirname "$d"); done
-        uv run --project "$d" ruff check --fix {staged_files}
-      stage_fixed: true
-    ruff-format:
-      glob: "*.py"
-      run: |
-        f=$(echo "{staged_files}" | cut -d' ' -f1); d=$(dirname "$f")
-        while [ "$d" != "." ] && [ ! -f "$d/pyproject.toml" ]; do d=$(dirname "$d"); done
-        uv run --project "$d" ruff format {staged_files}
-      stage_fixed: true
+  piped: true # stages run in order; stop at the first failure
+  jobs:
+    - name: fix # ── semantic fixers: they rewrite code
+      group:
+        parallel: true
+        jobs:
+          - name: eslint
+            glob: "*.{ts,tsx,js,jsx,mjs,cjs}"
+            # Staged-file scoping is why this calls the binary rather than the package's `lint`
+            # script — the deliberate escalation is commit=staged lines → push=whole affected
+            # package. Both resolve the same root eslint.config.mjs.
+            run: pnpm exec eslint --fix --no-error-on-unmatched-pattern {staged_files}
+            stage_fixed: true
+          - name: ruff-check
+            glob: "*.py"
+            run: sh .lefthook/ruff.sh check {staged_files}
+            stage_fixed: true
 
-# pre-push: the AFFECTED gate (PHILOSOPHY: "turbo run typecheck test build --affected" +, for
-# affected APIs, pyright strict + pytest). Builds are turbo-cached so repeat pushes are fast.
-# Only product(s) actually touched run, PLUS all dependents when packages/* change
-# (the co-evolve guard, moved before the push).
+    - name: format # ── formatters LAST: they get the final write
+      group:
+        parallel: true
+        jobs:
+          - name: prettier
+            glob: "*.{ts,tsx,js,jsx,mjs,cjs,json,md,yml,yaml,css}"
+            run: pnpm exec prettier --write --no-error-on-unmatched-pattern {staged_files}
+            stage_fixed: true
+          - name: ruff-format
+            glob: "*.py"
+            run: sh .lefthook/ruff.sh format {staged_files}
+            stage_fixed: true
+
+# ── commit-msg ──────────────────────────────────────────────────────────────────────────────────
+# Its own hook because the message does not exist yet at pre-commit. commitlint ignores merge
+# commits by default, so `git merge` and PR merges are unaffected.
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: pnpm exec commitlint --edit {1}
+
+# NOTE on .git/hooks/prepare-commit-msg: `lefthook install` writes that dispatcher unconditionally,
+# even though it reports syncing only the three hooks configured here. It is lefthook's own file,
+# not a leftover from a previous hook runner — with no `prepare-commit-msg` section it dispatches to
+# `lefthook run prepare-commit-msg`, finds nothing, and exits 0. Deleting it is futile: the next
+# `pnpm install` (→ `pnpm prepare` → `lefthook install`) recreates it.
+
+# ── pre-push ────────────────────────────────────────────────────────────────────────────────────
+# One job: git hands a pre-push hook the refs being pushed on STDIN, and the remote sha in them is
+# the exact diff base CI is about to see for the first time. The script reads those refs BEFORE
+# detaching stdin, then drives a single turbo invocation scoped to them. See .lefthook/pre-push.sh
+# and scripts/pre-push.mjs — the body lives in real script files so it keeps shellcheck, exit-code
+# clarity, and the ability to run the gate by hand, which is the first thing anyone does when a
+# hook fails.
 pre-push:
-  commands:
-    affected-gate:
-      run: pnpm turbo run typecheck test build --affected
-    # pyright + pytest for affected apis run THROUGH turbo's `typecheck`/`test` tasks in each
-    # api package (wired in Phase 3) so they are naturally affected-scoped and cached — no
-    # separate lefthook command needed.
+  jobs:
+    - name: affected-gate
+      # use_stdin is what actually hands the hook's ref lines to the script. WITHOUT it lefthook
+      # swallows stdin, the read comes back empty, and the gate silently degrades to its
+      # @{upstream}/origin/main fallback instead of the exact sha the remote has.
+      use_stdin: true
+      run: sh .lefthook/pre-push.sh

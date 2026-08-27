@@ -83,10 +83,15 @@ change and needs the coverage test in §7 to stay green.
 
 ### The token contract — full surface
 
-Today's 15 tokens cover ~5 components. The full library needs all of the following. **Author
-every one of these before importing components** — `--accent` and `--popover` are already
-declared in the preset with no value anywhere, so any component using `bg-accent` renders
-transparent today.
+Today's 20 tokens cover ~5 components. The full library needs all of the following. **Author
+every one of these before importing components.**
+
+The `--accent` / `--popover` / `--radius` hole this section used to warn about is closed:
+all three are authored in `packages/ui/figma/tokens.json` and generated into every mode.
+`--radius` was the live one — the preset maps `rounded-md` to `calc(var(--radius) - 2px)`,
+and Button, Card and Input all use it, so every rounded corner in the design system was
+resolving against an undefined variable. `scripts/check-theme-tokens.mjs` now makes that
+shape of hole unshippable (see §7).
 
 > **This list is mirrored, designer-facing, in [FIGMA.md](./FIGMA.md) §1.** That copy is the
 > contract handed to a design team, and it is the same contract — hand it to them _before_ they
@@ -438,14 +443,14 @@ covering your actual brands.
 Add these in wave 0, before the component work starts. Retrofitting them across 90+ components
 is not fun.
 
-| Gate                          | What it does                                                                                                                                                                                                                                                                                       |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Token coverage test**       | Every `var(--x)` referenced by `tailwind-preset.cjs` has a value in every brand × {light, dark}. Catches today's `--accent`/`--popover`/`--radius` hole and every future one.                                                                                                                      |
-| **No-literal-color lint**     | ESLint rule rejecting hex / `rgb()` / `hsl()` literals in `className` strings and style objects under `src/components/`. Makes invariant #1 real instead of aspirational.                                                                                                                          |
-| **Platform-parity typecheck** | For **S** components, both `.native.tsx` and `.web.tsx` must satisfy the shared `.types.ts`. Free — just don't skip the types file.                                                                                                                                                                |
-| **Barrel completeness**       | Every `src/components/**/<name>.tsx` is exported from `src/index.ts`. Trivial test, catches the most common omission.                                                                                                                                                                              |
-| **VR matrix — capped**        | 90+ components × ~4 variants × 2 themes × N brands × 2 platforms explodes. **Cap at {light, dark} × 2 representative brands × linux CI baselines**, with the per-platform local set only for components whose type rendering actually differs. Decide this before generating baselines, not after. |
-| **RNTL per component**        | Already the standard; keep it non-negotiable for authored (**A**) components especially, since they have no upstream test heritage.                                                                                                                                                                |
+| Gate                          | What it does                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Token coverage test**       | ✅ **Built** — `scripts/check-theme-tokens.mjs`, wired into pre-push and CI. Every `var(--x)` the preset references has a value in light AND dark; the two modes define the same key set; and every `global.css` (including each product's copy, which nothing regenerates today) matches `theme.ts` key-for-key and value-for-value. Closed the `--accent`/`--popover`/`--radius` hole and every future one. |
+| **No-literal-color lint**     | ESLint rule rejecting hex / `rgb()` / `hsl()` literals in `className` strings and style objects under `src/components/`. Makes invariant #1 real instead of aspirational.                                                                                                                                                                                                                                     |
+| **Platform-parity typecheck** | For **S** components, both `.native.tsx` and `.web.tsx` must satisfy the shared `.types.ts`. Free — just don't skip the types file.                                                                                                                                                                                                                                                                           |
+| **Barrel completeness**       | ✅ **Built** — `packages/ui/src/__tests__/barrel.test.ts`. Every `src/components/**/<name>.tsx` is re-exported from `src/index.ts`, every public symbol of each module is in the barrel (including the cva helpers, which use the trailing `export { … }` form), and the barrel re-exports nothing from a module that no longer exists.                                                                       |
+| **VR matrix — capped**        | 90+ components × ~4 variants × 2 themes × N brands × 2 platforms explodes. **Cap at {light, dark} × 2 representative brands × linux CI baselines**, with the per-platform local set only for components whose type rendering actually differs. Decide this before generating baselines, not after.                                                                                                            |
+| **RNTL per component**        | Already the standard; keep it non-negotiable for authored (**A**) components especially, since they have no upstream test heritage.                                                                                                                                                                                                                                                                           |
 
 ---
 
