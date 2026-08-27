@@ -252,6 +252,22 @@ What `/ptfm-test-ui` does NOT mean here:
 
 ---
 
+## Surface the blockers BEFORE you start
+
+Read the plan / diff / surface first, then raise every blocker you can already see in ONE message, before doing the work. A blocker found at minute forty that was legible at minute two has cost the user forty minutes AND their attention twice. The per-step "surface it and stop" rules elsewhere in this command are the safety net for what you could not have known; they are not the plan for what you could.
+
+Scan specifically for:
+
+- **Decisions the upstream doc does not make** — behaviour left undefined, an unhappy path with no specified outcome, a permission rule given as an example rather than as a rule.
+- **Access you do not have** — a credential, an MCP that is not connected, a Figma / Notion / Slack link you cannot open, a service that is not running.
+- **Preconditions that are not met** — local stack down, migrations unapplied, seed data absent, a dependency the doc assumes already exists.
+- **What was ALREADY broken before you touched it** — baseline the quality gates and capture the failures that predate this run, so you neither inherit blame for them nor chase them as if you caused them.
+- **Conflicts with a locked rule** — anything asked of you that `PHILOSOPHY.md` or the `CLAUDE.md` chain forbids. Say so now, not after building it.
+
+Raise them **together and numbered**, each with what you propose to do about it. Then get on with everything that is NOT blocked — one blocked area is not a reason to down tools on the rest, and a blocker you have surfaced is the user's to answer while you keep working.
+
+---
+
 ## Finish the work
 
 This command's deliverables are not a best-effort target. Run it to completion.
