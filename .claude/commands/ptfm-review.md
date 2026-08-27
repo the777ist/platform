@@ -247,6 +247,26 @@ Raise them **together and numbered**, each with what you propose to do about it.
 
 ---
 
+## Keep the docs true — and know which ones you may touch
+
+The pipeline's artifacts sit in two tiers. Confusing them is how a decision gets quietly rewritten to match whatever happened to ship.
+
+**WRITE — these must reflect reality by the time this command ends:**
+
+- `products/<product>/docs/implementation/<TICKET-ID>-<slug>_implementation.md` — the running log. Record what this command ships AS it happens, not in a batch at the end. It also carries the definitive index of every file belonging to the feature, so any file you add, delete, rename or **relocate** updates that index in the same pass.
+- `products/<product>/docs/plans/<TICKET-ID>-<slug>_plan.md` — update `## Post-ship deltas` whenever what shipped differs from what the plan called for: what the plan said, what shipped, why. A relocation out of the feature also invalidates the plan's `## File-by-file changes` — fix that in the same pass.
+
+**READ-ONLY — not edited by this command, for any reason:**
+
+- `products/<product>/docs/product/<TICKET-ID>-*_product.md` — the product brief.
+- `products/<product>/docs/architecture/<TICKET-ID>-*_architecture.md` — the architecture.
+
+Those record decisions taken BEFORE the plan existed, by stages that had their own interrogation and their own sign-off. They are the yardstick this work is measured against, and a yardstick you are allowed to bend measures nothing. **If what shipped contradicts them, that is a FINDING, not a documentation error** — surface it, do not reconcile it. Amendments go through `/ptfm-product` and `/ptfm-architect`, where the debate and the sign-off live.
+
+Wherever this command says "docs updated" or "docs reconciled to reality", it means the plan and the implementation log. It never means the brief or the architecture.
+
+---
+
 ## Finish the work
 
 This command's deliverables are not a best-effort target. Run it to completion.
