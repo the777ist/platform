@@ -9,7 +9,7 @@ Expected shape: `<product> <TICKET-ID> [slug-or-title] [primary user instruction
 
 - **`<product>`** — first token (e.g. `blog`). **Required.** The product directory under `products/`. If absent, infer it from cwd when the session is inside `products/<name>/...`; otherwise STOP and ASK. Validate `products/<product>/` exists; if it does not, STOP and ASK. EVERYTHING this command does — the codebase walk, every glob, every save path — is scoped to `products/<product>/`.
 - **`<TICKET-ID>`** — second token (e.g. `PTFM-145`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
-- **`[slug-or-title]`** — optional next token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block globs `products/<product>/docs/plans/` and `products/<product>/docs/implementation/` to recover it.
+- **`[slug-or-title]`** — optional next token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block below recovers it — an existing doc for this ticket is the authority; the branch is only a seed, used when no doc exists yet.
 - **`[primary user instruction]`** — anything after the slug (or after the ticket ID if no slug-shaped token follows). Freeform guidance for THIS specific invocation — adjust scope, focus, or emphasis as instructed. **It does NOT override the absolute rules below** — if it conflicts with a rule, prefer the rule and surface the conflict to the user.
 
 ---
@@ -19,8 +19,15 @@ We need to implement the full fix / feature for Linear ticket `<TICKET-ID>` (in 
 **Resolve `<product>`, `<TICKET-ID>` and `<slug>` BEFORE doing anything else.**
 
 1. **`<product>`** — if a first token was provided in `$ARGUMENTS`, use it. Otherwise, if the session is inside `products/<name>/...`, infer `<name>`. Validate `products/<product>/` exists. If you cannot resolve a valid product, STOP and ASK — do NOT guess.
-2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS`, use it. Otherwise run `git branch --show-current` and extract the `<TEAM>-<NUMBER>` portion (e.g. `PTFM-145` from `feature/PTFM-145-d2c-bulk-edit`). If neither yields a ticket, STOP and ASK — do NOT guess.
-3. **`<slug>`** — if a slug-shaped token was provided, use it. Otherwise derive it from the **Linear branch**: run `git branch --show-current` and take the segment after the ticket id, e.g. `hritt/abc-160-multi-channel-broadcast` → `multi-channel-broadcast`. Linear names the branch from the ticket title, so every stage of a ticket lands on the SAME slug without any stage having to find another stage's file. Fall back to `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` and `products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` (recovering the segment between `<TICKET-ID>-` and the `_plan.md` / `_implementation.md` suffix) when the branch is not a Linear branch, and to the kebab-cased ticket title (~5–8 words) when neither yields one.
+2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS`, use it. Otherwise run `git branch --show-current` and match `[A-Za-z][A-Za-z0-9]{1,9}-[0-9]+` anywhere in it, CASE-INSENSITIVELY — Linear's branch format is a workspace setting, so it may emit `CRO-412`, `cro-412` or `Cro-412`. **Normalise to UPPERCASE** (`cro-412` → `CRO-412`) and use that form in every path and every filename from here on; glob case-insensitively when reading, so a doc already written in another case still resolves. If neither yields a ticket, STOP and ASK — do NOT guess.
+3. **`<slug>`** — resolve in this order and STOP at the first hit:
+
+   1. A slug-shaped token in `$ARGUMENTS`.
+   2. **An existing artifact for this ticket** — `Glob products/<product>/docs/*/<TICKET-ID>*.md` (match the ticket id case-insensitively) and recover the slug from the filename: the segment between `<TICKET-ID>-` and the `_product.md` / `_architecture.md` / `_plan.md` / `_implementation.md` / `_review.md` suffix. **This is the authority.** Once ANY stage has written a doc for this ticket, that filename fixes the slug for every stage after it.
+   3. The **branch** — the segment after the ticket id: `cro-412-bulk-edit-tags` → `bulk-edit-tags`; `hritt/cro-412-bulk-edit-tags` → `bulk-edit-tags`; `shop/cro-412-bulk-edit-tags` → `bulk-edit-tags`.
+   4. The Linear ticket title, kebab-cased (~5–8 words, drop filler words).
+
+   Steps 3 and 4 are SEEDS — used once, by whichever stage runs first for this ticket — and they are last on purpose, because neither is stable. Linear's branch format is a workspace setting that can be changed at any time, and it truncates long titles, so the same ticket can yield a different string tomorrow than it does today. The filename written by the first stage is what every later stage reads. NEVER re-derive a slug that step 2 already answered, and NEVER rename an existing artifact to match a freshly derived one.
 
 Reference docs (read these first, in full, in this order):
 
