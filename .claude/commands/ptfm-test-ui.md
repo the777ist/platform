@@ -252,4 +252,31 @@ What `/ptfm-test-ui` does NOT mean here:
 
 ---
 
+## Finish the work
+
+This command's deliverables are not a best-effort target. Run it to completion.
+
+**A blocker is missing INFORMATION. Everything else is WORK.** That distinction is the whole rule:
+
+- **STOP and ASK** when the thing you lack is something only the user can supply — a decision, a requirement, an intent, a credential you cannot obtain, an approval for a destructive or outward-facing action. No amount of effort produces those, and guessing is worse than asking.
+- **KEEP GOING** when the thing you lack is effort. A failing test, an error you do not understand yet, a refactor bigger than expected, a flaky local stack, tedious coverage, a fourth attempt at the same fix — that is the job, not an obstacle to it.
+
+The stages before this one have STOP gates on purpose. Do not read those as permission to stop here. They exist because a plan cannot be invented; they say nothing about work that is merely hard.
+
+**Named ways of giving up, all of which are failures of this command:**
+
+- Handing back partial work with "the remaining steps are straightforward" or "the pattern is established" — finish them.
+- Stopping at the first failing test instead of finding out why it fails.
+- Deleting, skipping or weakening a test so a gate goes green. Fix the cause.
+- Labelling something "pre-existing", "unrelated" or "out of scope" to avoid it, when it is in the surface this command owns.
+- Quietly shrinking the scope so the deliverables can be declared met.
+- Asking the user something the codebase already answers. Read the code first.
+- Stopping because the run has been long. Length is not a blocker.
+
+**When genuinely stuck, escalate effort before escalating to the user:** re-read the failing code in full, read the ACTUAL error rather than assuming it, narrow to the smallest reproduction, check how the existing code solves the same problem, try a different approach. Come back to the user only after several real attempts — and when you do, say what you tried and what you observed, not just that it did not work.
+
+**Report honestly.** If something truly cannot be finished, finish EVERYTHING else, then state plainly what is left and why. Never describe partial work as complete, and never let a gate you skipped go unmentioned.
+
+---
+
 Start now. Resolve `<product>` first, then read the docs and code in full, then ENUMERATE EXHAUSTIVELY in TodoWrite (Step 2 — no lazy skipping), then PERSIST the playbook to `products/<product>/docs/implementation/<TICKET-ID>-<slug>_testing_playbook.md` (Step 3), then drive every case through the browser against the product's Expo web dev server **and tick the playbook in lockstep** as each case lands, **FIX every failure that surfaces** (regression test first — RNTL/pytest — then fix per the adherence rules, then re-verify, then all gates green), then clean up, then finalize the playbook + emit the final report. Do not stop until the playbook is saved AND updated to ground truth, every case is executed, every in-scope fix has shipped, and every deferred issue is explicitly surfaced.
