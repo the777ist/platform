@@ -8,7 +8,7 @@ Args: $ARGUMENTS
 Expected shape: `<product> <TICKET-ID> [slug-or-title] [primary user instruction]`
 
 - **`<product>`** — first token (e.g. `blog`). **Required.** The product directory under `products/`. If absent, infer it from cwd when the session is inside `products/<name>/...`; otherwise STOP and ASK. Validate `products/<product>/` exists; if it does not, STOP and ASK. EVERYTHING this command does — the codebase walk, every glob, every save path — is scoped to `products/<product>/`.
-- **`<TICKET-ID>`** — second token (e.g. `PTFM-145`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
+- **`<TICKET-ID>`** — second token (e.g. `CRO-412`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
 - **`[slug-or-title]`** — optional next token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block below recovers it — an existing doc for this ticket is the authority; the branch is only a seed, used when no doc exists yet.
 - **`[primary user instruction]`** — anything after the slug (or after the ticket ID if no slug-shaped token follows). Freeform guidance for THIS specific invocation — adjust scope, focus, or emphasis as instructed. **It does NOT override the absolute rules below** — if it conflicts with a rule, prefer the rule and surface the conflict to the user.
 
@@ -44,7 +44,7 @@ Reference docs (read these first, in full, in this order):
 ## Step 1 — Fetch the ticket and the plan
 
 1. Use the Linear MCP (`mcp__Linear__*`, e.g. `get_issue`) to fetch the ticket: title, full description, comments, blockers, linked docs. Capture context.
-2. Find the plan doc: `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md`. Read it in full — every section. The plan is the source of truth for what to build.
+2. Find the plan doc: `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md`. Read it in full — every section. The plan is the source of truth for what to build. **If it returns nothing, STOP and ASK** — implementing with no plan is building from a guess, and it fails silently: the stage runs, produces code, and reports success against a spec nobody wrote.
 3. If no plan exists at that path, STOP and surface to the user — direct them to run `/ptfm-plan <product> <TICKET-ID>` first. Do NOT improvise an implementation without a plan.
 4. If multiple plan candidates match, ask the user which one to follow.
 5. Note the implementation log path: `products/<product>/docs/implementation/<TICKET-ID>-<slug>_implementation.md`. Use the same `<slug>` the plan file uses. If a log already exists from a prior session, READ it and continue from where it left off; do not overwrite.

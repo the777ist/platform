@@ -8,7 +8,7 @@ Args: $ARGUMENTS
 Expected shape: `<product> <TICKET-ID> [slug-or-title] [primary user instruction]`
 
 - **`<product>`** — first token: the product directory under `products/` (e.g. `blog`). **Required.** If absent, infer it from the cwd when the session is inside `products/<name>/...`; otherwise STOP and ASK. Validate that `products/<product>/` exists; if it doesn't, STOP and ASK — do NOT guess. EVERYTHING this command does — the codebase walk, every glob, every save path, the target URL — is scoped to `products/<product>/`.
-- **`<TICKET-ID>`** — second token (e.g. `ABC-145`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
+- **`<TICKET-ID>`** — second token (e.g. `CRO-412`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
 - **`[slug-or-title]`** — optional next token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block below recovers it — an existing doc for this ticket is the authority; the branch is only a seed, used when no doc exists yet.
 - **`[primary user instruction]`** — anything after the slug (or after the ticket ID if no slug-shaped token follows). Freeform guidance for THIS specific invocation — adjust scope, focus, or emphasis as instructed. **It does NOT override the absolute rules below** — if it conflicts with a rule, prefer the rule and surface the conflict to the user.
 
@@ -53,8 +53,10 @@ Reference docs (read these first, in full):
 - @products/<product>/CLAUDE.md — the product's structure, ports (incl. the Expo web dev-server port), infra names.
 - the nested **API** `CLAUDE.md` under `products/<product>/api/` — the add-an-endpoint recipe (model→service→schema→router→openapi→typegen→hook→screen), used when a fix touches the backend.
 - @packages/ui/CLAUDE.md + @packages/ui/FIGMA.md — design-system runbook + token contract (semantic tokens only, `@platform/ui` primitives, never modify a shared primitive).
-- @products/<product>/docs/plans/<TICKET-ID>-<slug>\_plan.md
-- @products/<product>/docs/implementation/<TICKET-ID>-<slug>\_implementation.md
+- `Glob products/<product>/docs/plans/<TICKET-ID>*_plan.md` — read the match in full. **If it returns nothing, STOP and ASK.**
+- `Glob products/<product>/docs/implementation/<TICKET-ID>*_implementation.md` — read the match in full. **If it returns nothing, STOP and ASK.**
+
+(A constructed exact path is deliberately NOT used for these two: reading a path that does not exist fails SILENTLY, and the stage then runs with no plan in context and still reports success. The glob is the same lookup that resolved `<slug>`, so it hits whenever a doc exists at all; the STOP is what makes a genuinely missing doc loud instead of invisible.)
 
 (If a `CLAUDE.md` is absent, fall back to `PHILOSOPHY.md` — product-level ones are stamped from `products/_template`.)
 

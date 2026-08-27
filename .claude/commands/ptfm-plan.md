@@ -8,7 +8,7 @@ Args: $ARGUMENTS
 Expected shape: `<product> <TICKET-ID> [slug-or-title] [primary user instruction]`
 
 - **`<product>`** — **first token, required.** The product directory under `products/` (e.g. `blog`). If absent: infer from cwd when the session is inside `products/<name>/...`; else STOP and ASK. Validate `products/<product>/` exists; if not, STOP and ASK. EVERYTHING this command does — codebase walk, globs, save paths, architecture lookups — is scoped to `products/<product>/`.
-- **`<TICKET-ID>`** — second token (e.g. `BLOG-145`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
+- **`<TICKET-ID>`** — second token (e.g. `CRO-412`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
 - **`[slug-or-title]`** — optional next token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block below recovers it — an existing doc for this ticket is the authority; the branch is only a seed, used when no doc exists yet.
 - **`[primary user instruction]`** — anything after the slug (or after the ticket ID if no slug-shaped token follows). Freeform guidance for THIS specific invocation — adjust scope, focus, or emphasis as instructed. **It does NOT override the absolute rules below** — if it conflicts with a rule, prefer the rule and surface the conflict to the user.
 

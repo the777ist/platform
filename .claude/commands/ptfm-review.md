@@ -8,7 +8,7 @@ Args: $ARGUMENTS
 Expected shape: `<product> <TICKET-ID> [slug-or-title] [primary user instruction]`
 
 - **`<product>`** — first token: the product directory under `products/` (e.g. `blog`). **Required.** If absent, infer it from the cwd when the session is inside `products/<name>/...`; otherwise STOP and ASK. Validate that `products/<product>/` exists; if it doesn't, STOP and ASK — do NOT guess. EVERYTHING this command does — the diff enumeration, the codebase walk, every glob, every save path — is scoped to `products/<product>/`.
-- **`<TICKET-ID>`** — second token (e.g. `ABC-145`). If not passed, the resolve block below auto-infers from the current branch; if it can't, that's fine for a review — proceed; the ticket is only used to locate plan/impl docs and name the report.
+- **`<TICKET-ID>`** — second token (e.g. `CRO-412`). **Required.** If not passed, the resolve block below auto-infers from the current branch; if it can't, STOP and ask.
 - **`[slug-or-title]`** — optional next token (kebab-case slug or quoted title). Overrides the auto-inferred slug. If absent, the resolve block below recovers it — an existing doc for this ticket is the authority; the branch is only a seed, used when no doc exists yet.
 - **`[primary user instruction]`** — anything after the slug (or after the ticket ID if no slug-shaped token follows). Freeform guidance for THIS specific invocation — scope the review ("security only", "just the realtime surface", "review PR #123", "review the last 3 commits"), set the base branch, raise the bar, etc. **It does NOT override the absolute rules below** — if it conflicts with a rule, prefer the rule and surface the conflict to the user.
 
@@ -19,7 +19,7 @@ We need to do a deep **code review AND security review** of the changes on this 
 **Resolve `<product>`, `<TICKET-ID>`, `<slug>`, and the review surface BEFORE doing anything else.**
 
 1. **`<product>`** — first token if provided; else infer from cwd (`products/<name>/...`); else STOP and ASK. Confirm `products/<product>/` exists.
-2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS` (after `<product>`), use it. Otherwise run `git branch --show-current` and match `[A-Za-z][A-Za-z0-9]{1,9}-[0-9]+` anywhere in it, CASE-INSENSITIVELY — Linear's branch format is a workspace setting, so it may emit `CRO-412`, `cro-412` or `Cro-412`. **Normalise to UPPERCASE** (`cro-412` → `CRO-412`) and use that form in every path and every filename from here on; glob case-insensitively when reading, so a doc already written in another case still resolves. If neither yields a ticket, that's fine for a review — proceed; the ticket is only used to locate plan/impl docs and name the report.
+2. **`<TICKET-ID>`** — if a ticket-shaped token was provided in `$ARGUMENTS` (after `<product>`), use it. Otherwise run `git branch --show-current` and match `[A-Za-z][A-Za-z0-9]{1,9}-[0-9]+` anywhere in it, CASE-INSENSITIVELY — Linear's branch format is a workspace setting, so it may emit `CRO-412`, `cro-412` or `Cro-412`. **Normalise to UPPERCASE** (`cro-412` → `CRO-412`) and use that form in every path and every filename from here on; glob case-insensitively when reading, so a doc already written in another case still resolves. If neither yields a ticket, STOP and ASK — do NOT guess.
 3. **`<slug>`** — resolve in this order and STOP at the first hit:
 
    1. A slug-shaped token in `$ARGUMENTS`.
