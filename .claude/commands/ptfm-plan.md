@@ -61,7 +61,7 @@ Many plans stand on their own — small features, bug fixes, isolated changes. S
 4. **If working under an architecture, scope this plan to ONE phase.** The handoff brief lists each phase + Linear sub-issue + slug + focus. Match the current ticket ID against a phase; if the user instruction names a phase explicitly, use that; if unclear, ASK. Plan output: `products/<product>/docs/plans/<TICKET-ID>-<phase-slug>_plan.md` where `<TICKET-ID>` is the **current phase ticket** (this branch's ticket, NOT the epic's) and `<phase-slug>` is from the handoff brief. Example: architecture at `products/blog/docs/architecture/BLOG-160-multi-channel-broadcast_architecture.md`, Phase 1 on Linear `BLOG-161` → plan at `products/blog/docs/plans/BLOG-161-multi-channel-broadcast-phase-1_plan.md`.
 5. **If NOT working under an architecture, plan directly.** Plan output: `products/<product>/docs/plans/<TICKET-ID>-<slug>_plan.md` where `<slug>` is exactly what the resolve block produced. This is the common case for small / medium changes — do NOT hard-stop to demand an architecture pass where one isn't warranted.
 6. **If a plan already exists at the chosen output path**, surface to the user and ASK whether to amend or create a revision; do NOT overwrite without explicit consent.
-7. **If the ticket is sparse**, ASK the user for missing context before proceeding rather than inventing requirements.
+7. **If the ticket is sparse**, ASK the user for missing context before proceeding rather than inventing requirements. This is for the gaps that block even starting; Step 2b is where the specification gaps get closed systematically.
 
 ## Step 2 — Build complete depth-of-understanding
 
@@ -83,6 +83,23 @@ For every surface this plan will touch, identify:
 - **Public surface** — what gets exported from the feature's `index.ts` (`products/<product>/app/features/<feature>/index.ts`) and any shared `packages/*` entry points.
 
 For every existing file you'll touch: read it before planning to change it. Architecture decisions made without reading the code are usually wrong.
+
+## Step 2b — Close the specification gaps
+
+You now know the code. This is where you find out whether you know the **behaviour**. Every gap left open here gets invented during `/ptfm-implement` — silently, and in whatever way was easiest to code.
+
+**Ask in ONE numbered batch** (not dribbled out one at a time), covering whichever of these are still open:
+
+- **"What is the expected behaviour on the unhappy path?"** — empty, offline, permission-denied, conflict, timeout, partial failure. The plan's `## Behaviour spec` is not done while any of these is undefined.
+- **"What does the user SEE while this is loading, and when it fails?"** — spinner, skeleton, toast, inline error, optimistic update that rolls back. Decide now, or `/ptfm-implement` decides for you.
+- **"Who is allowed to do this?"** — the ownership / permission rule stated as a RULE, not an example. This is the one that becomes an IDOR when it is left implicit.
+- **"What happens when two people do this at once?"** — last-write-wins, a conflict error, or it cannot happen and here is why.
+- **"What is explicitly OUT of scope for THIS ticket?"** — anti-goals, so the implementation does not quietly grow past the plan.
+- **"What is the expected data volume, and what does this list look like at 10×?"** — the pagination and index decisions in Step 3 depend on the answer.
+
+**GATE — do NOT draft the plan while a load-bearing behaviour is undefined.** A plan that says "handle errors appropriately" has deferred the decision to whoever implements it, which is the opposite of planning.
+
+**Never invent the answer.** Record non-load-bearing gaps under `## Risks & open questions`; for load-bearing ones, say plainly that the plan is blocked and on what.
 
 ## Step 3 — Define the test strategy (CRITICAL — TDD-first; tests come before implementation)
 
@@ -223,6 +240,7 @@ The pipeline's Definition-of-Done checklist, inline so the executing agent has i
 
 ## ABSOLUTE, NON-NEGOTIABLE RULES
 
+- **NEVER INVENT AN ANSWER THE USER DID NOT GIVE.** Step 2b's gate is binding: no drafted plan while a load-bearing behaviour is undefined. A gap left open here is not deferred — it is silently decided by whoever implements it.
 - **If an upstream architecture doc exists, it's the SOURCE OF TRUTH and BINDING.** Read it in full, treat its phasing / pattern-adherence checklist / seams as fixed, scope this plan to ONE phase from it, and never re-architect silently. Epic ticket ≠ phase ticket — the architecture lives on the parent epic; this plan lives on the current phase sub-issue. If the architecture is genuinely wrong, STOP and surface; amendments happen via `/ptfm-architect`, not in this plan. **For most work (small features, bug fixes, isolated changes), no architecture exists — direct planning is fine and expected; do NOT force an architecture pass where one isn't warranted.**
 - **NO CODE CHANGES during this run.** This is a planning pass. The only file written is the plan markdown. No migrations applied, no typegen run, no env vars set, no git operations. Implementation happens in a separate session that executes against the plan.
 - **Frontend changes STRICTLY conform to the design system.** Every colour / font / spacing / radius comes from **semantic tokens** (`bg-background`, `bg-primary`, `text-foreground`, `border-border`, …) via NativeWind — token values come from the Figma pipeline (`theme.ts` / `global.css`); NEVER raw hex, never hand-name a colour. Brand is a token **mode**; light + dark from day one (runtime-switchable). Every primitive comes from `@platform/ui` (`packages/ui/src/components/ui/*`). NEVER modify a shared primitive to suit one feature — extend with an opt-in prop, add a cva variant, or compose on top. Every UI surface needs explicit cross-target decisions (iOS / Android / web / desktop + light/dark + brand + responsive on web/tablet).

@@ -215,6 +215,69 @@ What "audit" does NOT mean:
 
 ---
 
+## Surface the blockers BEFORE you start
+
+Read the plan / diff / surface first, then raise every blocker you can already see in ONE message, before doing the work. A blocker found at minute forty that was legible at minute two has cost the user forty minutes AND their attention twice. The per-step "surface it and stop" rules elsewhere in this command are the safety net for what you could not have known; they are not the plan for what you could.
+
+Scan specifically for:
+
+- **Decisions the upstream doc does not make** — behaviour left undefined, an unhappy path with no specified outcome, a permission rule given as an example rather than as a rule.
+- **Access you do not have** — a credential, an MCP that is not connected, a Figma / Notion / Slack link you cannot open, a service that is not running.
+- **Preconditions that are not met** — local stack down, migrations unapplied, seed data absent, a dependency the doc assumes already exists.
+- **What was ALREADY broken before you touched it** — baseline the quality gates and capture the failures that predate this run, so you neither inherit blame for them nor chase them as if you caused them.
+- **Conflicts with a locked rule** — anything asked of you that `PHILOSOPHY.md` or the `CLAUDE.md` chain forbids. Say so now, not after building it.
+
+Raise them **together and numbered**, each with what you propose to do about it. Then get on with everything that is NOT blocked — one blocked area is not a reason to down tools on the rest, and a blocker you have surfaced is the user's to answer while you keep working.
+
+---
+
+## Keep the docs true — and know which ones you may touch
+
+The pipeline's artifacts sit in two tiers. Confusing them is how a decision gets quietly rewritten to match whatever happened to ship.
+
+**WRITE — these must reflect reality by the time this command ends:**
+
+- `products/<product>/docs/implementation/<TICKET-ID>-<slug>_implementation.md` — the running log. Record what this command ships AS it happens, not in a batch at the end. It also carries the definitive index of every file belonging to the feature, so any file you add, delete, rename or **relocate** updates that index in the same pass.
+- `products/<product>/docs/plans/<TICKET-ID>-<slug>_plan.md` — update `## Post-ship deltas` whenever what shipped differs from what the plan called for: what the plan said, what shipped, why. A relocation out of the feature also invalidates the plan's `## File-by-file changes` — fix that in the same pass.
+
+**READ-ONLY — not edited by this command, for any reason:**
+
+- `products/<product>/docs/product/<TICKET-ID>-*_product.md` — the product brief.
+- `products/<product>/docs/architecture/<TICKET-ID>-*_architecture.md` — the architecture.
+
+Those record decisions taken BEFORE the plan existed, by stages that had their own interrogation and their own sign-off. They are the yardstick this work is measured against, and a yardstick you are allowed to bend measures nothing. **If what shipped contradicts them, that is a FINDING, not a documentation error** — surface it, do not reconcile it. Amendments go through `/ptfm-product` and `/ptfm-architect`, where the debate and the sign-off live.
+
+Wherever this command says "docs updated" or "docs reconciled to reality", it means the plan and the implementation log. It never means the brief or the architecture.
+
+---
+
+## Finish the work
+
+This command's deliverables are not a best-effort target. Run it to completion.
+
+**A blocker is missing INFORMATION. Everything else is WORK.** That distinction is the whole rule:
+
+- **STOP and ASK** when the thing you lack is something only the user can supply — a decision, a requirement, an intent, a credential you cannot obtain, an approval for a destructive or outward-facing action. No amount of effort produces those, and guessing is worse than asking.
+- **KEEP GOING** when the thing you lack is effort. A failing test, an error you do not understand yet, a refactor bigger than expected, a flaky local stack, tedious coverage, a fourth attempt at the same fix — that is the job, not an obstacle to it.
+
+The stages before this one have STOP gates on purpose. Do not read those as permission to stop here. They exist because a plan cannot be invented; they say nothing about work that is merely hard.
+
+**Named ways of giving up, all of which are failures of this command:**
+
+- Handing back partial work with "the remaining steps are straightforward" or "the pattern is established" — finish them.
+- Stopping at the first failing test instead of finding out why it fails.
+- Deleting, skipping or weakening a test so a gate goes green. Fix the cause.
+- Labelling something "pre-existing", "unrelated" or "out of scope" to avoid it, when it is in the surface this command owns.
+- Quietly shrinking the scope so the deliverables can be declared met.
+- Asking the user something the codebase already answers. Read the code first.
+- Stopping because the run has been long. Length is not a blocker.
+
+**When genuinely stuck, escalate effort before escalating to the user:** re-read the failing code in full, read the ACTUAL error rather than assuming it, narrow to the smallest reproduction, check how the existing code solves the same problem, try a different approach. Come back to the user only after several real attempts — and when you do, say what you tried and what you observed, not just that it did not work.
+
+**Report honestly.** If something truly cannot be finished, finish EVERYTHING else, then state plainly what is left and why. Never describe partial work as complete, and never let a gate you skipped go unmentioned.
+
+---
+
 Start now. Discover the surface yourself, scoped to `products/<product>`. Go step by step. Do not stop until ALL THREE deliverables are complete: docs reconciled to reality, every meaningful surface tested at the right layer (RNTL + pytest), and all quality gates green — `turbo run lint typecheck test build` (+ `export:web`), `ruff check`, `pyright`, `pytest`, and the typegen drift check.
 
 ## Next stage

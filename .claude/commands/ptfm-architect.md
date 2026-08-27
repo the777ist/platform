@@ -59,7 +59,7 @@ If you cannot find a Notion link on the ticket but the ticket reads like it's re
 
 **Also quickly check for an upstream product brief at `products/<product>/docs/product/<TICKET-ID>*_product.md` or `products/<product>/docs/product/*_product.md`** (the user may name it explicitly in the primary user instruction, e.g. `"product brief ABC-160"` or a direct path). If one exists — written by `/ptfm-product` — READ IT IN FULL. The product brief defines WHAT and WHY and FOR WHOM; it is binding context for this architecture's scope IN / scope OUT / success metrics / target user. The architect still decides HOW (system layers, phasing, patterns), but cannot silently re-scope the product. If the architecture would have to deviate from the brief's scope to be technically sensible, STOP and surface to the user — the brief amendment happens via `/ptfm-product`, not silently here. **If no product brief exists, that's the common case for smaller features — proceed with architecture directly. Do NOT force a `/ptfm-product` pass where one isn't warranted.**
 
-If the ticket is sparse and strategic direction is ambiguous EVEN after reading the Notion brief / product brief, ASK the user for missing context before proceeding rather than inventing requirements.
+If ANYTHING about the strategic direction is still ambiguous after reading the Notion brief / product brief, ASK the user before proceeding rather than inventing requirements. This is for the gaps that block even starting; Step 3b is where the architectural unknowns get closed systematically.
 
 ---
 
@@ -94,6 +94,26 @@ Name the new modules / boundaries / contracts the ticket introduces. For each, m
 **Invention without justification is rejected.** A new error shape outside problem+json, a new schema-validation library, a hand-edited generated client, a new design token, a Postgres-Changes subscription that opens an RLS hole — all forbidden unless the deviation is named and justified.
 
 Output of this step: a list of architectural-surface-area items, each tagged `[conforms-to: X]` or `[deviates-from: X — reason]`.
+
+---
+
+## Step 3b — Close the architectural unknowns
+
+Step 3 is where you find out what you DON'T know. Build a gap list before phasing: the phase boundaries, the Linear sub-issues and the whole downstream plan are derived from these answers, and `/ptfm-plan` treats what you save here as **BINDING**. An architecture guessed at is a guess stamped into every phase that follows.
+
+**Ask in ONE numbered batch** (not dribbled out one at a time), covering whichever of these are still open:
+
+- **"What is the blast radius if this phase boundary is wrong?"** — a boundary that has to move after Phase 1 ships is the most expensive mistake this command can make.
+- **"What breaks at 10× and 100× current volume?"** — force the number now. Step 5b needs it, and nobody knows it later.
+- **"What is the rollback / migration story?"** — for every schema change, and for every phase that lands data.
+- **"What existing pattern does this deviate from, and why is that justified?"** — every `[deviates-from: …]` tag from Step 3 is an open question until the user has signed off on it.
+- **"Which single phase could ship alone and prove the bet?"** — if none can, the phasing is wrong.
+- **"What happens to in-flight data, sessions and already-deployed clients during cutover?"**
+- **"Is this a one-way or a two-way door?"** — name the irreversible decisions explicitly. Those are the ones worth debating now rather than discovering in Phase 3.
+
+**GATE — do NOT create the Linear sub-issues (Step 6) or save the architecture doc (Step 7) while a load-bearing question is open.** Sub-issue creation is a side effect on Linear that is tedious to unwind, and the saved doc becomes `/ptfm-plan`'s source of truth.
+
+**Never invent the answer.** If the user genuinely does not have one and it is NOT load-bearing, record it under `## Risks & open questions` and proceed. If it IS load-bearing, say so plainly and stop — an architecture built on an assumed answer is worse than no architecture, because everything downstream inherits the assumption without knowing it was one.
 
 ---
 
@@ -270,6 +290,7 @@ After saving the doc, report to the user in chat:
 
 ## ABSOLUTE, NON-NEGOTIABLE RULES
 
+- **NEVER INVENT AN ANSWER THE USER DID NOT GIVE.** Step 3b's gate is binding: no Linear sub-issues and no saved architecture doc while a load-bearing question is open. Everything downstream treats this doc as the source of truth, so an assumed answer here propagates as a fact.
 - **NO CODE CHANGES during this run.** Architecture pass only; the only output is the architecture markdown. No Alembic migrations applied, no typegen run, no env vars added, no PRs.
 - **STRICT ADHERENCE TO EXISTING PATTERNS.** Every architectural choice names the existing convention it conforms to. Invention is rejected unless explicitly justified against PHILOSOPHY.md. "It would be cleaner if we…" is NOT a valid justification.
 - **NO BEHAVIOUR DRIFT FROM EXISTING SURFACES.** Adjacent features keep their contracts. Shared primitives in `@platform/ui` / shared code in `packages/*` are immutable from this architecture's POV — extend with opt-in props or `cva` variants, or compose; never modify for one feature.
