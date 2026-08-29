@@ -171,6 +171,8 @@ What `/ptfm-implement` does NOT mean:
 
 Deployment context spans the template's four surfaces — **Fly (api), EAS (mobile), Vercel (web), Electron (desktop)** — reach for the relevant one only when a step needs deploy/env context; it is not a workflow pillar here.
 
+Each of those surfaces now has its own MCP when deploy context IS needed: **Fly** (`mcp__fly__*` — apps, machines, secrets, release logs; migrations run as the Fly release_command, so a failed migration lives in Fly release logs), **Expo/EAS** (`mcp__expo__*` — builds, workflows, TestFlight crashes), **Vercel** (`mcp__vercel__*` — deployments, build + runtime logs), and **Sentry** (`mcp__sentry__*` — runtime errors on both halves of the X-Request-Id chain).
+
 ---
 
 ## Surface the blockers BEFORE you start

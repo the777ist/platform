@@ -65,9 +65,11 @@ separate web or desktop app** — it's one frontend codebase plus a Python backe
 - **[Supabase CLI](https://supabase.com/docs/guides/local-development)** + **Docker** — the
   local backend stack (Postgres, auth, storage) runs in Docker, so **Docker must be running**
   for `supabase start` / `pnpm bootstrap`.
-- **Agentic workflow (optional but recommended):** the `ptfm-*` pipeline drives MCP servers —
-  connect **Supabase, GitHub, Figma, Linear, Notion, Playwright** in Claude Code before
-  running it (see the **Operational stack** section below).
+- **Agentic workflow (optional but recommended):** the `ptfm-*` pipeline drives MCP servers.
+  The committed root `.mcp.json` brings **Sentry, Fly, Expo, Vercel, Semgrep, Chrome DevTools**
+  with the clone (authenticate the OAuth ones via `/mcp`); connect **Supabase, GitHub, Figma,
+  Linear, Notion, Playwright** in Claude Code yourself — and actually sign in: a connected but
+  unauthenticated server counts as absent (see **Operational stack** below).
 - The git repo name is irrelevant — nothing derives from it (app/infra ids come from _product_
   names).
 
@@ -154,11 +156,18 @@ products/
 - **Git hooks are tiered, and CI re-runs all of it.** `pre-commit` (~5s) only ever runs
   auto-fixers on staged files — eslint/ruff first, then prettier/ruff-format so the formatter
   gets the last write. `commit-msg` enforces Conventional Commits. `pre-push` runs the real gate
-  (lint · pyright/tsc · unit tests · the web bundle · typegen drift · one Alembic head), scoped to
+  (lint · pyright/tsc · unit tests · the web bundle · typegen drift · one Alembic head · the
+  migration lock-safety lint), scoped to
   the commits you are actually pushing. `--no-verify` skips a hook, but every one of those gates
   has a CI counterpart that runs unconditionally — so it buys you a faster local loop, not a way
   around the gate. Run it by hand any time with `/affected` or
   `node scripts/pre-push.mjs origin/main`.
+- **Migrations are linted for lock-taking DDL** (`scripts/check-migration-safety.mjs` — squawk
+  over `alembic upgrade head --sql`, no database needed). Migrations run against production as a
+  Fly release command, and every test suite runs them against an empty idle database where any
+  DDL is instantly safe — so a table-locking migration is a failure mode only this linter can see
+  before the deploy does. `alembic/env.py` sets `lock_timeout` + `statement_timeout` in both
+  modes; deleting those SETs fails the gate.
 - **A product's pytest needs that product's stack up.** If its Postgres is unreachable, pre-push
   says so loudly and skips only that product's API tests (its ruff and pyright still run); CI runs
   them against a real Postgres regardless.
@@ -172,8 +181,22 @@ Code Connect map → export → VR baseline) and **`/add-feature`**
 ## Operational stack (agentic-workflow integrations)
 
 Product development here is **agentic** — driven by the `ptfm-*` slash-command pipeline (below).
-That pipeline integrates external services over MCP; connect these in Claude Code before running
-it:
+That pipeline integrates external services over MCP, in two tiers:
+
+**Committed** — the root **`.mcp.json`** declares the servers every clone gets automatically
+(Claude Code offers them on first session; OAuth ones authenticate via `/mcp`):
+
+| Service             | Role in the workflow                                                                | MCP family                |
+| ------------------- | ----------------------------------------------------------------------------------- | ------------------------- |
+| **Sentry**          | Runtime errors + traces — both halves of the `X-Request-Id` chain (OAuth)           | `mcp__sentry__*`          |
+| **Fly.io**          | API deploys, machines, secrets, **release logs** (migrations run there) — local CLI | `mcp__fly__*`             |
+| **Expo / EAS**      | Builds, workflows, TestFlight crash data (OAuth)                                    | `mcp__expo__*`            |
+| **Vercel**          | Web deployments, build + runtime logs, analytics (OAuth)                            | `mcp__vercel__*`          |
+| **Semgrep**         | Deterministic SAST floor under `/ptfm-review` (free OSS engine, via `uvx`)          | `mcp__semgrep__*`         |
+| **Chrome DevTools** | Web perf traces — Core Web Vitals (LCP/CLS/INP) in `/ptfm-test-ui`                  | `mcp__chrome-devtools__*` |
+
+**User-connected** — connect (and authenticate) these in Claude Code yourself; the pipeline
+assumes they are live:
 
 | Service        | Role in the workflow                                         | MCP family           |
 | -------------- | ------------------------------------------------------------ | -------------------- |
@@ -183,6 +206,10 @@ it:
 | **Supabase**   | Database/auth — read-only schema introspection               | `mcp__Supabase__*`   |
 | **Playwright** | Live web verification / E2E                                  | `mcp__playwright__*` |
 | **GitHub**     | Repos, PRs, CI                                               | `mcp__github__*`     |
+
+Connected-but-unauthenticated counts as absent: Figma and Supabase in particular expose only an
+`authenticate` tool until you sign in, and `/sync-tokens`, `/bootstrap-design-system`, and
+`/ptfm-review`'s RLS checks all silently lose their inputs when they are in that state.
 
 Deploy surfaces: **Fly.io** (API) · **Vercel** (web) · **EAS** (mobile) · **GitHub Releases**
 (desktop).

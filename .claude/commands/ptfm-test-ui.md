@@ -247,6 +247,7 @@ What `/ptfm-test-ui` does NOT mean here:
 - **Linear** (`mcp__Linear__*`) — re-read the ticket for context on what's in / out of scope.
 - **Figma** (`mcp__Figma__*`) — corroborate a UI surface against its Figma component / token mode (light/dark × brand) when a fix touches the design surface; never hand-name a colour.
 - **Notion** (`mcp__Notion__*`) — fetch any design / QA / journey docs the plan or ticket references.
+- **Chrome DevTools** (`mcp__chrome-devtools__*`) — OPTIONAL perf pass, after functional coverage is complete: `performance_start_trace` / `performance_stop_trace` / `performance_analyze_insight` on the primary journeys for Core Web Vitals (LCP / CLS / INP) from a real Chrome session. Playwright verifies behaviour; this is the only tool here that measures SPEED. Findings are logged, not silently fixed — a perf fix follows the same triage as a functional one.
 
 (Deployment context spans the product's four surfaces — Fly = api, EAS = mobile, Vercel = web, Electron = desktop — but this command is a local web-driver: it tests the running Expo web dev server, not a deployment.)
 

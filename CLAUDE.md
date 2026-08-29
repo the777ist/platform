@@ -181,6 +181,14 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
 - pyright lives in each api's `typecheck` script, NOT `lint`. That is what makes
   the pre-push `typecheck` task enforce it as PHILOSOPHY requires; while it sat
   inside `lint` (a task pre-push never ran) the strict-typing gate did nothing locally.
+- Migrations are LINTED for lock-taking DDL: `scripts/check-migration-safety.mjs` runs squawk
+  over each affected api's `alembic upgrade head --sql` (offline — no database, dummy env) in
+  pre-push AND CI. Migrations execute against production as a Fly release_command, and every test
+  suite runs them on an empty idle database where all DDL is instantly safe — this linter is the
+  only thing that sees a table-locking migration before the deploy does. `alembic/env.py` sets
+  `lock_timeout` + `statement_timeout` in BOTH modes and the lint enforces their presence
+  (deleting the SETs fails the gate); `prefer-text-field` is the one documented exclusion
+  (SQLModel emits VARCHAR(n) by design; the danger case is resizing later, not creating).
 - pre-push SKIPS a product's pytest when that product's Supabase Postgres is unreachable
   (probed on `db.port` from its `supabase/config.toml` — same source the suite reads), prints
   which product it skipped, and lets CI run them. It never skips ruff/pyright for that api.
@@ -230,6 +238,11 @@ Products are BUILT through the agentic lifecycle pipeline in `.claude/commands/p
 ptfm-implement → ptfm-audit → ptfm-simplify → ptfm-commonify → ptfm-review → ptfm-test-ui`.
 Each takes the product name first and writes artifacts to
 `products/<product>/docs/{product,architecture,plans,implementation,reviews}/`.
-It drives MCP integrations — connect **Linear, Notion, Figma, Supabase (read-only
-introspection; migrations stay in Alembic), Playwright, GitHub** in Claude Code first
-(see README "Operational stack").
+It drives MCP integrations in two tiers (see README "Operational stack"): the committed
+root **`.mcp.json`** ships **Sentry, Fly, Expo/EAS, Vercel, Semgrep, Chrome DevTools**
+with every clone (OAuth ones authenticate via `/mcp`); connect **Linear, Notion, Figma,
+Supabase (read-only introspection; migrations stay in Alembic), Playwright, GitHub** in
+Claude Code yourself. A connected-but-unauthenticated server counts as ABSENT — Figma and
+Supabase expose only an `authenticate` tool until signed in, and `/sync-tokens`,
+`/bootstrap-design-system`, and `/ptfm-review`'s RLS checks silently lose their inputs in
+that state.
