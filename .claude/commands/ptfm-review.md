@@ -109,6 +109,8 @@ Go through EVERY dimension for the changed surface. For each issue: file:line, w
 
 Review the change as an attacker would, grounded in named security canon — don't freelance:
 
+**Deterministic floor FIRST (Semgrep):** before the model-judgement passes below, run a **Semgrep MCP** scan (`mcp__semgrep__*`, `security_check` / `semgrep_scan`) over the changed files. Semgrep is 5,000+ deterministic rules that do not get tired, skimmed, or convinced — the model pass then starts from its findings instead of a blank page, and a finding the scan raises that the review would have missed is itself a review finding. Semgrep CANNOT see IDOR, tenant isolation, or business-logic authz — those stay on the model-judgement passes below; the floor is a floor, not the review.
+
 - **OWASP Top 10 (2021)** — the web-app baseline. Walk the change against each relevant category (IDs tagged on the sub-dimensions below).
 - **STRIDE** as the threat-modeling lens for any new trust boundary the change introduces — Spoofing, Tampering, Repudiation, Information disclosure, Denial-of-service, Elevation of privilege.
 - **Principle of least privilege, defense-in-depth, secure-by-default, fail-securely** as the governing posture.
@@ -227,6 +229,8 @@ What `/ptfm-review` does NOT mean:
 - **Linear** (`mcp__Linear__*`) — re-read the ticket for the change's intent; optionally post a review-summary comment with sign-off. Read-only by default.
 - **Figma** (`mcp__Figma__*`) — this project has a deep Figma integration (Code Connect + token modes). Use it to corroborate that a touched `@platform/ui` primitive / token mode (light/dark × brand) matches its Figma component when a finding turns on design-system fidelity. Full UI testing is `/ptfm-test-ui`'s job.
 - **Playwright** (`mcp__playwright__*`) — rare; only if a finding needs a quick live web corroboration. Full UI testing is `/ptfm-test-ui`'s job.
+- **Semgrep** (`mcp__semgrep__*`) — the deterministic SAST floor of Step 3; see the security pass. Free OSS engine; no account needed.
+- **Sentry** (`mcp__sentry__*`) — what is ACTUALLY failing: search issues/traces on the touched surface (the `X-Request-Id` chain tags both client and API events). A live production error in changed code outranks any static finding.
 - _Deployment context_ — the product ships to four surfaces (Fly = api, EAS = mobile, Vercel = web, Electron = desktop). If a change relies on a new env var, confirm it's provisioned in the right store before treating it as a non-issue; this is context, not a workflow pillar.
 
 ---

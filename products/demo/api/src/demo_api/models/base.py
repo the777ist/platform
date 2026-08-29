@@ -25,7 +25,10 @@ class UUIDModel(SQLModel):
     `sa_column_kwargs` construct a fresh Column per subclass (mixin-safe form).
     """
 
-    id: UUID = Field(default_factory=_uuid7, primary_key=True, index=True)
+    # No index=True: a primary key already carries a unique index, and the redundant
+    # secondary index made every `alembic revision --autogenerate` propose ix_<table>_id
+    # forever (migration 0001 rightly never created it).
+    id: UUID = Field(default_factory=_uuid7, primary_key=True)
     created_at: datetime = Field(
         default_factory=_utcnow,
         sa_type=DateTime(timezone=True),  # pyright: ignore[reportArgumentType]  (instance OK)
