@@ -26,6 +26,9 @@ importers:
       prettier:
         specifier: ^3.3.0
         version: 3.9.4
+      squawk-cli:
+        specifier: ^2.63.0
+        version: 2.63.0
       style-dictionary:
         specifier: 5.5.0
         version: 5.5.0(tslib@2.8.1)
@@ -2878,6 +2881,31 @@ packages:
 
   '@sinonjs/fake-timers@10.3.0':
     resolution: {integrity: sha512-V4BG07kuYSUkTCSBHG8G8TNhM+F19jXFWnQtzj+we8DrkpSBCee9Z3Ms8yiGer/dlmhe35/Xdgyo3/0rQKg7YA==}
+
+  '@squawk-cli/darwin-arm64@2.63.0':
+    resolution: {integrity: sha512-YaSfsQ8c0bb93thcBmJWLOte/1MExUFn6mVWfSqjgaFHip0UGHa3X4oZJiCdk75f/Tw2GrGmAiLV2/eQqnYfUA==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@squawk-cli/darwin-x64@2.63.0':
+    resolution: {integrity: sha512-y23BkUAzD5VtxjCr2JGZz3j+gMVueyad6t4f8AfXV/cNp2CEY+5EmO7QAjXD9z8ro8Oye4F9aId9A5gCNsbh9A==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@squawk-cli/linux-arm64@2.63.0':
+    resolution: {integrity: sha512-ino85Bg5vL3XIHCBLadoQdaTIZlTg+oh9LriyejIGur7s15fhavDkwhCjqnEUKznGnqsx7x92yW2uDUbJM3fYw==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@squawk-cli/linux-x64@2.63.0':
+    resolution: {integrity: sha512-dh1IiQGs/7M9cQEHaC2JkV6lYrLoR5ytAyznRLxcBAfzExSfqEz/gPwc11dewzFZDq3G6TmKKVbMNhcWIhAsww==}
+    cpu: [x64]
+    os: [linux]
+
+  '@squawk-cli/win32-x64@2.63.0':
+    resolution: {integrity: sha512-7939Y/zW6ni0X/Zp19Mml8wS35eOsszgFT+RuZH5zYZwWvQxjEa00pc3baPugb9VIAIdWVMnJTjBcmFA31sKfg==}
+    cpu: [x64]
+    os: [win32]
 
   '@storybook/builder-vite@9.1.20':
     resolution: {integrity: sha512-cdU3Q2/wEaT8h+mApFToRiF/0hYKH1eAkD0scQn67aODgp7xnkr0YHcdA+8w0Uxd2V7U8crV/cmT/HD0ELVOGw==}
@@ -7388,6 +7416,10 @@ packages:
   sprintf-js@1.1.3:
     resolution: {integrity: sha512-Oo+0REFV59/rz3gfJNKQiBlwfHaSESl1pcGyABQsnnIfWOFt6JNj5gCog2U6MLZ//IGYD+nA8nI+mTShREReaA==}
 
+  squawk-cli@2.63.0:
+    resolution: {integrity: sha512-OR9UHzY3kSLoZCB4qk3iSHeEm9pwVccHSWnRggfvRKo/QAddkWJEyoXlIsz0gPAPpzsyk60WcaY4SkswZTXPVA==}
+    hasBin: true
+
   stack-generator@2.0.10:
     resolution: {integrity: sha512-mwnua/hkqM6pF4k8SnmZ2zfETsRUpWXREfA/goT8SLCV4iOFa4bzOX2nDipWAZFPTjLvQB82f5yaodMVhK0yJQ==}
 
@@ -11127,6 +11159,21 @@ snapshots:
   '@sinonjs/fake-timers@10.3.0':
     dependencies:
       '@sinonjs/commons': 3.0.1
+
+  '@squawk-cli/darwin-arm64@2.63.0':
+    optional: true
+
+  '@squawk-cli/darwin-x64@2.63.0':
+    optional: true
+
+  '@squawk-cli/linux-arm64@2.63.0':
+    optional: true
+
+  '@squawk-cli/linux-x64@2.63.0':
+    optional: true
+
+  '@squawk-cli/win32-x64@2.63.0':
+    optional: true
 
   '@storybook/builder-vite@9.1.20(storybook@9.1.20(@testing-library/dom@10.4.1)(prettier@3.9.4)(vite@7.3.6(@types/node@24.13.2)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.48.0)(yaml@2.9.0)))(vite@7.3.6(@types/node@24.13.2)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.48.0)(yaml@2.9.0))':
     dependencies:
@@ -16834,6 +16881,14 @@ snapshots:
 
   sprintf-js@1.1.3:
     optional: true
+
+  squawk-cli@2.63.0:
+    optionalDependencies:
+      '@squawk-cli/darwin-arm64': 2.63.0
+      '@squawk-cli/darwin-x64': 2.63.0
+      '@squawk-cli/linux-arm64': 2.63.0
+      '@squawk-cli/linux-x64': 2.63.0
+      '@squawk-cli/win32-x64': 2.63.0
 
   stack-generator@2.0.10:
     dependencies:

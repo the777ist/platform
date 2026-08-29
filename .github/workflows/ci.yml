@@ -144,6 +144,18 @@ jobs:
           else
             echo "no affected APIs — skipping the alembic head check"
           fi
+      - name: Migration lock-safety lint (affected APIs)
+        run: |
+          # Same checker the pre-push hook runs (squawk over `alembic upgrade head --sql`, offline
+          # -- no database). Migrations execute against PRODUCTION as a Fly release_command, and
+          # every test suite runs them against an empty idle database where any DDL is instantly
+          # safe -- so lock-taking DDL is a failure mode only a Postgres-aware linter can see
+          # before the deploy does. Runs after `uv sync` so alembic is importable.
+          if [ -s "$RUNNER_TEMP/affected-apis.txt" ]; then
+            node scripts/check-migration-safety.mjs $(cat "$RUNNER_TEMP/affected-apis.txt")
+          else
+            echo "no affected APIs — skipping the migration safety lint"
+          fi
       - name: Lint / typecheck / test / build / openapi (affected only)
         env:
           SCOPE: ${{ steps.scope.outputs.filter }}

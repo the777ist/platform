@@ -16,8 +16,12 @@ def upgrade() -> None:
     op.create_table(
         "item",
         sa.Column("id", sa.Uuid(), primary_key=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.Column("title", sqlmodel.AutoString(length=200), nullable=False),
         sa.Column("description", sqlmodel.AutoString(length=2000), nullable=True),
         sa.Column("owner_id", sqlmodel.AutoString(), nullable=False),
@@ -28,8 +32,12 @@ def upgrade() -> None:
     op.create_table(
         "push_token",
         sa.Column("id", sa.Uuid(), primary_key=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.Column("user_id", sqlmodel.AutoString(), nullable=False),
         sa.Column("device_id", sqlmodel.AutoString(length=200), nullable=False),
         sa.Column("expo_token", sqlmodel.AutoString(length=255), nullable=False),

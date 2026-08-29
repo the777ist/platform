@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 import { createConnection } from "node:net";
 import { scopeFilter, affectedApiDirs, TURBO_TASKS } from "./affected.mjs";
 import { checkAlembicHeads, reportFailures, allApiDirs } from "./alembic-heads.mjs";
+import { checkMigrationSafety, reportMigrationFailures } from "./check-migration-safety.mjs";
 import { testDbTarget } from "./test-db-target.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -161,6 +162,16 @@ try {
   const headFailures = checkAlembicHeads(migrationApis);
   if (headFailures.length > 0) {
     reportFailures(headFailures);
+    process.exit(1);
+  }
+
+  // Lock-safety lint over the same apis, through the SAME checker CI runs. Migrations execute
+  // against production as a Fly release_command, so table-locking DDL is invisible to every test
+  // (empty idle databases make all DDL instantly safe) and only a linter that knows Postgres lock
+  // semantics can see it before the deploy does. ~2s per api (alembic offline SQL + squawk).
+  const migrationFailures = checkMigrationSafety(migrationApis);
+  if (migrationFailures.length > 0) {
+    reportMigrationFailures(migrationFailures);
     process.exit(1);
   }
 } catch (error) {
