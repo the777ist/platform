@@ -5,12 +5,21 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
-// Ports derive from product.json's portIndex (API 8000+10i — PHILOSOPHY generator
-// spec) so the stamped copy of this config targets ITS OWN product's stack.
-const { portIndex } = JSON.parse(readFileSync(path.join(__dirname, "../product.json"), "utf8")) as {
-  portIndex: number;
-};
-const API_PORT = 8000 + 10 * portIndex;
+// The API port is READ from api/package.json's dev script, not re-derived from
+// `apiBase + 10·portIndex` — the same single-source rule global-setup applies to the
+// supabase port (config.toml). The generator (and scripts/set-port-base.mjs, when a repo
+// takes its own port bases) writes the real port into that script; a formula here is a
+// second copy that disagrees after a rebase, and it disagrees in the worst way: the
+// exported web bundle bakes the NEW API URL while this webServer boots the API on the OLD
+// one, so every E2E fails on "add-item row never appears" with both halves looking healthy.
+const apiDevScript = (
+  JSON.parse(readFileSync(path.join(__dirname, "../api/package.json"), "utf8")) as {
+    scripts: { dev: string };
+  }
+).scripts.dev;
+const apiPortMatch = /--port\s+(\d+)/.exec(apiDevScript);
+if (!apiPortMatch) throw new Error(`no --port in api dev script: ${apiDevScript}`);
+const API_PORT = Number(apiPortMatch[1]);
 
 export default defineConfig({
   testDir: "./e2e",
