@@ -10,7 +10,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { join } from "node:path";
 
-import { NAME_RE, destFor, nameProblem } from "../remove-product.mjs";
+import { NAME_RE, destFor, isFileLockError, nameProblem } from "../remove-product.mjs";
 
 test("a normal product name is accepted", () => {
   assert.equal(nameProblem("demo"), null);
@@ -62,4 +62,24 @@ test("destFor refuses to resolve outside products/, even if the pattern were loo
   for (const name of ["..", "../packages", "a/b"]) {
     assert.throws(() => destFor(name, productsDir), /outside products/, name);
   }
+});
+
+test("a Windows file lock is classified as a lock error, with the actionable exit", () => {
+  // The shape uvicorn --reload orphans produce: rmSync throws EPERM (or EBUSY/EACCES,
+  // depending on which process holds the handle). These must become a "stop your dev
+  // servers and re-run" message, never a raw stack trace after the stack was stopped but
+  // before tokens.config.json cleanup — that half-completed state is the bug being pinned.
+  for (const code of ["EPERM", "EBUSY", "ENOTEMPTY", "EACCES"]) {
+    assert.ok(isFileLockError({ code }), code);
+  }
+});
+
+test("real script failures are NOT swallowed as lock errors", () => {
+  // A genuine bug (undefined path, bad permissions model, anything else) must still throw
+  // loudly — classifying everything as "re-run" would hide real breakage behind advice.
+  for (const error of [{ code: "ENOENT" }, { code: "ERR_FS_EISDIR" }, {}, new Error("boom")]) {
+    assert.ok(!isFileLockError(error));
+  }
+  assert.ok(!isFileLockError(undefined));
+  assert.ok(!isFileLockError(null));
 });
