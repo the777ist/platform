@@ -9,7 +9,10 @@ FastAPI service for the template product (module `template_api`, own uv universe
    (UUIDv7 PK, created/updated timestamps). New table ⇒ new Alembic migration INCLUDING
    `ALTER TABLE <x> ENABLE ROW LEVEL SECURITY` (RLS deny-all on EVERY table; the API's
    privileged role bypasses it): `uv run alembic revision --autogenerate -m "<x>"`, then
-   edit, then `uv run alembic upgrade head`.
+   edit, then `uv run alembic upgrade head`. This applies to INDEX-only changes too: any
+   index a migration creates must also be declared on the model (`Field(index=True)` or
+   `__table_args__`), and vice versa — metadata and migration chain must agree EXACTLY, or
+   `tests/test_migration_rls.py::test_autogenerate_is_clean_after_migrating` fails the suite.
 2. **service** — `src/template_api/services/<x>_service.py`: class per aggregate
    extending `BaseService` (holds the session via Depends); owns business logic AND data
    access — NO repository layer. `DELETE`/`UPDATE` go through `session.execute(...)`,

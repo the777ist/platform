@@ -206,6 +206,11 @@ Root level:
     the org `<repo>` is baked in — create its infra accounts on infra day."
   - the Multi-product stack bullet's `infra naming <org>-<product>-<env>` gains
     "(org `<repo>`)"
+  - the Workflows section's closing sentence (the `electron-release.yml` paragraph):
+    "All repo-specific values are clearly-marked placeholders until the real repo/org
+    exists." → "All repo-specific values carry the org `<repo>`; remaining `TODO`
+    placeholders are filled on infra day." **Missed by the octavia run's enumeration —
+    caught only in its residual audit; listed here so the next rename gets it in layer 2b.**
   - key ruling #3: "`<org>/<product>-desktop-releases` repo (placeholder until real
     org/repo exists)" → "`<repo>/<product>-desktop-releases` repo (created on infra day)"
   - verification item #5: the audit itself narrows from `git grep -inE 'example|TODO'` to
