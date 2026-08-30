@@ -1,0 +1,10 @@
+# Secrets FIRST — scripts/check-committed-secrets.mjs (and the guards.test.mjs twin) require
+# every Dockerfile in the repo to sit beside an ignore excluding .env, and this directory is
+# no exception even though no .env is ever expected here: the guard is a floor, not a review.
+.env
+.env.*
+
+# Keep the build context to exactly what the image needs (Dockerfile + entrypoint.sh) so a
+# README or fly.toml edit never invalidates a build layer.
+README.md
+fly.toml

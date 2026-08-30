@@ -1,0 +1,41 @@
+# devbox/fly.toml — the persistent cloud workstation: ONE machine + ONE volume per seat.
+#
+# `example` is the org placeholder (PHILOSOPHY naming: infra is <org>-..., org placeholder
+# `example`); each company clone renames this to <org>-devbox (a second seat is
+# <org>-devbox-<name>). NOTE: unlike product fly apps, NO guard checks this name for
+# collisions — check-product-identity only scans products/*/api — so uniqueness is manual;
+# scripts/devbox.mjs refuses to operate while the placeholder is unchanged.
+#
+# Deliberately NO [http_service]/[services]: nothing is exposed, and a machine without
+# services is never auto-stopped/started by the Fly proxy — the lifecycle is entirely manual
+# (`devbox up` / `devbox down`), which is the design: no idle watchdog, stop is explicit.
+# Access is `fly ssh console` over the WireGuard agent (no sshd in the image).
+app = "example-devbox"
+primary_region = "lhr"
+
+# `fly machine stop` sends SIGTERM and waits this long before SIGKILL — paired with
+# entrypoint.sh's trap, which stops dockerd cleanly well inside it.
+kill_timeout = "30s"
+
+# The Expo web export + a couple of Supabase stacks are memory-hungry for an 8GB box; swap
+# turns the worst case from OOM-kill into slow.
+swap_size_mb = 4096
+
+[build]
+dockerfile = "Dockerfile"
+
+# The identity half of the design: HOME (/data/home/dev), dockerd's data-root (/data/docker)
+# and logs live here, so Claude/gh/MCP auth, clones, caches and pulled images survive
+# stop/start AND image redeploys. Volumes are single-attach — one machine per seat.
+# 20GB is sized from measurement, not guesswork: a fully-bootstrapped single-repo seat
+# (clone + node_modules + both product stacks' docker images) is ~9GB. Fly volumes EXTEND
+# anytime (`fly volumes extend`) but never shrink — so the template defaults small and each
+# seat grows into what it actually needs, instead of locking every seat into a bigger bill.
+[mounts]
+source = "data"
+destination = "/data"
+initial_size = "20gb"
+
+[[vm]]
+size = "shared-cpu-4x"
+memory = "8gb"
