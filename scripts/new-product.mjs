@@ -193,12 +193,49 @@ function copyTree(srcDir, destDir, replacers) {
 }
 
 // ---- Step 4: port offsets ---------------------------------------------------------------
-// API port  = 8000 + 10*i ;  Supabase block base = 54321 + 100*i.
-// Template (i=0): api 8000, supabase 54321.. ; demo (i=1): api 8010, supabase 54421..
-function applyPorts(dest, i) {
-  const apiPort = 8000 + 10 * i;
-  const sbBase = 54321 + 100 * i; // api/db/studio/smtp/pooler/analytics offset as a block of 100
-  const sbDelta = sbBase - 54321; // amount to add to each default supabase port
+// API port  = apiBase + 10*i ;  Supabase block base = supabaseBase + 100*i.
+// The bases are PER-REPO (root platform.json; defaults below): portIndex de-conflicts the
+// products WITHIN one repo, but every repo stamped from this platform starts numbering at the
+// same bases — so two org-repos on one machine collide the moment both run stacks. A repo gets
+// its own bases via scripts/set-port-base.mjs, and this generator honours them ever after.
+// Default repo, template (i=0): api 8000, supabase 54321..; demo (i=1): api 8010, supabase 54421..
+export const DEFAULT_PORT_BASES = { api: 8000, supabase: 54321 };
+
+/** This repo's port bases: root platform.json when present, else the platform defaults. */
+export function portBases(root = ROOT) {
+  const f = join(root, "platform.json");
+  if (!existsSync(f)) return { ...DEFAULT_PORT_BASES };
+  const cfg = JSON.parse(readFileSync(f, "utf8"));
+  return {
+    api: cfg?.ports?.api ?? DEFAULT_PORT_BASES.api,
+    supabase: cfg?.ports?.supabase ?? DEFAULT_PORT_BASES.supabase,
+  };
+}
+
+/** The concrete ports a given portIndex resolves to under a repo's bases. */
+export function portPlan(i, bases = DEFAULT_PORT_BASES) {
+  return {
+    apiPort: bases.api + 10 * i,
+    sbBase: bases.supabase + 100 * i,
+    sbDelta: 100 * i,
+    // The template's whole supabase block (e.g. 54300-54399): api/db/studio/smtp/pooler/
+    // analytics all live inside one hundred, so the shift matches the WINDOW numerically
+    // rather than a hardcoded digit pattern — a rebased repo's block is not 543xx.
+    sbWindow: Math.floor(bases.supabase / 100) * 100,
+  };
+}
+
+/** Shift every port inside one hundred-window by delta, leaving every other number alone. */
+export function shiftSupabaseBlock(text, window, delta) {
+  if (delta === 0) return text;
+  return text.replace(/\b(\d{4,5})\b/g, (m) => {
+    const n = Number(m);
+    return n >= window && n < window + 100 ? String(n + delta) : m;
+  });
+}
+
+function applyPorts(dest, i, bases = portBases()) {
+  const { apiPort, sbBase, sbDelta, sbWindow } = portPlan(i, bases);
 
   // (a) supabase/config.toml — shift every default 543xx port by sbDelta, plus the
   //     edge-runtime `inspector_port` (8083 — OUTSIDE the 543xx block; without an offset
@@ -206,9 +243,7 @@ function applyPorts(dest, i) {
   //     8083+10i never collides with API ports 8000+10j (83 is not a multiple of 10).
   const cfg = join(dest, "supabase", "config.toml");
   if (existsSync(cfg)) {
-    let toml = readFileSync(cfg, "utf8").replace(/\b(543\d\d)\b/g, (m) =>
-      String(Number(m) + sbDelta),
-    );
+    let toml = shiftSupabaseBlock(readFileSync(cfg, "utf8"), sbWindow, sbDelta);
     toml = toml.replace(/^(inspector_port = )(\d+)$/m, (_, k, p) => k + String(Number(p) + 10 * i));
     writeFileSync(cfg, toml);
   }
@@ -218,7 +253,10 @@ function applyPorts(dest, i) {
   if (existsSync(apiPkg)) {
     writeFileSync(
       apiPkg,
-      readFileSync(apiPkg, "utf8").replace(/--port\s+8000\b/g, `--port ${apiPort}`),
+      readFileSync(apiPkg, "utf8").replace(
+        new RegExp(`--port\\s+${bases.api}\\b`, "g"),
+        `--port ${apiPort}`,
+      ),
     );
   }
 
@@ -229,8 +267,9 @@ function applyPorts(dest, i) {
     const f = join(dest, "app", `.env.${env}`);
     if (!existsSync(f)) continue;
     let txt = readFileSync(f, "utf8");
-    txt = txt.replace(/(localhost|127\.0\.0\.1):8000\b/g, `$1:${apiPort}`); // API url
-    txt = txt.replace(/(localhost|127\.0\.0\.1):54321\b/g, `$1:${sbBase}`); // supabase url
+    const host = "(localhost|127\\.0\\.0\\.1)";
+    txt = txt.replace(new RegExp(`${host}:${bases.api}\\b`, "g"), `$1:${apiPort}`); // API url
+    txt = txt.replace(new RegExp(`${host}:${bases.supabase}\\b`, "g"), `$1:${sbBase}`); // supabase url
     writeFileSync(f, txt);
   }
 
@@ -243,9 +282,7 @@ function applyPorts(dest, i) {
   for (const rel of [".env.example", "README.md"]) {
     const f = join(dest, rel);
     if (!existsSync(f)) continue;
-    let txt = readFileSync(f, "utf8");
-    txt = txt.replace(/\b(543\d\d)\b/g, (m) => String(Number(m) + sbDelta));
-    writeFileSync(f, txt);
+    writeFileSync(f, shiftSupabaseBlock(readFileSync(f, "utf8"), sbWindow, sbDelta));
   }
 }
 
