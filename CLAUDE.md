@@ -71,7 +71,8 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
 - Local API tests need NO env. `tests/__init__.py` targets CI's `:5432` service container
   when `CI` is set, else THAT product's own stack — reading `db.port` from its
   `supabase/config.toml` rather than re-deriving `54322+100i` — and auto-creates a
-  per-product `<module>_api_test` database on it, so
+  per-product `<module>_api_test` database on it (rebuilding its schema per session —
+  drop_all + create_all, so a migration can never leave the test DB stale), so
   `pnpm turbo run test` and `uv run pytest` both just work with the stack up. Never
   default to a bare `:5432` locally: it is either nothing or a FOREIGN Postgres, and the
   suite passes green against the wrong database. `TEST_DATABASE_URL` still overrides
