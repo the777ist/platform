@@ -233,7 +233,7 @@ pnpm run format:check                                         # prettier gate (`
 
 Root (product arg unless noted): `/new-product <name>` · `/remove-product <name>` ·
 `/affected` ·
-`/typegen <product>` · `/release <product> <surface>` — plus the shared-`packages/ui`
+`/typegen <product>` · `/release <product> <surface>` · `/devbox <up|ssh|down|status|deploy>` — plus the shared-`packages/ui`
 trio (no product arg): `/add-component <name>` · `/sync-tokens` ·
 `/bootstrap-design-system`.
 Product-scoped (open a session in `products/<name>/`): `/dev` · `/typegen` · `/migrate` ·

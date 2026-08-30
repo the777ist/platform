@@ -129,6 +129,7 @@ packages/
   ui/                   # @platform/ui — owned design system (shadcn model)
   core/                 # @platform/core — supabase client, auth, query client, env
   config/               # @platform/config — shared tsconfig/eslint/tailwind presets
+devbox/                 # Fly.io persistent cloud workstation (one machine+volume per seat)
 products/
   _template/            # the starter stamped by `new-product`
   <name>/
@@ -213,6 +214,14 @@ Connected-but-unauthenticated counts as absent: Figma and Supabase in particular
 
 Deploy surfaces: **Fly.io** (API) · **Vercel** (web) · **EAS** (mobile) · **GitHub Releases**
 (desktop).
+
+### Cloud dev workstation (`devbox/`)
+
+A persistent Claude Code workstation on Fly.io — one machine + one volume per seat; start it,
+work over `fly ssh console` + tmux, stop it, and resume the SAME box later (Claude/gh/MCP
+auth, clones and caches all persist on the volume). Org-parameterized like all infra here
+(`example-devbox` placeholder; the wrapper refuses to run until it's swapped). Lifecycle:
+`node scripts/devbox.mjs create|up|ssh|down|deploy`. Full runbook: [`devbox/README.md`](devbox/README.md).
 
 ### Development workflow — the `ptfm-*` pipeline
 
