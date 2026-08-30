@@ -9,15 +9,48 @@
 // back — git status byte-identical. The pure functions here are what that flow rode on.
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { DEFAULT_PORT_BASES, portBases, portPlan, shiftSupabaseBlock } from "../new-product.mjs";
 import { basesProblem, rebaseProduct, allProducts } from "../set-port-base.mjs";
 
-test("the default bases are the documented ones, and this repo currently uses them", () => {
+test("the default bases are the documented ones", () => {
   assert.deepEqual(DEFAULT_PORT_BASES, { api: 8000, supabase: 54321 });
-  // platform.json is committed with the defaults; a drifted value here means someone rebased
-  // the platform repo itself, which its docs (and CI expectations) do not describe.
-  assert.deepEqual(portBases(), DEFAULT_PORT_BASES);
+});
+
+test("portBases resolves platform.json when present, defaults when absent or partial", () => {
+  // Fixture dirs, NOT the live repo: this file is inherited by every stamped org-repo, and an
+  // org repo that ran set-port-base has a platform.json that legitimately differs from the
+  // defaults. The first version asserted live == defaults and would have failed the pre-push
+  // gate of the FIRST repo to actually use the feature — a guard against the feature working.
+  const root = mkdtempSync(join(tmpdir(), "port-bases-"));
+  try {
+    assert.deepEqual(portBases(root), DEFAULT_PORT_BASES, "absent file -> defaults");
+    writeFileSync(
+      join(root, "platform.json"),
+      JSON.stringify({ ports: { api: 8200, supabase: 56321 } }),
+    );
+    assert.deepEqual(portBases(root), { api: 8200, supabase: 56321 }, "present -> its values");
+    writeFileSync(join(root, "platform.json"), JSON.stringify({ ports: { api: 8200 } }));
+    assert.deepEqual(
+      portBases(root),
+      { api: 8200, supabase: 54321 },
+      "partial -> per-key fallback",
+    );
+    writeFileSync(join(root, "platform.json"), JSON.stringify({}));
+    assert.deepEqual(portBases(root), DEFAULT_PORT_BASES, "empty object -> defaults");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the LIVE repo's bases are valid — whatever they are", () => {
+  // Rebased or not, the committed platform.json must pass the same guardrails set-port-base
+  // enforces on input; a hand-edit that breaks the offset conventions fails here.
+  const live = portBases();
+  assert.equal(basesProblem(live.supabase, live.api), null, JSON.stringify(live));
 });
 
 test("portPlan keeps the documented per-index offsets under ANY base", () => {
