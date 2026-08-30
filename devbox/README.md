@@ -30,9 +30,12 @@ deploy target (no CI workflow; `deploy` here means "refresh the workstation imag
 ## Org activation (once per repo clone)
 
 1. Edit `devbox/fly.toml`: swap the `example-devbox` placeholder for `<org>-devbox`
-   (PHILOSOPHY naming; `scripts/devbox.mjs` refuses to run until you do). **Caveat:** unlike
-   product fly apps, no repo guard checks this name — Fly app names are globally unique, so
-   `create` fails on a collision; pick another.
+   (PHILOSOPHY naming; `scripts/devbox.mjs` refuses to run until you do). In the same edit,
+   update the first test in `scripts/__tests__/devbox.test.mjs` to expect YOUR app name —
+   in the template it pins the placeholder (template discipline), and in your clone it
+   becomes the org-baked pin; leaving it unchanged fails your first pre-push. **Caveat:**
+   unlike product fly apps, no repo guard checks this name — Fly app names are globally
+   unique, so `create` fails on a collision; pick another.
 2. ```bash
    node scripts/devbox.mjs create --org <fly-org-slug>
    ```
