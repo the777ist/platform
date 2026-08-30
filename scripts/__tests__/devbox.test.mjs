@@ -13,6 +13,11 @@ test("the committed fly.toml still carries the org placeholder", () => {
   // Template discipline: if someone swaps the committed name for a real org, the template
   // stops being portable and the PHILOSOPHY naming audit (`git grep example`) loses this
   // swap-point. The real name belongs in each clone, never here.
+  //
+  // IN AN ACTIVATED CLONE this test is SUPPOSED to change: org activation
+  // (devbox/README.md) swaps the placeholder AND updates this expectation to the clone's
+  // own <org>-devbox name — the template-discipline pin becomes that org's baked-name pin.
+  // If this just failed your first push after activation, that is the missing edit.
   assert.equal(readFlyConfig().app, PLACEHOLDER);
 });
 
