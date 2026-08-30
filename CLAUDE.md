@@ -60,7 +60,14 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
 - `SUPABASE_SERVICE_ROLE_KEY` / JWT secrets are NEVER `EXPO_PUBLIC_*` and never
   committed; committed `app/.env.*` files carry publishable values only.
 - Local stacks coexist by portIndex (`product.json`): API `8000+10i`,
-  Supabase block `54321+100i`. `pnpm bootstrap` starts every product's stack.
+  Supabase block `54321+100i` — where 8000/54321 are this repo's PORT BASES (root
+  `platform.json`; defaults shown). portIndex only de-conflicts WITHIN a repo: every repo
+  stamped from this platform starts at the same bases, so two org-repos on one machine
+  collide the moment both run stacks. `node scripts/set-port-base.mjs 56321 8200` rebases a
+  whole repo (products, `_template` included, docs, and the bases the generator uses ever
+  after); re-running with the old bases round-trips byte-identically. After a rebase, restart
+  stacks and re-copy each api/.env (gitignored — still carries the old ports).
+  `pnpm bootstrap` starts every product's stack.
 - A stamped stack starts EMPTY and `api/.env` is never generated: copy the product's
   `.env.example` (ports pre-offset per product), paste the `supabase status` service_role
   key, then `alembic upgrade head` + `python -m <name>_api.seed` from `api/`. A blank
@@ -71,7 +78,8 @@ Agent context for the whole repo. Deep rationale lives in [PHILOSOPHY.md](PHILOS
 - Local API tests need NO env. `tests/__init__.py` targets CI's `:5432` service container
   when `CI` is set, else THAT product's own stack — reading `db.port` from its
   `supabase/config.toml` rather than re-deriving `54322+100i` — and auto-creates a
-  per-product `<module>_api_test` database on it, so
+  per-product `<module>_api_test` database on it (rebuilding its schema per session —
+  drop_all + create_all, so a migration can never leave the test DB stale), so
   `pnpm turbo run test` and `uv run pytest` both just work with the stack up. Never
   default to a bare `:5432` locally: it is either nothing or a FOREIGN Postgres, and the
   suite passes green against the wrong database. `TEST_DATABASE_URL` still overrides

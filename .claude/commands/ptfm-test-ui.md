@@ -243,6 +243,7 @@ What `/ptfm-test-ui` does NOT mean here:
 ## Available MCPs / CLIs (use as needed)
 
 - **Playwright** (`mcp__playwright__*`) — **primary tool for this command.** Every test case in the plan gets driven through `browser_navigate`, `browser_click`, `browser_type`, `browser_fill_form`, `browser_snapshot`, `browser_take_screenshot`, `browser_console_messages`, `browser_network_requests`, etc., against the product's Expo web dev server.
+- **Fallback driver** — if the Playwright MCP is down or not connected, the **Chrome DevTools MCP** (`mcp__chrome-devtools__*`) or the Claude-in-Chrome tools (`mcp__claude-in-chrome__*`) drive the same journeys (navigate / click / fill / snapshot / console / network); the playbook, cleanup and reporting contracts are IDENTICAL — substitute the driver, never skip the coverage.
 - **Supabase** (`mcp__Supabase__*`) — **read-only** inspection of records to verify state after a UI action (`list_tables`, `list_migrations`, `execute_sql` for read-only schema/row checks) — e.g. confirm a `browser_click` actually persisted the row. NEVER mutate data outside the feature's own delete flow during cleanup; migrations go via **Alembic**, never `apply_migration` — use the MCP only to introspect.
 - **Linear** (`mcp__Linear__*`) — re-read the ticket for context on what's in / out of scope.
 - **Figma** (`mcp__Figma__*`) — corroborate a UI surface against its Figma component / token mode (light/dark × brand) when a fix touches the design surface; never hand-name a colour.

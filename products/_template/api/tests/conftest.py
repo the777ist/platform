@@ -41,6 +41,16 @@ def engine() -> Engine:
     # poolclass/connect_args here meant the suite ran against a configuration that merely
     # happened to match production's — see tests/test_db_engine.py.
     eng = _make_engine(TEST_DB_URL)
+    # drop_all FIRST: create_all skips tables that already exist and never ALTERs, so the
+    # test database silently kept whatever schema the suite's FIRST-EVER run built. The first
+    # migration after that, every test touching the changed table failed with UndefinedColumn
+    # until someone hand-ran DROP DATABASE <module>_api_test — reproduced by dropping a column
+    # from the test DB and watching 8 tests fail with no way for the suite to heal itself.
+    # The test database is DISPOSABLE by contract (per-test savepoints already roll back all
+    # data; TEST_DATABASE_URL must never point at a database anyone cares about — the suite
+    # writes to it regardless), so rebuilding the schema per session costs milliseconds and
+    # removes the whole failure class.
+    SQLModel.metadata.drop_all(eng)
     SQLModel.metadata.create_all(
         eng
     )  # tests build the schema directly (no RLS needed in test role)

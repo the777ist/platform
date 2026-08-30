@@ -133,6 +133,19 @@ function die(msg) {
   process.exit(1);
 }
 
+/**
+ * A deletion error that means "another process holds a file", not "this script is broken".
+ *
+ * On Windows a live uvicorn --reload orphan (the reloader respawns workers, sometimes past the
+ * parent's death), an editor, or a terminal cd'd into the product keeps files locked; rmSync
+ * then throws EPERM/EBUSY and the raw stack trace used to land mid-run — after the stack was
+ * stopped but before the tokens.config.json / lockfile cleanup — leaving a half-removed
+ * product with no hint that simply re-running would finish the job.
+ */
+export function isFileLockError(error) {
+  return ["EPERM", "EBUSY", "ENOTEMPTY", "EACCES"].includes(error?.code);
+}
+
 // ---- main ---------------------------------------------------------------------------------
 async function main() {
   const { name, dest, yes } = parseArgs();
@@ -142,7 +155,19 @@ async function main() {
   stopSupabase(name, dest); // Step 2 — must precede the delete
 
   console.log(`→ deleting products/${name}`);
-  rmSync(dest, { recursive: true, force: true }); // Step 3
+  try {
+    rmSync(dest, { recursive: true, force: true }); // Step 3
+  } catch (error) {
+    if (!isFileLockError(error)) throw error;
+    // Every step is idempotent (stop no-ops, rmSync --force tolerates the partial delete,
+    // the brand-mode removal is guarded), so the recovery really is just "re-run".
+    die(
+      `something still holds files under products/${name} (${error.code} on ${error.path ?? "a file"}).\n` +
+        `  Stop anything using it — dev servers (uvicorn/Metro, incl. --reload orphans), editors,\n` +
+        `  terminals cd'd inside — then re-run: pnpm remove-product ${name} --yes\n` +
+        `  (the local Supabase stack is already stopped; re-running completes the remaining steps)`,
+    );
+  }
 
   removeFigmaMode(name); // Step 4
 

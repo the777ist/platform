@@ -206,6 +206,11 @@ Root level:
     the org `<repo>` is baked in — create its infra accounts on infra day."
   - the Multi-product stack bullet's `infra naming <org>-<product>-<env>` gains
     "(org `<repo>`)"
+  - the Workflows section's closing sentence (the `electron-release.yml` paragraph):
+    "All repo-specific values are clearly-marked placeholders until the real repo/org
+    exists." → "All repo-specific values carry the org `<repo>`; remaining `TODO`
+    placeholders are filled on infra day." **Missed by the octavia run's enumeration —
+    caught only in its residual audit; listed here so the next rename gets it in layer 2b.**
   - key ruling #3: "`<org>/<product>-desktop-releases` repo (placeholder until real
     org/repo exists)" → "`<repo>/<product>-desktop-releases` repo (created on infra day)"
   - verification item #5: the audit itself narrows from `git grep -inE 'example|TODO'` to
@@ -275,6 +280,26 @@ from the repo, but the PRODUCT segment still always derives from the product nam
 The generator is scope-agnostic (it rewrites the product token INSIDE package names), so
 stamps come out `@<repo>/<name>-app` automatically — proven by the first post-rename stamp
 (`stream` → `@the777incident/stream-app`, `the777incident-stream-api-stg`, clean sweep).
+
+## Layer 4 — port base (multi-repo coexistence on one machine)
+
+Not an identity concern, but the same moment: every repo stamped from this platform starts
+its local ports at the same bases (api 8000, supabase 54321), so the renamed repo's stacks
+collide with the platform repo's (and every sibling org-repo's) whenever two run at once —
+hit live between this repo and an org clone (`octavia-demo` held 54422; demo could not start).
+
+Pick an unused pair (keep the conventions: supabase base ends in 21, api base ends in 0,
+≥1000 apart) and rebase the whole repo in one command:
+
+```bash
+node scripts/set-port-base.mjs 56321 8200   # example: repo B; give each sibling its own pair
+```
+
+It rewrites every product (`_template` included — it runs as portIndex 0), the stamped docs'
+formula text, and root `platform.json` (which the generator reads for every future stamp).
+Review the diff, run the gate, commit. Then restart any running stacks and re-copy each
+product's gitignored `api/.env` from its `.env.example` (the old ports are baked in there).
+Re-running with the original bases round-trips to a byte-identical tree.
 
 ## The keep-list — strings a blind replace corrupts (verified every one)
 
