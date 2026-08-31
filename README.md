@@ -240,6 +240,10 @@ its first argument** and writes its artifact under that product's own docs tree
   cascade. `review` and `test-ui` run last so they assess the final shipped shape.
 - When the optional head runs, each artifact binds the next (product brief → architecture →
   per-phase plan).
+- **`/ptfm-pipeline-run <product> <ticket>`** automates the execution half end-to-end as a
+  checkpointed orchestrator — a fresh subagent per stage with its full instructions, every
+  human gate halts with a terminal question + push notification, and re-running the same
+  command resumes any run from wherever the artifacts say it stopped.
 
 These commands are distinct from the thin `pnpm`/`turbo` wrappers — they encode the project's
 invariants as executable flows.

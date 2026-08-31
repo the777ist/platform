@@ -4,7 +4,7 @@ from sqlmodel import col, select
 
 from ..errors import ProblemException
 from ..models import Item
-from ..pagination import Page, clamp_limit, decode_cursor, encode_cursor
+from ..pagination import Page, clamp_limit, decode_cursor_id, encode_cursor
 from ..schemas.item import ItemCreate, ItemRead, ItemUpdate
 from .base import BaseService
 from .realtime import broadcast_invalidate
@@ -13,12 +13,14 @@ from .realtime import broadcast_invalidate
 class ItemService(BaseService):
     def list(self, *, owner_id: str, cursor: str | None, limit: int) -> Page[ItemRead]:
         limit = clamp_limit(limit)
-        after = decode_cursor(cursor)
+        # decode_cursor_id, not decode_cursor: a crafted cursor must degrade to page one, and
+        # UUID() at this call site turned one query param into an unhandled 500.
+        after = decode_cursor_id(cursor)
         # col() gives the typed column expression (a bare Item.id types as UUID under
         # pyright strict — SQLModel's documented helper for exactly this).
         stmt = select(Item).where(Item.owner_id == owner_id).order_by(col(Item.id))
         if after is not None:
-            stmt = stmt.where(col(Item.id) > UUID(after))
+            stmt = stmt.where(col(Item.id) > after)
         rows = self.session.exec(stmt.limit(limit + 1)).all()
         has_more = len(rows) > limit
         page = rows[:limit]

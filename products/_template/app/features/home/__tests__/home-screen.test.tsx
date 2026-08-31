@@ -69,6 +69,44 @@ describe("HomeScreen states", () => {
     expect(refetch).toHaveBeenCalled();
   });
 
+  it("retry is a real BUTTON, so web/desktop keyboard users can reach it", async () => {
+    const refetch = jest.fn();
+    query({ isError: true, error: new Error("boom"), refetch, data: undefined });
+    await render(<HomeScreen />);
+
+    // react-native-web's Text attaches only onClick for onPress — no tabIndex, no role — so
+    // a bare <Text onPress> is unreachable by Tab and unannounced as a control. RefreshControl
+    // is inert on web, which makes this the ONLY in-app recovery affordance there: as a Text,
+    // a keyboard-only or screen-reader user has no way out of the error state at all.
+    // Pressable (what Button composes) sets tabIndex = disabled ? -1 : 0.
+    const retry = screen.getByRole("button", { name: "Tap to retry" });
+    await fireEvent.press(retry);
+
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it("surfaces the problem+json title and NEVER a raw stringified error", async () => {
+    // The generated client is configured throwOnError, and it throws the PARSED problem+json
+    // body — a plain object. String(error) on that renders the literal "[object Object]" in
+    // front of the user, which is both useless and a breach of the never-raw-error rule.
+    query({ isError: true, error: { title: "Item not found", status: 404 }, data: undefined });
+    await render(<HomeScreen />);
+
+    expect(screen.getByText("Couldn’t load items")).toBeOnTheScreen();
+    expect(screen.getByText("Item not found")).toBeOnTheScreen();
+    expect(screen.queryByText("[object Object]")).toBeNull();
+  });
+
+  it("shows ONLY the fixed copy when the failure is not problem+json", async () => {
+    // Offline / DNS / CORS throw a real Error, whose stringification leaks an internal
+    // ("TypeError: Failed to fetch") that means nothing to a user.
+    query({ isError: true, error: new Error("network down"), data: undefined });
+    await render(<HomeScreen />);
+
+    expect(screen.getByText("Couldn’t load items")).toBeOnTheScreen();
+    expect(screen.queryByText(/network down/)).toBeNull();
+  });
+
   it("shows the empty state rather than a blank screen", async () => {
     query({ data: { pages: [{ items: [], next_cursor: null }] } });
     await render(<HomeScreen />);
@@ -134,6 +172,83 @@ describe("AddItemRow", () => {
     const options = mockUseMutation.mock.calls[0]![0] as { onSuccess?: () => void };
     options.onSuccess?.();
 
-    expect(mockInvalidate).toHaveBeenCalledWith({ queryKey: [{ _id: "listItems" }] });
+    // The KEY is what makes the new item appear; `refetchType: "active"` (asserted separately
+    // below) is what stops it refetching every unmounted page too. Matching the key alone keeps
+    // this test about the local-invalidate contract rather than re-pinning the fan-out fix.
+    expect(mockInvalidate).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: [{ _id: "listItems" }] }),
+    );
+  });
+});
+
+describe("create failures are visible (never silent)", () => {
+  // The create mutation had onSuccess and NO onError anywhere in the app. A rejected create —
+  // now a correct 422 problem+json since the DTO gained length bounds — left the user staring
+  // at an unchanged screen after tapping Add. Making an error CORRECT without making it VISIBLE
+  // is the worse of the two bugs: the input silently does nothing and the title stays put.
+  it("surfaces the problem+json title when the create is rejected", async () => {
+    query();
+    mockUseMutation.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+      isError: true,
+      error: { title: "String should have at most 200 characters" },
+    } as never);
+    await render(<HomeScreen />);
+
+    expect(screen.getByText("String should have at most 200 characters")).toBeOnTheScreen();
+  });
+
+  it("falls back to fixed copy when the rejection is not problem+json shaped", async () => {
+    // A transport failure throws a TypeError, not a problem body — the user still needs to be
+    // told the tap failed, and must never be shown the raw internal.
+    query();
+    mockUseMutation.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+      isError: true,
+      error: new TypeError("Failed to fetch"),
+    } as never);
+    await render(<HomeScreen />);
+
+    expect(screen.getByText("Couldn’t add item")).toBeOnTheScreen();
+    expect(screen.queryByText(/Failed to fetch/)).toBeNull();
+    expect(screen.queryByText(/TypeError/)).toBeNull();
+  });
+
+  it("shows no error banner on the happy path", async () => {
+    // Non-vacuity: the two assertions above would pass against a component that ALWAYS renders
+    // the banner. This pins that it is conditional on the mutation actually failing.
+    query();
+    mockUseMutation.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+      isError: false,
+    } as never);
+    await render(<HomeScreen />);
+
+    expect(screen.queryByText("Couldn’t add item")).toBeNull();
+  });
+});
+
+describe("invalidation is scoped to mounted lists", () => {
+  it("invalidates with refetchType 'active' — not every cached page in the app", async () => {
+    // Measured live during the TST-1 UI pass: 24 creates produced 48 list refetches in ONE tab,
+    // because a bare invalidateQueries refetches every cached page of every list whether or not
+    // it is mounted. `refetchType: "active"` marks the rest stale and lets them refetch when
+    // something actually mounts them. The fan-out multiplies by list count AND connected client.
+    query();
+    mockUseMutation.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+      isError: false,
+    } as never);
+    await render(<HomeScreen />);
+
+    // Drive the real onSuccess the component handed to useMutation.
+    const options = mockUseMutation.mock.calls.at(-1)![0] as { onSuccess?: () => void };
+    options.onSuccess?.();
+
+    expect(mockInvalidate).toHaveBeenCalledWith(expect.objectContaining({ refetchType: "active" }));
   });
 });

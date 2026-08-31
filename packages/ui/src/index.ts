@@ -9,5 +9,5 @@ export { Badge, badgeVariants, badgeTextVariants, type BadgeProps } from "./comp
 export { Input, type InputProps } from "./components/ui/input";
 export { Card, CardTitle, CardContent } from "./components/ui/card";
 export { cn } from "./lib/utils";
-export { themes, type Theme } from "./lib/theme";
+export { themes, themeColors, type Theme } from "./lib/theme";
 export { ThemeProvider } from "./theme-provider";
