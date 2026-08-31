@@ -246,6 +246,13 @@ Products are BUILT through the agentic lifecycle pipeline in `.claude/commands/p
 ptfm-implement → ptfm-audit → ptfm-simplify → ptfm-commonify → ptfm-review → ptfm-test-ui`.
 Each takes the product name first and writes artifacts to
 `products/<product>/docs/{product,architecture,plans,implementation,reviews}/`.
+`/ptfm-pipeline-run <product> <ticket>` automates the EXECUTION half (plan → test-ui) as a
+CHECKPOINTED orchestrator: one fresh subagent per stage carrying that stage's full command
+text verbatim, every human gate halting with a terminal question + push notification,
+advancement only past a verified floor, and any dead/abandoned run resumed by re-running the
+same command — position is re-derived from the artifacts (`scripts/ptfm-stage.mjs`: disk is
+truth; only simplify/commonify advance via the run ledger). One run = one phase ticket;
+product/architect stay human-driven.
 It drives MCP integrations in two tiers (see README "Operational stack"): the committed
 root **`.mcp.json`** ships **Sentry, Fly, Expo/EAS, Vercel, Semgrep, Chrome DevTools**
 with every clone (OAuth ones authenticate via `/mcp`); connect **Linear, Notion, Figma,
