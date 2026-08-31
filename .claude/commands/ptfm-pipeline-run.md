@@ -49,6 +49,20 @@ For each stage from the entry point to `test-ui`, in order:
    > You are running as one stage of a checkpointed pipeline (`/ptfm-pipeline-run`). Execute the stage instructions below exactly, with `$ARGUMENTS` = `[<product> <TICKET-ID> <slug> <primary user instruction>]`. Three overrides, and only these: (1) wherever the instructions say to STOP and ASK the user, do not stall — return a result of `BLOCKED` with the exact question and the minimal context needed to answer it; the orchestrator relays it to the human and will send you the answer to continue with. (2) Ignore the "Next stage" section — the orchestrator owns sequencing; when your deliverables are complete, return `DONE` with a summary and the paths of every artifact you wrote. (3) If you are genuinely unable to finish AFTER exhausting your instructions' persistence ladder, return `FAILED` with what you tried and what you observed. Your final message MUST end with exactly one of `RESULT: DONE`, `RESULT: BLOCKED`, or `RESULT: FAILED` and its payload.
 
 2. **Spawn it as a subagent** (general-purpose; it needs full tools). Record `entered` in the ledger.
+
+   **Model — do NOT pass a `model` override.** Omitting it makes each stage inherit the
+   orchestrator's model, which is the design: the operator picks the capability for a whole run
+   by choosing the model they invoke `/ptfm-pipeline-run` with, and nothing here hardcodes a
+   model name that would rot as models change or suit one org's cost appetite and not another's.
+   These stages do the heaviest work in the repo — TDD implementation cycles, adversarial
+   security review, whole-browser test passes — so they are the LAST place to economise; a run
+   is only as good as the model executing its stages.
+   **The trap:** a configured default-subagent-model (settings' subagent-model setting, or a
+   `model:` in an agent definition's frontmatter) takes precedence over inheritance, so it can
+   silently downgrade every stage — no error, no warning, only output that quietly gets worse.
+   If a clone's config does that, either remove the default or pass an explicit `model` on each
+   spawn so the choice is visible; do not let a stage run on an unknown model.
+
 3. **On `BLOCKED`**: append the question to the ledger (so a dead session still re-surfaces it), print it to the user, and send a push notification (load `PushNotification` via ToolSearch if deferred; one line: which ticket, which stage, the question's first clause). WAIT. Relay the user's answer INTO THE SAME SUBAGENT via SendMessage — it continues with its context intact. A stage may block more than once; loop.
 4. **On `DONE`**: run the TRUST-BUT-VERIFY floor before advancing —
    - the stage's expected artifact physically exists (`node scripts/ptfm-stage.mjs` must no longer name this stage);
