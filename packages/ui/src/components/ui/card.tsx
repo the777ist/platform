@@ -5,12 +5,12 @@ import { Text } from "./text";
 
 export function Card({ className, ...props }: React.ComponentProps<typeof View>) {
   return (
-    <View className={cn("border-border bg-card rounded-lg border p-4", className)} {...props} />
+    <View className={cn("rounded-lg border border-border bg-card p-4", className)} {...props} />
   );
 }
 export function CardTitle({ className, ...props }: React.ComponentProps<typeof Text>) {
   return (
-    <Text className={cn("text-card-foreground text-lg font-semibold", className)} {...props} />
+    <Text className={cn("text-lg font-semibold text-card-foreground", className)} {...props} />
   );
 }
 export function CardContent({ className, ...props }: React.ComponentProps<typeof View>) {

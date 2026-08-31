@@ -23,7 +23,7 @@ export default function TabsLayout() {
 
   if (loading) {
     // hold the splash/loader while the persisted session hydrates — no flicker
-    return <Text className="text-muted-foreground m-auto">Loading…</Text>;
+    return <Text className="m-auto text-muted-foreground">Loading…</Text>;
   }
   // The tab bar is React Navigation CHROME: `className`/NativeWind never reach it, so without
   // explicit colours it renders React Navigation's own light palette — a white bar glued under

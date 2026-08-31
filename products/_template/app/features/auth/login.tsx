@@ -27,9 +27,9 @@ export function LoginScreen() {
   }
 
   return (
-    <View className="bg-background flex-1 items-center justify-center p-6">
+    <View className="flex-1 items-center justify-center bg-background p-6">
       <Card className="w-full max-w-sm gap-4 p-6">
-        <Text className="text-foreground text-2xl font-semibold">Sign in</Text>
+        <Text className="text-2xl font-semibold text-foreground">Sign in</Text>
         <Input
           placeholder="Email"
           autoCapitalize="none"
@@ -42,7 +42,7 @@ export function LoginScreen() {
         <Button onPress={onSubmit} disabled={busy}>
           {busy ? "Signing in…" : "Sign in"}
         </Button>
-        <Link href="/(auth)/signup" className="text-primary text-center">
+        <Link href="/(auth)/signup" className="text-center text-primary">
           No account? Sign up
         </Link>
       </Card>

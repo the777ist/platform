@@ -25,6 +25,9 @@ from template_api.security import (
 )
 from template_api.settings import Settings, get_settings
 
+# 32+ bytes so pyjwt 2.13's InsecureKeyLengthWarning stays quiet; never verified against.
+TEST_KEY = "unit-test-signing-key-32-bytes!!"
+
 
 def _request(headers: dict[str, str] | None = None):
     """A Starlette Request carrying just the headers _rate_key reads."""
@@ -44,23 +47,23 @@ def _request(headers: dict[str, str] | None = None):
 
 class TestRateLimitBucket:
     def test_authenticated_requests_bucket_per_user(self) -> None:
-        token = jwt.encode({"sub": "user-1"}, "irrelevant-secret")
+        token = jwt.encode({"sub": "user-1"}, "irrelevant-but-32-byte-secret!!!")
         assert _rate_key(_request({"Authorization": f"Bearer {token}"})) == "user:user-1"
 
     def test_a_refreshed_token_keeps_the_SAME_bucket(self) -> None:
         # The documented reason this keys on the `sub` claim rather than a slice of the token:
         # a refresh would otherwise hand the same user a brand-new bucket and effectively
         # disable the limit for anyone who refreshes.
-        first = jwt.encode({"sub": "user-1", "exp": 1_900_000_000}, "s")
-        second = jwt.encode({"sub": "user-1", "exp": 1_900_000_999}, "s")
+        first = jwt.encode({"sub": "user-1", "exp": 1_900_000_000}, TEST_KEY)
+        second = jwt.encode({"sub": "user-1", "exp": 1_900_000_999}, TEST_KEY)
         assert first != second
         assert _rate_key(_request({"Authorization": f"Bearer {first}"})) == _rate_key(
             _request({"Authorization": f"Bearer {second}"})
         )
 
     def test_different_users_get_different_buckets(self) -> None:
-        a = jwt.encode({"sub": "user-a"}, "s")
-        b = jwt.encode({"sub": "user-b"}, "s")
+        a = jwt.encode({"sub": "user-a"}, TEST_KEY)
+        b = jwt.encode({"sub": "user-b"}, TEST_KEY)
         assert _rate_key(_request({"Authorization": f"Bearer {a}"})) != _rate_key(
             _request({"Authorization": f"Bearer {b}"})
         )
@@ -81,7 +84,7 @@ class TestRateLimitBucket:
         assert _rate_key(_request({"Authorization": header})).startswith("ip:")
 
     def test_a_token_without_sub_falls_back_to_ip(self) -> None:
-        token = jwt.encode({"role": "anon"}, "s")
+        token = jwt.encode({"role": "anon"}, TEST_KEY)
         assert _rate_key(_request({"Authorization": f"Bearer {token}"})).startswith("ip:")
 
 
@@ -197,8 +200,8 @@ class TestTheLimiterActuallyLimits:
         # _rate_key's bucketing asserted through the LIMITER rather than by calling it directly:
         # one user exhausting the limit must not lock out everybody else, which is what a
         # key_func wired up incorrectly would do.
-        spent = jwt.encode({"sub": "heavy-user"}, "s")
-        fresh = jwt.encode({"sub": "light-user"}, "s")
+        spent = jwt.encode({"sub": "heavy-user"}, TEST_KEY)
+        fresh = jwt.encode({"sub": "light-user"}, TEST_KEY)
         for _ in range(4):
             strict_client.get("/v1/hello", headers={"Authorization": f"Bearer {spent}"})
 

@@ -8,7 +8,7 @@ export function ThemeProvider({ theme, children }: { theme: Theme; children: Rea
     colorScheme.set(theme); // toggles the `.dark` class on web
   }, [theme]);
   return (
-    <View style={themes[theme]} className="bg-background flex-1">
+    <View style={themes[theme]} className="flex-1 bg-background">
       {children}
     </View>
   );
