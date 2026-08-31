@@ -48,4 +48,52 @@ export const themes = {
   }),
 } as const;
 
+// The same tokens as CSS colour strings, for non-NativeWind consumers (navigator chrome).
+export const themeColors = {
+  light: {
+    "--background": "hsl(0 0% 100%)",
+    "--foreground": "hsl(240 10% 4%)",
+    "--card": "hsl(0 0% 100%)",
+    "--card-foreground": "hsl(240 10% 4%)",
+    "--popover": "hsl(0 0% 100%)",
+    "--popover-foreground": "hsl(240 10% 4%)",
+    "--primary": "hsl(240 6% 10%)",
+    "--primary-foreground": "hsl(0 0% 98%)",
+    "--secondary": "hsl(240 5% 96%)",
+    "--secondary-foreground": "hsl(240 6% 10%)",
+    "--muted": "hsl(240 5% 96%)",
+    "--muted-foreground": "hsl(240 4% 46%)",
+    "--accent": "hsl(240 5% 96%)",
+    "--accent-foreground": "hsl(240 6% 10%)",
+    "--destructive": "hsl(0 84% 60%)",
+    "--destructive-foreground": "hsl(0 0% 98%)",
+    "--border": "hsl(240 6% 90%)",
+    "--input": "hsl(240 6% 90%)",
+    "--ring": "hsl(240 5% 65%)",
+    "--radius": "hsl(8px)",
+  },
+  dark: {
+    "--background": "hsl(240 10% 4%)",
+    "--foreground": "hsl(0 0% 98%)",
+    "--card": "hsl(240 10% 4%)",
+    "--card-foreground": "hsl(0 0% 98%)",
+    "--popover": "hsl(240 10% 4%)",
+    "--popover-foreground": "hsl(0 0% 98%)",
+    "--primary": "hsl(0 0% 98%)",
+    "--primary-foreground": "hsl(240 6% 10%)",
+    "--secondary": "hsl(240 4% 16%)",
+    "--secondary-foreground": "hsl(0 0% 98%)",
+    "--muted": "hsl(240 4% 16%)",
+    "--muted-foreground": "hsl(240 5% 65%)",
+    "--accent": "hsl(240 4% 16%)",
+    "--accent-foreground": "hsl(0 0% 98%)",
+    "--destructive": "hsl(0 63% 31%)",
+    "--destructive-foreground": "hsl(0 0% 98%)",
+    "--border": "hsl(240 4% 16%)",
+    "--input": "hsl(240 4% 16%)",
+    "--ring": "hsl(240 5% 84%)",
+    "--radius": "hsl(8px)",
+  },
+} as const;
+
 export type Theme = keyof typeof themes;

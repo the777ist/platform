@@ -9,6 +9,8 @@ thing standing between `?limit=1000000` and a full table scan.
 No database needed — these are pure functions.
 """
 
+import base64
+
 import pytest
 
 from demo_api.pagination import (
@@ -17,8 +19,15 @@ from demo_api.pagination import (
     Page,
     clamp_limit,
     decode_cursor,
+    decode_cursor_id,
     encode_cursor,
 )
+
+
+def _b64(raw: str) -> str:
+    """A cursor an attacker can hand-craft: any bytes, base64'd. Spelled out rather than
+    pasted as an opaque literal so the payload under test is readable."""
+    return base64.urlsafe_b64encode(raw.encode()).decode()
 
 
 class TestCursorRoundTrip:
@@ -49,11 +58,65 @@ class TestDecodeIsTotal:
             "YWJj",  # valid base64, not JSON
             "eyJ4IjoxfQ==",  # valid JSON, missing the "after" key
             "e30=",  # empty JSON object
+            # --- valid base64 carrying valid JSON that is NOT an object -----------------
+            # `json.loads(...)["after"]` subscripts whatever it got. Only `dict` and `str`
+            # raise KeyError/TypeError-free; every one of these raises TypeError, which the
+            # `except (ValueError, KeyError)` above does NOT catch — so the "decode is total"
+            # promise in this class's own name was false for a whole family of inputs.
+            _b64("null"),  # None["after"]      -> TypeError
+            _b64("[]"),  # [] ["after"]         -> TypeError
+            _b64('["a"]'),  # list              -> TypeError
+            _b64('"a string"'),  # str          -> TypeError
+            _b64("5"),  # int                   -> TypeError
+            _b64("true"),  # bool               -> TypeError
+            # --- valid object, but "after" is not a string ------------------------------
+            # These do not raise here, they return a non-str the caller then feeds to
+            # UUID(), which blows up one layer further out. A total decode returns None.
+            _b64('{"after": 1}'),
+            _b64('{"after": null}'),
+            _b64('{"after": {"nested": 1}}'),
+            _b64('{"after": ["a"]}'),
         ],
     )
     def test_bad_cursor_means_first_page_not_an_exception(self, value: str | None) -> None:
         # A stale bookmark would otherwise be a 500 rather than simply the first page.
         assert decode_cursor(value) is None
+
+
+class TestDecodeCursorIdIsTotal:
+    """`decode_cursor` returning a str is not enough — the keyset compares UUIDs.
+
+    The service used to write `UUID(decode_cursor(cursor))`, so a cursor carrying a
+    perfectly well-formed JSON object with a non-UUID string sailed through every check in
+    `TestDecodeIsTotal` and raised ValueError inside the query builder instead. That is a
+    plain-text HTTP 500 — not problem+json — from a single query parameter, on every
+    cursor-paginated list in the product. `decode_cursor_id` is the one function services
+    are meant to call, so the totality promise lives where the UUID is actually produced.
+    """
+
+    def test_round_trips_a_real_id(self) -> None:
+        from uuid import UUID
+
+        raw = "01890a5d-ac96-774b-bcce-b302099a8057"
+        assert decode_cursor_id(encode_cursor(raw)) == UUID(raw)
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            None,
+            "",
+            "not-base64!!",
+            _b64("null"),
+            _b64('["a"]'),
+            _b64('{"after": 1}'),
+            _b64('{"after": "zzz"}'),  # a well-formed cursor whose id is not a UUID
+            _b64('{"after": "00000000-0000-0000-0000-00000000000"}'),  # one hex digit short
+        ],
+    )
+    def test_anything_that_is_not_a_uuid_is_first_page_not_an_exception(
+        self, value: str | None
+    ) -> None:
+        assert decode_cursor_id(value) is None
 
 
 class TestClampLimit:

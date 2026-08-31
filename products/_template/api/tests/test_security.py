@@ -10,6 +10,7 @@ No database needed.
 """
 
 from collections.abc import Generator
+from uuid import uuid4
 
 import jwt
 import pytest
@@ -17,7 +18,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from template_api.main import create_app
-from template_api.security import _rate_key, install_security  # pyright: ignore[reportPrivateUsage]
+from template_api.security import (
+    _rate_key,  # pyright: ignore[reportPrivateUsage]
+    install_security,
+    rate_limit_scope,
+)
 from template_api.settings import Settings, get_settings
 
 
@@ -205,6 +210,69 @@ class TestTheLimiterActuallyLimits:
             strict_client.get("/v1/hello", headers={"Authorization": f"Bearer {fresh}"}).status_code
             == 200
         )
+
+    def test_the_limit_is_NOT_evadable_by_varying_an_id_in_the_path(
+        self, strict_client: TestClient
+    ) -> None:
+        """A by-id route must share ONE bucket across ids, or the limit is not a limit.
+
+        The limiter is built with `key_style="url"`, and slowapi scopes the bucket on
+        `request["path"]` — the CONCRETE url, not the route path_format. Without normalising
+        the path first, every `/v1/items/<uuid>` is its own fresh bucket, so a caller who
+        rotates the id is never limited at all. Measured before the fix: 20 requests with
+        rotating ids returned zero 429s, while the same count against a fixed path returned
+        the expected refusals.
+
+        That silently disabled the rate limit on EVERY parameterised route — the same class
+        of quiet failure as the SlowAPIMiddleware bug this middleware exists to work around.
+        The limiter looks installed, returns 429s wherever a test happens to reuse one path,
+        and does nothing on the by-id routes where the expensive work actually lives.
+
+        Unauthenticated on purpose: the middleware runs BEFORE auth, so 401 is the shape of
+        an allowed request here, and the point is that an anonymous caller cannot evade it
+        either.
+        """
+        codes = [strict_client.get(f"/v1/items/{uuid4()}").status_code for _ in range(8)]
+
+        assert codes[:3] == [401, 401, 401], f"the limit fired too early: {codes}"
+        assert codes[3:] == [429] * 5, f"rotating the path id evaded the limit: {codes}"
+
+
+class TestTheRateLimitBucketIsTheRouteNotTheUrl:
+    """The unit half of the test above — what the bucket key actually resolves to.
+
+    Kept separate because the end-to-end test can only prove that SOME normalisation
+    happened; these pin WHICH, so a fix that over-collapses (every path into one global
+    bucket, locking every user out of everything at once) fails here rather than looking
+    like a working rate limiter.
+    """
+
+    def test_an_id_collapses_to_its_route_path_format(self) -> None:
+        app = create_app()
+        assert rate_limit_scope(app, f"/v1/items/{uuid4()}") == "/v1/items/{item_id}"
+
+    def test_two_different_ids_share_one_bucket(self) -> None:
+        app = create_app()
+        assert rate_limit_scope(app, f"/v1/items/{uuid4()}") == rate_limit_scope(
+            app, f"/v1/items/{uuid4()}"
+        )
+
+    @pytest.mark.parametrize("path", ["/v1/items", "/v1/hello", "/v1/me", "/healthz"])
+    def test_a_static_route_is_left_exactly_as_it_is(self, path: str) -> None:
+        # Over-collapsing is the dangerous direction: if these folded together, one user
+        # exhausting /v1/items would also lock everyone out of /healthz.
+        app = create_app()
+        assert rate_limit_scope(app, path) == path
+
+    def test_distinct_routes_keep_distinct_buckets(self) -> None:
+        app = create_app()
+        assert rate_limit_scope(app, f"/v1/items/{uuid4()}") != rate_limit_scope(app, "/v1/items")
+
+    def test_an_unrouted_path_falls_back_to_itself(self) -> None:
+        # A 404 path still needs A bucket — falling back to the raw path keeps the limiter
+        # bounded rather than exempting anything that fails to match.
+        app = create_app()
+        assert rate_limit_scope(app, "/no/such/route") == "/no/such/route"
 
 
 class TestTheConfiguredLimit:

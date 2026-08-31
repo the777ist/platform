@@ -43,6 +43,7 @@ export const ItemCreateSchema = {
     description: {
       anyOf: [
         {
+          maxLength: 2000,
           type: "string",
         },
         {
@@ -52,6 +53,7 @@ export const ItemCreateSchema = {
       title: "Description",
     },
     title: {
+      maxLength: 200,
       title: "Title",
       type: "string",
     },
@@ -108,6 +110,7 @@ export const ItemUpdateSchema = {
     description: {
       anyOf: [
         {
+          maxLength: 2000,
           type: "string",
         },
         {
@@ -119,6 +122,7 @@ export const ItemUpdateSchema = {
     title: {
       anyOf: [
         {
+          maxLength: 200,
           type: "string",
         },
         {
