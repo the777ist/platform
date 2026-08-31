@@ -36,5 +36,16 @@ packages:
   - "products/*/api" # script-shim package.json → uv run (PHILOSOPHY "Package management model")
   - "products/*/api-client" # generated + committed (hey-api)
 
+# eslint-plugin-react-hooks 7.x declares `zod-validation-error@^3.5.0 || ^4.0.0` but imports the
+# `zod-validation-error/v4` subpath, which only EXISTS in the 4.x line — resolving the ^3.5.0 arm
+# (a legal pick) crashes every lint run with ERR_PACKAGE_PATH_NOT_EXPORTED. Scoped to the plugin so
+# @figma/code-connect keeps its own 3.x resolution; drop this when the plugin fixes its range.
+overrides:
+  "eslint-plugin-react-hooks>zod-validation-error": ^4.0.2
+  # CVE-2026-59870 (quadratic CPU in !!omap/merge-key resolution) is fixed in js-yaml 4.3.1, but
+  # @hey-api/json-schema-ref-parser pins =4.2.0 and electron-updater dedupes onto it. Scoped to the
+  # 4.x line so the 3.15.x consumers keep their own (already-patched) resolution.
+  "js-yaml@4": ^4.3.1
+
 patchedDependencies:
-  app-builder-lib@26.15.6: patches/app-builder-lib@26.15.6.patch
+  app-builder-lib@26.15.7: patches/app-builder-lib@26.15.7.patch

@@ -16,10 +16,10 @@ separate web or desktop app** — it's one frontend codebase plus a Python backe
 
 | Layer               | Choice                                                                           |
 | ------------------- | -------------------------------------------------------------------------------- |
-| Framework / runtime | **Expo SDK 56** · React Native 0.85 · React 19.2                                 |
+| Framework / runtime | **Expo SDK 57** · React Native 0.86 · React 19.2                                 |
 | Navigation          | Expo Router                                                                      |
 | Web                 | react-native-web (Expo web export)                                               |
-| Desktop             | **Electron 42** wrapping the web build (electron-builder / -updater)             |
+| Desktop             | **Electron 44** wrapping the web build (electron-builder / -updater)             |
 | Styling             | **NativeWind v4** on Tailwind CSS v3 — semantic tokens, light/dark + brand modes |
 | Components          | `@platform/ui` — owned react-native-reusables primitives (`@rn-primitives/*`)    |
 | Data / state        | **TanStack Query v5** (server) · **Zustand v5** (local)                          |
@@ -36,12 +36,12 @@ separate web or desktop app** — it's one frontend codebase plus a Python backe
 
 **Design & testing**
 
-| Concern       | Choice                                                                                           |
-| ------------- | ------------------------------------------------------------------------------------------------ |
-| Design system | **Storybook 9** (`react-native-web-vite`) · Figma Code Connect + Variables · Style Dictionary v5 |
-| JS tests      | **jest-expo + React Native Testing Library**                                                     |
-| API tests     | **pytest** (real Postgres)                                                                       |
-| E2E / visual  | Playwright (web, nightly) · Maestro (mobile, local) · Storybook VR                               |
+| Concern       | Choice                                                                                            |
+| ------------- | ------------------------------------------------------------------------------------------------- |
+| Design system | **Storybook 10** (`react-native-web-vite`) · Figma Code Connect + Variables · Style Dictionary v5 |
+| JS tests      | **jest-expo + React Native Testing Library**                                                      |
+| API tests     | **pytest** (real Postgres)                                                                        |
+| E2E / visual  | Playwright (web, nightly) · Maestro (mobile, local) · Storybook VR                                |
 
 **Monorepo, CI/CD & hosting**
 

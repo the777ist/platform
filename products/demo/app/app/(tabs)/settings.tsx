@@ -8,7 +8,7 @@ export default function Settings() {
   const { theme, toggle } = useThemeStore();
   const { user } = useSession();
   return (
-    <View className="bg-background flex-1 gap-6 p-4">
+    <View className="flex-1 gap-6 bg-background p-4">
       <View className="gap-4">
         <Text>Theme: {theme}</Text>
         <Button onPress={toggle}>Toggle dark mode</Button>

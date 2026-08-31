@@ -65,7 +65,7 @@ function AddItemRow() {
   const createDetail = create.isError ? problemTitle(create.error) : null;
 
   return (
-    <View className="border-border border-b">
+    <View className="border-b border-border">
       <View className="flex-row items-center gap-2 p-4">
         <Input
           className="flex-1"
@@ -117,7 +117,7 @@ export function HomeScreen() {
 
   if (isPending) {
     return (
-      <View className="bg-background flex-1 items-center justify-center">
+      <View className="flex-1 items-center justify-center bg-background">
         <ActivityIndicator />
       </View>
     );
@@ -126,7 +126,7 @@ export function HomeScreen() {
   if (isError) {
     const detail = problemTitle(error);
     return (
-      <View className="bg-background flex-1 items-center justify-center gap-2 p-6">
+      <View className="flex-1 items-center justify-center gap-2 bg-background p-6">
         {/* RFC 9457 problem+json is typed; surface its title — NEVER String(error). */}
         <Text className="text-destructive">Couldn’t load items</Text>
         {detail ? <Text className="text-muted-foreground">{detail}</Text> : null}
@@ -145,7 +145,7 @@ export function HomeScreen() {
   const items = data.pages.flatMap((page) => page.items);
 
   return (
-    <View className="bg-background flex-1">
+    <View className="flex-1 bg-background">
       <AddItemRow />
       {items.length === 0 ? (
         <View className="flex-1 items-center justify-center p-6">
@@ -157,7 +157,7 @@ export function HomeScreen() {
           keyExtractor={(item) => item.id}
           contentContainerClassName="bg-background"
           renderItem={({ item }) => (
-            <View className="border-border border-b p-4">
+            <View className="border-b border-border p-4">
               <Text className="text-foreground">{item.title}</Text>
             </View>
           )}

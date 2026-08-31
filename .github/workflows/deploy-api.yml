@@ -84,7 +84,7 @@ jobs:
       - uses: actions/checkout@v6
       # Pinned to a release, not @master: this job holds FLY_API_TOKEN, and a moving branch
       # means whatever that branch becomes runs with the deploy credential.
-      - uses: superfly/flyctl-actions/setup-flyctl@v1.4
+      - uses: superfly/flyctl-actions/setup-flyctl@v1.5
       - name: Deploy (staging on main, production on tag)
         working-directory: products/${{ matrix.product == 'template' && '_template' || matrix.product }}/api
         env:

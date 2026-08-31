@@ -21,8 +21,8 @@
   "devDependencies": {
     "@platform/demo-app": "workspace:*",
     "@types/node": "^24.3.0",
-    "electron": "42.4.0",
-    "electron-builder": "26.15.6",
+    "electron": "44.0.0",
+    "electron-builder": "26.15.7",
     "typescript": "5.9.3"
   },
   "dependencies": {

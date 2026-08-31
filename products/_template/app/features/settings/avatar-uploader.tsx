@@ -38,11 +38,11 @@ export function AvatarUploader() {
 
   return (
     <View className="gap-3">
-      <Text className="text-foreground text-lg font-medium">Avatar</Text>
+      <Text className="text-lg font-medium text-foreground">Avatar</Text>
       {url ? (
         <Image source={{ uri: url }} className="h-24 w-24 rounded-full" />
       ) : (
-        <View className="bg-muted h-24 w-24 rounded-full" />
+        <View className="h-24 w-24 rounded-full bg-muted" />
       )}
       {error ? <Text className="text-destructive">{error}</Text> : null}
       <Button onPress={onPick} disabled={busy}>

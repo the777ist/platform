@@ -4,29 +4,29 @@ version = "0.0.0"
 description = "Demo product FastAPI service"
 requires-python = ">=3.13"
 dependencies = [
-  "fastapi==0.139.0",              # current stable at install (PHILOSOPHY: FastAPI current)
+  "fastapi==0.141.1",              # current stable at install (PHILOSOPHY: FastAPI current)
   "uvicorn[standard]",
   "pydantic-settings",
-  "sqlmodel==0.0.39",              # pre-1.0 — pin exact; Pydantic v2 + SQLAlchemy 2 compatible
+  "sqlmodel==0.0.42",              # pre-1.0 — pin exact; Pydantic v2 + SQLAlchemy 2 compatible
   "sqlalchemy[postgresql-psycopg]",
   "psycopg[binary]",
   "alembic",
-  "pyjwt[crypto]",
+  "pyjwt[crypto]>=2.12",
   "httpx",
   "sentry-sdk[fastapi]",
   "structlog",
   "slowapi==0.1.10",               # self-described "alpha" — pin exact (current at install)
-  "uuid-utils==0.16.2",            # maintained UUIDv7 generator (Rust-backed); pin exact
+  "uuid-utils==0.17.0",            # maintained UUIDv7 generator (Rust-backed); pin exact
 ]
 
 [dependency-groups]
 dev = [
   "pytest==9.1.1",                 # current at install
   "pytest-asyncio==1.4.0",         # 1.x defaults to asyncio_mode="strict" → markers required
-  "ruff==0.15.20",                 # current at install
+  "ruff==0.16.5",                 # current at install
   "pyright",
   "polyfactory==3.3.0",            # current major at install (guide referenced 2.x — see LEARNINGS)
-  "httpx2>=2.5.0",
+  "httpx2>=2.12.0",
 ]
 
 [build-system]
