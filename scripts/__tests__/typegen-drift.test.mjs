@@ -15,7 +15,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { writeFileSync, rmSync, existsSync, mkdtempSync, mkdirSync } from "node:fs";
+import { writeFileSync, rmSync, existsSync, mkdtempSync, mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -38,11 +38,25 @@ test("drift paths are literal, never wildcards", () => {
 });
 
 test("every product with an api contributes both artefacts", () => {
+  // Shape, not roster: this used to name products/demo, which broke the suite in any clone
+  // whose stamped products differ. Enumerate what the tree carries and assert each pair.
   const paths = driftPaths();
-  assert.ok(paths.includes("products/_template/api-client"), paths.join(", "));
-  assert.ok(paths.includes("products/_template/api/openapi.json"), paths.join(", "));
-  assert.ok(paths.includes("products/demo/api-client"), paths.join(", "));
+  const apiProducts = readdirSync(join(ROOT, "products")).filter((n) =>
+    existsSync(join(ROOT, "products", n, "api")),
+  );
+  assert.ok(apiProducts.includes("_template"), String(apiProducts));
+  for (const name of apiProducts) {
+    assert.ok(paths.includes(`products/${name}/api-client`), paths.join(", "));
+    assert.ok(paths.includes(`products/${name}/api/openapi.json`), paths.join(", "));
+  }
 });
+
+// Probes write into a real api-client; target the first stamped product so the test never
+// depends on one product BY NAME, and still works in a clone with only the template.
+const probeProduct = () =>
+  readdirSync(join(ROOT, "products")).find(
+    (n) => n !== "_template" && existsSync(join(ROOT, "products", n, "api-client")),
+  ) ?? "_template";
 
 test("a product whose api-client directory is GONE still gets checked", () => {
   // Keyed off the api, not off the client. Keying off the client looks equivalent — every
@@ -96,7 +110,7 @@ test("the committed api-client currently matches the API", () => {
 test("an UNTRACKED generated file is detected — the case CI was blind to", () => {
   // The realistic trigger: a product gains a router, the regen emits a new service module, and
   // it is never committed. `git diff` reports nothing at all for this.
-  const probe = join(ROOT, "products/demo/api-client/__drift_probe__.ts");
+  const probe = join(ROOT, "products", probeProduct(), "api-client", "__drift_probe__.ts");
   try {
     writeFileSync(probe, "// probe\n");
     const drift = findDrift();
@@ -111,8 +125,10 @@ test("an UNTRACKED generated file is detected — the case CI was blind to", () 
 });
 
 test("a MODIFIED generated file is detected — the case pre-push was blind to", () => {
-  const tracked = git("ls-files", "products/demo/api-client").split(/\r?\n/).filter(Boolean)[0];
-  assert.ok(tracked, "expected demo's api-client to have tracked files");
+  const tracked = git("ls-files", `products/${probeProduct()}/api-client`)
+    .split(/\r?\n/)
+    .filter(Boolean)[0];
+  assert.ok(tracked, "expected the probe product's api-client to have tracked files");
   const abs = join(ROOT, tracked);
   assert.ok(existsSync(abs));
   try {

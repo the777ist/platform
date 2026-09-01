@@ -88,8 +88,8 @@ def test_no_input_dto_lets_a_client_set_a_server_owned_field(model: type[BaseMod
     and the moment one does, a client chooses who owns the row it just created. Strict mode does
     not help — the field would be declared, so the value is perfectly valid.
 
-    The template's own item test already asserts "owner_id is set server-side"; this makes that
-    true by construction for every DTO a product adds later.
+    The template's own item test already asserts "owner_id is set server-side"; this
+    makes that true by construction for every DTO a product adds later.
     """
     leaked = SERVER_OWNED & set(model.model_fields)
     assert not leaked, (

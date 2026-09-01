@@ -30,7 +30,11 @@ def create_app() -> FastAPI:
     # call create_app() repeatedly; Sentry no-ops without a DSN).
     configure_logging(level=get_settings().log_level)
     init_sentry()
-    app = FastAPI(title="demo_api", version="0.0.0", generate_unique_id_function=_operation_id)
+    app = FastAPI(
+        title="demo_api",
+        version="0.0.0",
+        generate_unique_id_function=_operation_id,
+    )
 
     # Target onion (outermost -> innermost): request_id -> security headers/CORS -> rate
     # limit -> routes. Starlette's add_middleware is LIFO (the LAST added wraps everything),

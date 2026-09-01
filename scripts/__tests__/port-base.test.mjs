@@ -85,8 +85,16 @@ test("rebaseProduct is a pure function of (portIndex, cur, next) over the real f
   // _template and demo with their committed portIndexes intact.
   const products = allProducts();
   const names = products.map((p) => p.name);
-  assert.ok(names.includes("_template") && names.includes("demo"), String(names));
+  // Shape, not roster: _template is always portIndex 0; every other product only needs a
+  // UNIQUE non-negative index. Asserting demo@1 by name broke this suite in any clone whose
+  // stamped products differ from platform's.
+  assert.ok(names.includes("_template"), String(names));
   assert.equal(products.find((p) => p.name === "_template").portIndex, 0);
-  assert.equal(products.find((p) => p.name === "demo").portIndex, 1);
+  const indexes = products.map((p) => p.portIndex);
+  assert.ok(
+    indexes.every((i) => Number.isInteger(i) && i >= 0),
+    String(indexes),
+  );
+  assert.equal(new Set(indexes).size, indexes.length, `duplicate portIndex among: ${names}`);
   assert.equal(typeof rebaseProduct, "function");
 });

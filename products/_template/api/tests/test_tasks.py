@@ -1,9 +1,9 @@
 """The task CLI's exit code is the only signal a scheduled Fly machine produces.
 
-`python -m template_api.tasks prune-push-tokens` runs as a one-off machine on Fly's daily
-schedule. Nobody watches it. The exit code is the entire contract: if a mistyped or renamed task
-exited 0, the machine would report success every day forever while pruning nothing, and the
-first symptom would be a push_tokens table that never shrinks.
+`python -m template_api.tasks prune-push-tokens` runs as a one-off machine on Fly's
+daily schedule. Nobody watches it. The exit code is the entire contract: if a mistyped or
+renamed task exited 0, the machine would report success every day forever while pruning
+nothing, and the first symptom would be a push_tokens table that never shrinks.
 
 prune_stale itself is covered in test_push.py against a real database. What is asserted here is
 the dispatch layer around it — which is exactly the part that has no database and therefore no

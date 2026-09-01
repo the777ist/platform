@@ -47,8 +47,11 @@ as source (no build step). Designer-facing Figma conventions live in [FIGMA.md](
 ## Storybook workbench
 
 - `pnpm --filter @platform/ui storybook` → http://localhost:6006 (app stays on 8081).
-- Toolbar: **Theme** (light|dark) and **Brand** (template|demo) — the live preview surface for
-  the Figma token modes (Figma modes ARE the brand modes).
+- Toolbar: **Theme** (light|dark) and **Brand** — one entry per `products/*/app`, enumerated at
+  build time (leading underscore stripped, so `_template` shows as "template"); stamping or
+  removing a product updates the list with no edit. The live preview surface for the Figma
+  token modes (Figma modes ARE the brand modes); override VALUES stay hand-authored in
+  `.storybook/preview.tsx`'s `BRAND_VARS`.
 - `pnpm --filter @platform/ui build-storybook` → `storybook-static/` (+ `index.json`, consumed
   by the Playwright VR sweep).
 

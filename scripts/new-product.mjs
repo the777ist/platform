@@ -308,12 +308,15 @@ function writeMeta(dest, name, portIndex) {
 }
 
 // ---- Step 6: print infra checklist ------------------------------------------------------
-function printChecklist(name, portIndex) {
+// Pure so the banner is testable: the ports it prints MUST come from the same portPlan(bases)
+// the stamp itself applied. Recomputing from the 8000/54321 defaults here printed the wrong
+// first-run ports in every rebased repo — the stamped files said one stack, the banner told the
+// human to target another.
+export function checklistText(name, portIndex, bases = portBases()) {
   const org = "example"; // placeholder org (Naming conventions header)
-  const apiPort = 8000 + 10 * portIndex;
-  const sbBase = 54321 + 100 * portIndex;
+  const { apiPort, sbBase } = portPlan(portIndex, bases);
   const mod = name.replace(/-/g, "_") + "_api"; // python module (mirrors buildReplacers)
-  console.log(`
+  return `
 ✅ Stamped products/${name} (portIndex=${portIndex})
    local ports: API http://localhost:${apiPort} · Supabase block base ${sbBase}
 
@@ -348,7 +351,11 @@ function printChecklist(name, portIndex) {
  [ ] FIGMA: ask design to create the "${name}" brand mode, then replace the
           TODO-MODE-ID-${name.toUpperCase()} in tokens.config.json and run /sync-tokens
 ────────────────────────────────────────────────────────────────────
-`);
+`;
+}
+
+function printChecklist(name, portIndex) {
+  console.log(checklistText(name, portIndex));
 }
 
 function die(msg) {

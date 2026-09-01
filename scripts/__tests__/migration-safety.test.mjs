@@ -90,7 +90,9 @@ test("every real api's migration chain passes the gate today", () => {
   // assertion that turns the gate from "exists" into "holds" — and it exercises the full
   // migrationSql -> lintSql path, dummy env vars and all.
   const dirs = allApiDirs();
-  assert.ok(dirs.length >= 2, `expected at least _template and demo, got: ${dirs}`);
+  // Shape, not roster: _template always exists; which stamped products accompany it varies
+  // per clone (demo here, others elsewhere, possibly none at all).
+  assert.ok(dirs.includes("products/_template/api"), `no _template api found, got: ${dirs}`);
   for (const dir of dirs) {
     const findings = relevantFindings(lintSql(migrationSql(dir)));
     assert.deepEqual(findings, [], `${dir}: ${JSON.stringify(findings, null, 2)}`);

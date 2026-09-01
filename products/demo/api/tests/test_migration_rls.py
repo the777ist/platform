@@ -49,10 +49,11 @@ def test_alembic_migration_applies_rls_deny_all(rls_db_url: str) -> None:
             # EVERY user table, discovered from the catalogue — never a hardcoded list.
             #
             # This used to assert `relname IN ('item', 'push_token')`, which pinned the locked
-            # invariant ("tables stay RLS-deny-all") to the two tables the demo happens to
-            # ship. A product adding a third table got no coverage for it at all, and every
-            # product stamped from this demo inherited that hole — the failure being an
-            # openly readable table on a public-facing database, which nothing else would report.
+            # invariant ("tables stay RLS-deny-all") to the two tables the demo
+            # happens to ship. A product adding a third table got no coverage for it at all,
+            # and every product stamped from this demo inherited that hole — the
+            # failure being an openly readable table on a public-facing database, which
+            # nothing else would report.
             #
             # alembic_version is excluded deliberately: it is Alembic's own bookkeeping, not
             # application data, and FORCE RLS on it would lock Alembic out of its own table.
@@ -71,7 +72,7 @@ def test_alembic_migration_applies_rls_deny_all(rls_db_url: str) -> None:
         # Without this the test passes VACUOUSLY: a query that matches nothing satisfies a loop
         # over its rows, so a migration that failed to create the tables, or a catalogue filter
         # that quietly stopped matching, would read as "every table is protected".
-        assert {"item", "push_token"} <= names, f"expected the demo's tables, got {names}"
+        assert {"item", "push_token"} <= names, f"expected the stamped tables, got {names}"
 
         for relname, rls, force_rls in rows:
             assert rls is True, f"RLS not enabled on {relname}"

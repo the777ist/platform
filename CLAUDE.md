@@ -215,6 +215,13 @@ pnpm new-product demo`; preserve the untracked `demo/api/.env` first). The gener
   (`"template_api" + "_suffix"`; name the component `Card`, not `TemplateCard`).
   Audit stamps with substring `git grep -i template products/<name>`, not just `-iw` —
   `scripts/check-stamp-tokens.mjs` enforces both shapes on every push and CI run.
+- Script tests that touch the REAL tree must assert SHAPE, never roster: `_template` plus
+  whatever products the walk finds (unique portIndexes, each with both artefacts), never a
+  product BY NAME and never a count only platform's own roster satisfies. This repo is a
+  template — a clone stamps different products and deletes demo, and every roster-pinned test
+  breaks there while staying green here. Third instance of the class (port bases → devbox
+  discipline pin → product roster) before it became a rule. Same shape rule for guards reading
+  `git ls-files`: tracked-but-deleted paths (mid-`/remove-product`) must be skipped, not read.
 - Scripting pnpm/expo: set `CI=1` for non-TTY pnpm, but NEVER pass an empty `CI=` to
   expo-cli — its `getenv.boolish` throws on an empty string.
 - `expo export` FORCES the production dotenv and Metro's transform cache does NOT key
