@@ -7,7 +7,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildReplacers, isText, rewriteContents, toPascal, toSnake } from "../new-product.mjs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import {
+  buildReplacers,
+  checklistText,
+  isText,
+  rewriteContents,
+  toPascal,
+  toSnake,
+} from "../new-product.mjs";
+
+const ROOT = join(fileURLToPath(import.meta.url), "..", "..", "..");
 
 const as = (name, text, file = "x.ts") => rewriteContents(file, text, buildReplacers(name));
 
@@ -87,4 +100,50 @@ test("text files are rewritten and binaries are not", () => {
   for (const path of ["icon.png", "splash.jpg", "font.woff2"]) {
     assert.ok(!isText(path), `${path} must be copied verbatim`);
   }
+});
+
+test("every _template python line keeps E501 headroom for a 20-char product name", () => {
+  // The stamp rewrites tokens IN PLACE, so a line's length grows by (len(name) - len("template"))
+  // per occurrence — and ruff's line-length 100 gates the stamped repo's very first commit.
+  // Proven by a real stamp: "application" (11 chars, +3 per token) pushed two 99-char template
+  // lines to 102+ and the new product failed ruff before its first commit. prettier auto-fixes
+  // the JS side in the pre-commit hook; ruff does NOT fix E501, so python is the failure class.
+  // 20 chars is the supported ceiling this test enforces — longer names may need manual wrapping.
+  const longName = "x".repeat(20);
+  const replacers = buildReplacers(longName);
+  const templateDir = join(ROOT, "products", "_template");
+  const offenders = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== "node_modules" && entry.name !== ".venv") walk(p);
+      } else if (entry.name.endsWith(".py")) {
+        const stamped = rewriteContents(entry.name, readFileSync(p, "utf8"), replacers);
+        stamped.split("\n").forEach((line, i) => {
+          // ruff's E501 exempts lines carrying a pragma comment (# noqa / # pyright: / # type:)
+          // — proven empirically: a 119-char pyright-ignore line passes `ruff check --select
+          // E501` in this repo today. Mirror that, or this guard fails lines ruff never will.
+          if (/#\s*(noqa|pyright:|type:)/.test(line)) return;
+          if (line.length > 100) offenders.push(`${relative(ROOT, p)}:${i + 1} (${line.length})`);
+        });
+      }
+    }
+  };
+  walk(templateDir);
+  assert.deepEqual(
+    offenders,
+    [],
+    `lines that break E501 when stamped as "${longName}":\n${offenders.join("\n")}`,
+  );
+});
+
+test("the checklist banner prints the ports the stamp actually used, bases included", () => {
+  // Regression: the banner recomputed 8000+10i / 54321+100i from the DEFAULTS while the stamp
+  // used portPlan(portBases()) — in a rebased repo the printed first-run steps targeted a stack
+  // that did not exist. The banner must flow through the same plan as the stamped files.
+  const rebased = checklistText("thing", 2, { api: 8200, supabase: 56321 });
+  assert.ok(rebased.includes("http://localhost:8220"), rebased.split("\n")[2]);
+  assert.ok(rebased.includes("Supabase block base 56521"), rebased.split("\n")[2]);
+  assert.ok(!rebased.includes("8020"), "default-base api port leaked into a rebased banner");
 });

@@ -149,10 +149,10 @@ def test_a_push_token_registered_by_one_user_is_not_reassigned_to_another(
 
 # --- the guard that makes this file self-maintaining -------------------------------------------
 #
-# Everything above tests the resources the template happens to ship. The failure worth preventing
-# is the NEXT one: a product adds an owner-scoped model, wires it through a service, and nobody
-# writes the isolation test — which is exactly how the template itself shipped with this file
-# missing entirely.
+# Everything above tests the resources the template happens to ship. The failure worth
+# preventing is the NEXT one: a product adds an owner-scoped model, wires it through a
+# service, and nobody writes the isolation test — which is exactly how the template
+# itself shipped with this file missing entirely.
 #
 # Telling an agent or a reviewer to remember is not a control. This asserts it instead: any model
 # carrying an ownership column must be exercised here, or the suite goes red naming the model.

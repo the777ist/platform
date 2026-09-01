@@ -10,8 +10,13 @@
 //   [db.pooler] port          the transaction pooler, in a section whose name starts with "db"
 import test from "node:test";
 import assert from "node:assert/strict";
+import { existsSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { dbPortFrom, testDbTarget } from "../test-db-target.mjs";
+
+const ROOT = join(fileURLToPath(import.meta.url), "..", "..", "..");
 
 // Shaped like the real file, including the two decoys and their ordering.
 const CONFIG = `
@@ -114,12 +119,19 @@ test("TEST_DATABASE_URL outranks CI", () => {
 test("each real product resolves to its OWN offset stack", () => {
   // Against the actual configs: products coexist by portIndex, and two products resolving to
   // the same port would mean one suite silently running against the other's database.
-  const template = testDbTarget("products/_template/api", { env: {} });
-  const demo = testDbTarget("products/demo/api", { env: {} });
-  assert.equal(template?.host, "127.0.0.1");
-  assert.ok(template?.port, "template resolved no port");
-  assert.ok(demo?.port, "demo resolved no port");
-  assert.notEqual(template.port, demo.port, "two products share a database port");
+  // Shape, not roster: this used to read products/demo/api by name, which broke the suite in
+  // any clone whose stamped products differ — walk whatever this tree actually carries.
+  const apiDirs = readdirSync(join(ROOT, "products"))
+    .filter((n) => existsSync(join(ROOT, "products", n, "supabase", "config.toml")))
+    .map((n) => `products/${n}/api`);
+  assert.ok(apiDirs.includes("products/_template/api"), String(apiDirs));
+  const ports = apiDirs.map((dir) => {
+    const target = testDbTarget(dir, { env: {} });
+    assert.equal(target?.host, "127.0.0.1", dir);
+    assert.ok(target?.port, `${dir} resolved no port`);
+    return target.port;
+  });
+  assert.equal(new Set(ports).size, ports.length, `two products share a database port: ${ports}`);
 });
 
 test("a product with no supabase config yields null instead of a wrong address", () => {

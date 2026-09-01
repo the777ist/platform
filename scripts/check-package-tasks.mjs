@@ -82,13 +82,20 @@ export function staleExemptions(name, scripts) {
 }
 
 export function workspacePackages(root = ROOT) {
-  return execFileSync("git", ["ls-files", "*/package.json"], { cwd: root, encoding: "utf8" })
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .filter((f) => !f.includes("node_modules/"))
-    .map((file) => ({ file, ...JSON.parse(readFileSync(join(root, file), "utf8")) }))
-    .filter((pkg) => typeof pkg.name === "string")
-    .sort((a, b) => a.name.localeCompare(b.name));
+  return (
+    execFileSync("git", ["ls-files", "*/package.json"], { cwd: root, encoding: "utf8" })
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .filter((f) => !f.includes("node_modules/"))
+      // `git ls-files` lists TRACKED paths, which includes files deleted from disk but not yet
+      // staged (mid-`/remove-product`, a stash, a half-finished rename). Reading those throws a
+      // raw ENOENT out of the guard. Skip them: on a clean checkout (CI) the two sets are equal,
+      // so this filter never hides anything there.
+      .filter((f) => existsSync(join(root, f)))
+      .map((file) => ({ file, ...JSON.parse(readFileSync(join(root, file), "utf8")) }))
+      .filter((pkg) => typeof pkg.name === "string")
+      .sort((a, b) => a.name.localeCompare(b.name))
+  );
 }
 
 function main() {

@@ -238,7 +238,10 @@ test("every Dockerfile in the repo sits beside an ignore that excludes .env", ()
     encoding: "utf8",
   })
     .split(/\r?\n/)
-    .filter(Boolean);
+    .filter(Boolean)
+    // Tracked-but-deleted paths (mid-`/remove-product`) would fail the .dockerignore lookup
+    // for a directory that no longer exists; on a clean checkout tracked == on-disk.
+    .filter((f) => existsSync(join(ROOT, f)));
   assert.ok(dockerfiles.length >= 2, `only found ${dockerfiles.length} Dockerfiles`);
   for (const dockerfile of dockerfiles) {
     const ignore = join(ROOT, dirname(dockerfile), ".dockerignore");

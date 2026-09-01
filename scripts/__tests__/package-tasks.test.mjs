@@ -7,6 +7,9 @@
 // not exist yet — which is the entire point of a guard in a repo built to spawn products.
 import test from "node:test";
 import assert from "node:assert/strict";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   REQUIRED_TASKS,
@@ -16,6 +19,8 @@ import {
   stubbedTasks,
   workspacePackages,
 } from "../check-package-tasks.mjs";
+
+const ROOT = join(fileURLToPath(import.meta.url), "..", "..", "..");
 
 const ALL = { lint: "eslint .", typecheck: "tsc --noEmit", test: "jest" };
 
@@ -86,7 +91,10 @@ test("an exemption that is no longer needed is reported as stale", () => {
 
 test("every real package in this repo satisfies the rule", () => {
   const packages = workspacePackages();
-  assert.ok(packages.length >= 8, `only found ${packages.length} packages`);
+  // Non-vacuity floor = the packages EVERY clone carries: config/core/ui plus the template's
+  // four surfaces (app, desktop, api, api-client). Stamped products add more; requiring them
+  // by count pinned this suite to platform's own roster and broke it in demo-less clones.
+  assert.ok(packages.length >= 7, `only found ${packages.length} packages`);
   for (const pkg of packages) {
     assert.deepEqual(missingTasks(pkg.name, pkg.scripts), [], `${pkg.name} is missing tasks`);
     assert.deepEqual(
@@ -97,13 +105,22 @@ test("every real package in this repo satisfies the rule", () => {
   }
 });
 
-test("both desktop packages are among them, with a test script", () => {
-  // The regression that motivated this guard. Named explicitly so removing their tests fails
-  // here as well as in the generic sweep above.
+test("every product's desktop package is among them, with a test script", () => {
+  // The regression that motivated this guard: desktop test scripts silently dropped from the
+  // roster. Shape, not roster — this used to name template-desktop AND demo-desktop, which
+  // broke the suite in any clone whose products differ (demo removed, others stamped). Walk
+  // the tree and assert whatever desktops exist, which always includes the template's.
   const byName = new Map(workspacePackages().map((p) => [p.name, p]));
-  for (const name of ["@platform/template-desktop", "@platform/demo-desktop"]) {
-    assert.ok(byName.has(name), `${name} not found`);
-    assert.ok(byName.get(name).scripts?.test, `${name} has no test script`);
+  const desktops = readdirSync(join(ROOT, "products")).filter((n) =>
+    existsSync(join(ROOT, "products", n, "desktop", "package.json")),
+  );
+  assert.ok(desktops.includes("_template"), `no _template desktop found: ${desktops}`);
+  for (const dir of desktops) {
+    const pkg = JSON.parse(
+      readFileSync(join(ROOT, "products", dir, "desktop", "package.json"), "utf8"),
+    );
+    assert.ok(byName.has(pkg.name), `${pkg.name} not found`);
+    assert.ok(byName.get(pkg.name).scripts?.test, `${pkg.name} has no test script`);
   }
 });
 

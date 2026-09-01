@@ -48,7 +48,11 @@ async def test_broadcast_posts_per_product_channel_with_service_role() -> None:
     assert seen["auth"] == "Bearer service-role-test-key"
     assert seen["body"] == {
         "messages": [
-            {"topic": "demo:realtime", "event": "invalidate", "payload": {"resource": "items"}}
+            {
+                "topic": "demo:realtime",
+                "event": "invalidate",
+                "payload": {"resource": "items"},
+            }
         ]
     }
 

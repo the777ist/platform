@@ -153,7 +153,11 @@ function main() {
   // 3. AGREEMENT — every global.css matches theme.ts, in both modes.
   const cssFiles = execFileSync("git", ["ls-files", "*global.css"], { cwd: ROOT, encoding: "utf8" })
     .split(/\r?\n/)
-    .filter(Boolean);
+    .filter(Boolean)
+    // `git ls-files` lists TRACKED paths, including files deleted from disk but not yet staged
+    // (mid-`/remove-product`). Reading those used to throw a raw ENOENT out of the guard; on a
+    // clean checkout (CI) tracked == on-disk, so skipping the missing ones never hides anything.
+    .filter((f) => existsSync(join(ROOT, f)));
   if (!cssFiles.includes(UI_CSS)) problems.push(`expected ${UI_CSS} to be tracked by git`);
   for (const file of cssFiles) {
     const css = cssVars(read(file));
